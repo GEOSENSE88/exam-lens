@@ -2750,12 +2750,14 @@ async function processOriginalPDFTextBased(file, statusEl){
         canvas: pg.canvas, vpHeight: pg.vp.height, cols: leftCols,
         isCover: leftNum === 1 && leftCh1 <= 2,
         hasNum: leftNum != null,
+        allTextItems: pg.allTextItems,
       });
       virtualPages.push({
         page: pg.page, slot: rightNum, side: 'R',
         canvas: pg.canvas, vpHeight: pg.vp.height, cols: rightCols,
         isCover: rightNum === 1 && rightCh1 <= 2,
         hasNum: rightNum != null,
+        allTextItems: pg.allTextItems,
       });
     } else {
       // 일반 PDF — footer 번호 없는 PDF 페이지만 표지로 간주 (산남고 양식: 표지는 footer 없음)
@@ -2767,6 +2769,7 @@ async function processOriginalPDFTextBased(file, statusEl){
         canvas: pg.canvas, vpHeight: pg.vp.height, cols,
         isCover: !hasNum,
         hasNum,
+        allTextItems: pg.allTextItems,
       });
     }
   });
@@ -2800,7 +2803,28 @@ async function processOriginalPDFTextBased(file, statusEl){
   // 모든 활성 가상 페이지의 컬럼을 평탄화 — 슬롯(원래 페이지) 순서
   const flatCols = [];
   activeVPages.forEach(v => {
+    const vTextItems = v.allTextItems || [];
+    const headerY = v.vpHeight * 0.04;
+    const footerY = v.vpHeight * 0.93;
     v.cols.forEach((c, ci) => {
+      // 이 컬럼 xRange 안에서 header/footer 밖의 실제 텍스트 시작/끝 y
+      // — 단 넘기는 문항 크롭에서 위/아래 흰 여백을 잘라내는 데 사용
+      const colItems = vTextItems.filter(it =>
+        it.x >= c.xRangeStart - 5 && it.x < c.xRangeEnd + 5 &&
+        it.y > headerY && it.y < footerY
+      );
+      let firstContentY = headerY;
+      let lastContentY = footerY;
+      if(colItems.length){
+        let minY = Infinity, maxBottom = -Infinity;
+        colItems.forEach(it => {
+          if(it.y < minY) minY = it.y;
+          const b = it.y + (it.fontH || 14);
+          if(b > maxBottom) maxBottom = b;
+        });
+        firstContentY = minY;
+        lastContentY = maxBottom;
+      }
       flatCols.push({
         page: v.page,
         slot: v.slot,
@@ -2815,9 +2839,10 @@ async function processOriginalPDFTextBased(file, statusEl){
         // header/footer 경계는 텍스트 검출 시 사용한 footerYStart(0.93) / headerYEnd(0.04) 와
         // 동일한 기준을 사용해야 함. 25px 만 잘라내면 "2026학년도 ... 중간고사" 같은
         // 페이지 꼬리말 텍스트가 단/페이지 넘기는 문항의 크롭에 그대로 포함됨.
-        headerY: v.vpHeight * 0.04,
-        footerY: v.vpHeight * 0.93,
-        allTextItems: v.allTextItems || c.allTextItems || null,
+        headerY,
+        footerY,
+        firstContentY,
+        lastContentY,
       });
     });
   });
@@ -2848,8 +2873,10 @@ async function processOriginalPDFTextBased(file, statusEl){
         segments.push({canvas: c.canvas, x0: c.xRangeStart, x1: c.xRangeEnd, y0: yStart, y1: yLimit});
       } else {
         // 마지막 문항 + 같은 컬럼에 ⑤ 없음 → 단/페이지 넘어감
-        // 메인: 현재 컬럼의 q부터 footer까지
-        segments.push({canvas: c.canvas, x0: c.xRangeStart, x1: c.xRangeEnd, y0: yStart, y1: c.footerY});
+        // 메인: 현재 컬럼의 q부터 — 실제 콘텐츠가 끝나는 지점(lastContentY)까지만 잘라
+        //       단 넘기는 표시("↓ 이어짐") 아래의 큰 흰 여백이 크롭에 포함되지 않도록 함
+        const mainY1 = Math.min(c.footerY, (c.lastContentY != null ? c.lastContentY : c.footerY) + 6);
+        segments.push({canvas: c.canvas, x0: c.xRangeStart, x1: c.xRangeEnd, y0: yStart, y1: mainY1});
         // 다음 컬럼들 순회하며 ⑤ 추적
         let extensionFound = false;
         for(let k = fIdx + 1; k < flatCols.length && k < fIdx + 6; k++){
@@ -2861,6 +2888,8 @@ async function processOriginalPDFTextBased(file, statusEl){
           );
           if(eligibleFives.length){
             const last = eligibleFives[eligibleFives.length-1];
+            // 확장 컬럼: 실제 콘텐츠가 시작되는 지점부터 잘라 상단 흰 여백 제거
+            const startY = Math.max(nc.headerY, (nc.firstContentY != null ? nc.firstContentY : nc.headerY) - 6);
             // 확장 컬럼에서도 ⑤가 여러 줄로 wrap 되므로 위쪽 한도를 넉넉히 확보
             // 다음 문항(ncFirstQ)이 있으면 그 직전까지, 없으면 fontH*10 까지
             const extYEnd = ncFirstQ
@@ -2869,7 +2898,7 @@ async function processOriginalPDFTextBased(file, statusEl){
             segments.push({
               canvas: nc.canvas,
               x0: nc.xRangeStart, x1: nc.xRangeEnd,
-              y0: nc.headerY,
+              y0: startY,
               y1: extYEnd,
             });
             extensionFound = true;
@@ -2879,12 +2908,15 @@ async function processOriginalPDFTextBased(file, statusEl){
           if(ncFirstQ){
             break;
           }
-          // ⑤도 없고 문항도 없는 컬럼 — 통째로 이어붙이고 계속
+          // ⑤도 없고 문항도 없는 컬럼 — 콘텐츠 범위만 이어붙이고 계속
+          const passStartY = Math.max(nc.headerY, (nc.firstContentY != null ? nc.firstContentY : nc.headerY) - 6);
+          const passEndY = Math.min(nc.footerY, (nc.lastContentY != null ? nc.lastContentY : nc.footerY) + 6);
+          if(passEndY - passStartY < 20) continue; // 거의 빈 컬럼은 스킵
           segments.push({
             canvas: nc.canvas,
             x0: nc.xRangeStart, x1: nc.xRangeEnd,
-            y0: nc.headerY,
-            y1: nc.footerY,
+            y0: passStartY,
+            y1: passEndY,
           });
         }
       }
