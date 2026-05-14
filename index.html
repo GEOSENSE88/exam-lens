@@ -2678,10 +2678,13 @@ async function processOriginalPDFTextBased(file, statusEl){
   }
 
   // ===== 각 페이지의 footer/header 영역에서 실제 책 페이지 번호 추출 =====
+  // (line 2575에서 이미 캐시된 경우는 건너뛰어 중복 연산 방지)
   pages.forEach(pg => {
-    pg.pageNums = _extractPageNumsFromFooter(pg.processedItems, pg.vp.width, pg.vp.height);
+    if(!pg.pageNums){
+      pg.pageNums = _extractPageNumsFromFooter(pg.processedItems, pg.vp.width, pg.vp.height);
+    }
   });
-  const totalPageNumsFound = pages.reduce((a,pg)=>a+pg.pageNums.length, 0);
+  const totalPageNumsFound = pages.reduce((a,pg)=>a+(pg.pageNums?pg.pageNums.length:0), 0);
 
   // ===== 페이지 → 가상 페이지 분리 + 슬롯(실제 페이지 번호) 부여 =====
   const virtualPages = [];
@@ -2869,12 +2872,15 @@ async function processOriginalPDFTextBased(file, statusEl){
       const seg = (c.segments && c.segments[0]) || {canvas:c.canvas, x0:c.x0, y0:c.y0, x1:c.x1, y1:c.y1};
       dataURL = _cropToDataURL(seg.canvas, seg.x0, seg.y0, seg.x1-seg.x0, seg.y1-seg.y0);
     }
+    const seg0 = (c.segments && c.segments[0]) || {x0:c.x0, y0:c.y0, x1:c.x1, y1:c.y1};
     out.push({
       idx, key: c.key,
       dataURL,
       page: c.page,
       slot: 100 * c.page + c.colIdx,
       spans: !!c.spans,
+      cropW: Math.max(0, (seg0.x1 - seg0.x0) | 0),
+      cropH: Math.max(0, (seg0.y1 - seg0.y0) | 0),
     });
   });
   // 캔버스 참조 해제
@@ -3011,7 +3017,7 @@ async function processOriginalPDF(file, statusEl, mode){
   const out = [];
   allCrops.forEach((c, idx)=>{
     const w = c.x1 - c.x0, h = c.y1 - c.y0;
-    out.push({idx, dataURL: _cropToDataURL(c.canvas, c.x0, c.y0, w, h), page: c.page, slot: c.slot});
+    out.push({idx, dataURL: _cropToDataURL(c.canvas, c.x0, c.y0, w, h), page: c.page, slot: c.slot, cropW: w|0, cropH: h|0});
   });
   allCrops.forEach(c => { c.gray = null; c.canvas = null; });
   setStatus(`총 ${out.length}개 문항 영역으로 분할 완료`);
@@ -3046,20 +3052,27 @@ function mapCropsToQuestions(crops, items){
 let _lastPdfFile = null;
 let _lastPdfResult = null;
 
+let _pdfSeq = 0;
 async function onPdfFileChange(file){
   const status = document.getElementById('pdfStatus');
   const mappingBox = document.getElementById('pdfMappingInfo');
+  // 진행 중인 패널이 있으면 먼저 닫아 잔여 DOM 정리
+  try{ closeQPanel(); }catch(e){}
   if(!file){
-    status.textContent=''; qImages={}; qSlotMap={}; qSlotPages={}; qImageOrder=[];
+    if(status) status.textContent='';
+    qImages={}; qSlotMap={}; qSlotPages={}; qImageOrder=[];
     _lastPdfFile = null; _lastPdfResult = null;
     if(mappingBox) mappingBox.style.display = 'none';
     return;
   }
   _lastPdfFile = file;
-  status.style.color = '#374151';
+  if(status) status.style.color = '#374151';
+  const mySeq = ++_pdfSeq;
   try{
-    const mode = (document.getElementById('pdfMode')||{}).value || 'auto';
+    const mode = (document.getElementById('pdfMode')?.value) || 'auto';
     const result = await processOriginalPDF(file, status, mode);
+    // 빠른 모드 전환 시 오래된 결과로 덮어쓰지 않도록 보호
+    if(mySeq !== _pdfSeq) return;
     _lastPdfResult = result;
     const crops = result.crops;
     qSlotPages = result.slotPages || {};
@@ -3124,9 +3137,12 @@ async function onPdfFileChange(file){
       }
     }
   }catch(e){
+    if(mySeq !== _pdfSeq) return; // 오래된 실패 알림 무시
     console.error(e);
-    status.style.color = '#ef4444';
-    status.textContent = '실패: ' + e.message;
+    if(status){
+      status.style.color = '#ef4444';
+      status.textContent = '실패: ' + e.message;
+    }
   }
 }
 // =====================================================================
@@ -3189,8 +3205,8 @@ function openQPanel(key){
       </div>
       <div class="qstat">
         <div class="k">변별도</div>
-        <div class="v" style="color:${dColor}">${item.d.toFixed(2)}</div>
-        <div class="sub">${item.d>=0.3?'우수':item.d>=0.1?'보통':item.d>=0?'낮음':'역변별'}</div>
+        <div class="v" style="color:${dColor}">${item.d!=null?item.d.toFixed(2):'-'}</div>
+        <div class="sub">${item.d==null?'-':(item.d>=0.3?'우수':item.d>=0.1?'보통':item.d>=0?'낮음':'역변별')}</div>
       </div>
       <div class="qstat">
         <div class="k">배점</div>
@@ -3275,6 +3291,8 @@ document.addEventListener('keydown', e=>{
 document.addEventListener('click', e=>{
   const link = e.target.closest('.q-link');
   if(!link) return;
+  // 열려 있는 셀/학생 모달 안의 q-link는 모달 충돌 방지를 위해 무시
+  if(e.target.closest('#cellModal, #studentModal, .qmodal.on')) return;
   const qno = link.dataset.qno;
   if(qno) openQPanel(qno);
 });
@@ -4722,6 +4740,7 @@ $('run').addEventListener('click', run);
 // 원안지 PDF 업로드 핸들러
 $('pdfFile').addEventListener('change', e => {
   const f = e.target.files[0];
+  e.target.value = ''; // 같은 파일 다시 선택 가능하도록 초기화
   onPdfFileChange(f);
 });
 // 모드 변경 시 같은 파일로 재처리
