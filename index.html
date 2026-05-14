@@ -2660,19 +2660,45 @@ async function processOriginalPDFTextBased(file, statusEl){
           }
           merged.push(cur);
         }
-        // 컬럼 시작 + 120px 이후의 가장 큰 가로 빈 구간(>= 25px)을 거터로 채택
+        // 컬럼 시작 + 120px 이후의 빈 가로 영역을 거터 후보로 잡고,
+        // 거터 양쪽으로 텍스트가 수직으로 충분히 분포된 경우(=가짜 거터 아님)만 채택.
+        // — 피규어 내부 빈 공간(예: 도표 박스 사이)을 거짓 거터로 잡아 컬럼이 좁아지면서
+        //   피규어 라벨이 누락되는 버그를 막기 위함.
+        const numBands = 10;
+        const bandSize = (pg.vp.height - footerYStart - 0 /*ignored*/) || 1;
+        const bodyTop = headerYEnd, bodyBot = footerYStart;
+        const bodyBandSize = (bodyBot - bodyTop) / numBands;
+        function gapVerticalSpan(gapX){
+          const leftBands = new Set(), rightBands = new Set();
+          colItems.forEach(it => {
+            if(it.y <= bodyTop || it.y >= bodyBot) return;
+            const band = Math.floor((it.y - bodyTop) / bodyBandSize);
+            if(band < 0 || band >= numBands) return;
+            const itRight = it.x + (it.w || 0);
+            if(itRight <= gapX) leftBands.add(band);
+            else if(it.x >= gapX) rightBands.add(band);
+          });
+          let both = 0;
+          for(let b=0; b<numBands; b++) if(leftBands.has(b) && rightBands.has(b)) both++;
+          return both;
+        }
         let bestGap = null;
         for(let i=0; i<merged.length-1; i++){
           const leftEdge = merged[i][1];
           const rightEdge = merged[i+1][0];
           const gap = rightEdge - leftEdge;
           if(gap < 25) continue;
-          if(leftEdge < c.x + 120) continue; // 컬럼 본문이 충분히 그려진 이후의 거터만
+          if(leftEdge < c.x + 120) continue;
+          const gapMidX = (leftEdge + rightEdge) / 2;
+          const span = gapVerticalSpan(gapMidX);
+          // 진짜 컬럼 거터는 페이지 높이의 30% 이상 구간에서 양쪽 모두에 텍스트가 있음
+          if(span < 3) continue;
           if(!bestGap || leftEdge < bestGap.leftEdge){
-            bestGap = {leftEdge, gap};
+            bestGap = {leftEdge, gap, span};
           }
         }
-        if(bestGap){
+        // 결과 컬럼 폭이 페이지 폭의 30% 미만으로 좁아지면 거짓 거터로 간주 — 무시
+        if(bestGap && (bestGap.leftEdge - c.xStart) >= pg.vp.width * 0.30){
           actualRight = Math.min(actualRight, bestGap.leftEdge);
         }
       }
@@ -2815,16 +2841,22 @@ async function processOriginalPDFTextBased(file, statusEl){
       );
       let firstContentY = headerY;
       let lastContentY = footerY;
+      // y는 텍스트의 baseline 좌표이므로 글리프 윗부분은 y - fontH,
+      // 아랫부분은 y + fontH*0.25 (한글 descender 여유) 로 본다.
       if(colItems.length){
-        let minY = Infinity, maxBottom = -Infinity;
+        let minTop = Infinity, maxBottom = -Infinity;
         colItems.forEach(it => {
-          if(it.y < minY) minY = it.y;
-          const b = it.y + (it.fontH || 14);
-          if(b > maxBottom) maxBottom = b;
+          const fh = it.fontH || 14;
+          const top = it.y - fh;
+          const bottom = it.y + fh * 0.25;
+          if(top < minTop) minTop = top;
+          if(bottom > maxBottom) maxBottom = bottom;
         });
-        firstContentY = minY;
-        lastContentY = maxBottom;
+        firstContentY = Math.max(headerY, minTop);
+        lastContentY = Math.min(footerY, maxBottom);
       }
+      // 컬럼 내 텍스트의 baseline y 배열 — 단 넘기는 ⑤ 이후의 첫 빈 줄(=다음 지문/문항 시작) 검출에 사용
+      const textYs = colItems.map(it => it.y).sort((a,b) => a-b);
       flatCols.push({
         page: v.page,
         slot: v.slot,
@@ -2843,6 +2875,7 @@ async function processOriginalPDFTextBased(file, statusEl){
         footerY,
         firstContentY,
         lastContentY,
+        textYs,
       });
     });
   });
@@ -2862,11 +2895,26 @@ async function processOriginalPDFTextBased(file, statusEl){
 
       if(lastFive){
         // 같은 컬럼에서 ⑤ 발견 — ⑤의 본문이 2~4줄로 wrap 되는 경우가 많아
-        // 단순히 fontH*2.5 만큼만 잡으면 잘림. 다음 문항이 같은 컬럼에 있으면
-        // 그 직전(yLimit)까지 안전하게 확장. 없으면 충분한 여유(10*fontH)까지.
-        const yEnd = nextQ
-          ? yLimit
-          : Math.min(yLimit, lastFive.y + lastFive.fontH * 10);
+        // 단순히 fontH*2.5 만큼만 잡으면 잘림.
+        //   • 다음 문항이 같은 컬럼에 있으면 그 직전(yLimit)까지 확장
+        //   • 없으면 ⑤ 본문 이후 첫 "큰 수직 공백"(다음 지문 [21~22] 시작 등)을 찾아 거기서 끊음
+        //     — 못 찾으면 lastFive + 10*fontH 까지
+        let yEnd;
+        if(nextQ){
+          yEnd = yLimit;
+        } else {
+          const fh = lastFive.fontH;
+          const lineGap = fh * 2; // 한 줄을 넘어가는 공백을 다음 문항/지문의 시작으로 본다
+          let yStop = Math.min(yLimit, lastFive.y + fh * 10); // 기본 한도
+          const ys = (c.textYs || []).filter(y => y > lastFive.y + fh * 0.5);
+          for(let i=0; i<ys.length-1; i++){
+            if(ys[i+1] - ys[i] > lineGap){
+              yStop = Math.min(yStop, ys[i] + fh * 0.4);
+              break;
+            }
+          }
+          yEnd = yStop;
+        }
         segments.push({canvas: c.canvas, x0: c.xRangeStart, x1: c.xRangeEnd, y0: yStart, y1: yEnd});
       } else if(nextQ){
         // 같은 컬럼 다음 문항 있음 + ⑤ 없음 — 다음 문항 직전까지
