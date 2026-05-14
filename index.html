@@ -2691,27 +2691,31 @@ async function processOriginalPDFTextBased(file, statusEl){
           }
           merged.push(cur);
         }
-        // 컬럼 시작 + 120px 이후의 빈 가로 영역을 거터 후보로 잡고,
-        // 거터 양쪽으로 텍스트가 수직으로 충분히 분포된 경우(=가짜 거터 아님)만 채택.
-        // — 피규어 내부 빈 공간(예: 도표 박스 사이)을 거짓 거터로 잡아 컬럼이 좁아지면서
-        //   피규어 라벨이 누락되는 버그를 막기 위함.
-        const numBands = 10;
-        const bandSize = (pg.vp.height - footerYStart - 0 /*ignored*/) || 1;
+        // 컬럼 시작 + 120px 이후의 빈 가로 영역을 거터 후보로 잡되,
+        // 거터 양쪽 텍스트의 수직 분포가 충분히 겹쳐야만(=진짜 컬럼) 채택.
+        // — 피규어 내부 빈 공간(자료1/자료2/자료3 사이 등)은 한정된 y 대역에만
+        //   양쪽 텍스트가 존재하므로 거짓 거터로 분류해 컬럼이 좁아지는 것을 막음.
         const bodyTop = headerYEnd, bodyBot = footerYStart;
-        const bodyBandSize = (bodyBot - bodyTop) / numBands;
-        function gapVerticalSpan(gapX){
-          const leftBands = new Set(), rightBands = new Set();
+        const colHeight = Math.max(1, bodyBot - bodyTop);
+        function gapYOverlapFrac(gapX){
+          let lMin = Infinity, lMax = -Infinity, rMin = Infinity, rMax = -Infinity;
+          let leftN = 0, rightN = 0;
           colItems.forEach(it => {
             if(it.y <= bodyTop || it.y >= bodyBot) return;
-            const band = Math.floor((it.y - bodyTop) / bodyBandSize);
-            if(band < 0 || band >= numBands) return;
             const itRight = it.x + (it.w || 0);
-            if(itRight <= gapX) leftBands.add(band);
-            else if(it.x >= gapX) rightBands.add(band);
+            if(itRight <= gapX){
+              leftN++;
+              if(it.y < lMin) lMin = it.y;
+              if(it.y > lMax) lMax = it.y;
+            } else if(it.x >= gapX){
+              rightN++;
+              if(it.y < rMin) rMin = it.y;
+              if(it.y > rMax) rMax = it.y;
+            }
           });
-          let both = 0;
-          for(let b=0; b<numBands; b++) if(leftBands.has(b) && rightBands.has(b)) both++;
-          return both;
+          if(leftN < 3 || rightN < 3) return 0;
+          const overlap = Math.max(0, Math.min(lMax, rMax) - Math.max(lMin, rMin));
+          return overlap / colHeight;
         }
         let bestGap = null;
         for(let i=0; i<merged.length-1; i++){
@@ -2721,15 +2725,17 @@ async function processOriginalPDFTextBased(file, statusEl){
           if(gap < 25) continue;
           if(leftEdge < c.x + 120) continue;
           const gapMidX = (leftEdge + rightEdge) / 2;
-          const span = gapVerticalSpan(gapMidX);
-          // 진짜 컬럼 거터는 페이지 높이의 30% 이상 구간에서 양쪽 모두에 텍스트가 있음
-          if(span < 3) continue;
+          // 양쪽 텍스트의 y 분포가 컬럼 높이의 40% 이상 겹쳐야 진짜 거터로 인정.
+          // 피규어가 컬럼 폭에 걸쳐 있는 경우 라벨이 일부 y 대역에만 있으므로
+          // 겹침 비율이 낮아 거짓 거터로 분류됨.
+          const overlap = gapYOverlapFrac(gapMidX);
+          if(overlap < 0.4) continue;
           if(!bestGap || leftEdge < bestGap.leftEdge){
-            bestGap = {leftEdge, gap, span};
+            bestGap = {leftEdge, gap, overlap};
           }
         }
-        // 결과 컬럼 폭이 페이지 폭의 30% 미만으로 좁아지면 거짓 거터로 간주 — 무시
-        if(bestGap && (bestGap.leftEdge - c.xStart) >= pg.vp.width * 0.30){
+        // 결과 컬럼 폭이 페이지 폭의 40% 미만으로 좁아지면 거짓 거터로 간주 — 무시
+        if(bestGap && (bestGap.leftEdge - c.xStart) >= pg.vp.width * 0.40){
           actualRight = Math.min(actualRight, bestGap.leftEdge);
         }
       }
