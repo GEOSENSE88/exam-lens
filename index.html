@@ -2958,9 +2958,16 @@ async function processOriginalPDFTextBased(file, statusEl){
         segments.push({canvas: c.canvas, x0: c.xRangeStart, x1: c.xRangeEnd, y0: yStart, y1: yLimit});
       } else {
         // 마지막 문항 + 같은 컬럼에 ⑤ 없음 → 단/페이지 넘어감
-        // 메인: 현재 컬럼의 q부터 — 실제 콘텐츠가 끝나는 지점(lastContentY)까지만 잘라
-        //       단 넘기는 표시("↓ 이어짐") 아래의 큰 흰 여백이 크롭에 포함되지 않도록 함
-        const mainY1 = Math.min(c.footerY, (c.lastContentY != null ? c.lastContentY : c.footerY) + 6);
+        // 메인 세그먼트 y1 결정:
+        //   • q.y 보다 충분히 아래(>4*fontH)에 텍스트 라벨이 2개 이상 있으면
+        //     → 자료에 [자료1]/프로세스A/통영반 등 텍스트 라벨이 있는 경우.
+        //       lastContentY 까지만 잘라 컬럼 하단 흰 여백 제거.
+        //   • 그렇지 않으면(텍스트 레이어 없는 raster 자료, 또는 본문만 있는 경우)
+        //     → c.footerY 까지 안전하게 포함. 자료(그림)가 잘리지 않도록 함.
+        const labelsBelow = (c.textYs || []).filter(y => y > q.y + q.fontH * 4).length;
+        const mainY1 = (labelsBelow >= 2 && c.lastContentY != null)
+          ? Math.min(c.footerY, c.lastContentY + 6)
+          : c.footerY;
         segments.push({canvas: c.canvas, x0: c.xRangeStart, x1: c.xRangeEnd, y0: yStart, y1: mainY1});
         // 다음 컬럼들 순회하며 ⑤ 추적
         let extensionFound = false;
