@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>PDF.js 순서 테스트</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+<input type="file" id="f" accept=".pdf">
+<pre id="o" style="font-size:11px;font-family:monospace"></pre>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+document.getElementById('f').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  let out = `pages: ${pdf.numPages}\n`;
+  // page 3 (PDF index 2 + 1 = page 3, 0-based 2 → user page 3)
+  for (const p of [2, 3]) {  // PDF page 2, 3 (0-based 1, 2)
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    out += `\n=== PDF page ${p} - tc.items 원래 순서 ===\n`;
+    tc.items.forEach((it, i) => {
+      const s = (it.str || '').slice(0, 50);
+      const tx = it.transform;
+      // raw transform: [a,b,c,d,e,f] where (e,f) is position
+      out += `[${i}] x=${tx[4].toFixed(1)} y=${tx[5].toFixed(1)} ${JSON.stringify(s)}\n`;
+      if (i > 100) return;
+    });
+  }
+  document.getElementById('o').textContent = out;
+});
+</script>
+</body></html>

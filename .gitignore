@@ -1,0 +1,13 @@
+# 테스트용 PDF
+test.pdf
+test_combined.pdf
+test_geo.pdf
+test_korean.pdf
+test_portrait.pdf
+*.pdf
+
+# 백업 파일
+_backup_*.html
+
+# 임시 이미지
+image-*.png

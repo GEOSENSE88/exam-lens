@@ -1,0 +1,379 @@
+[
+ {
+  "file": "p02_l_1.png",
+  "page": 2,
+  "column": "left_col",
+  "y_range": [
+   212,
+   1264
+  ],
+  "x_range": [
+   101,
+   745
+  ]
+ },
+ {
+  "file": "p02_l_2.png",
+  "page": 2,
+  "column": "left_col",
+  "y_range": [
+   1259,
+   2025
+  ],
+  "x_range": [
+   101,
+   745
+  ]
+ },
+ {
+  "file": "p02_r_1.png",
+  "page": 2,
+  "column": "right_col",
+  "y_range": [
+   212,
+   1166
+  ],
+  "x_range": [
+   772,
+   1383
+  ]
+ },
+ {
+  "file": "p02_r_2.png",
+  "page": 2,
+  "column": "right_col",
+  "y_range": [
+   1161,
+   2025
+  ],
+  "x_range": [
+   772,
+   1383
+  ]
+ },
+ {
+  "file": "p03_l_1.png",
+  "page": 3,
+  "column": "left_col",
+  "y_range": [
+   212,
+   1210
+  ],
+  "x_range": [
+   100,
+   745
+  ]
+ },
+ {
+  "file": "p03_l_2.png",
+  "page": 3,
+  "column": "left_col",
+  "y_range": [
+   1205,
+   2025
+  ],
+  "x_range": [
+   100,
+   745
+  ]
+ },
+ {
+  "file": "p03_r_1.png",
+  "page": 3,
+  "column": "right_col",
+  "y_range": [
+   212,
+   1133
+  ],
+  "x_range": [
+   774,
+   1393
+  ]
+ },
+ {
+  "file": "p03_r_2.png",
+  "page": 3,
+  "column": "right_col",
+  "y_range": [
+   1128,
+   2025
+  ],
+  "x_range": [
+   774,
+   1393
+  ]
+ },
+ {
+  "file": "p04_l_1.png",
+  "page": 4,
+  "column": "left_col",
+  "y_range": [
+   212,
+   2025
+  ],
+  "x_range": [
+   104,
+   745
+  ]
+ },
+ {
+  "file": "p04_r_1.png",
+  "page": 4,
+  "column": "right_col",
+  "y_range": [
+   211,
+   978
+  ],
+  "x_range": [
+   772,
+   1384
+  ]
+ },
+ {
+  "file": "p04_r_2.png",
+  "page": 4,
+  "column": "right_col",
+  "y_range": [
+   973,
+   2025
+  ],
+  "x_range": [
+   772,
+   1384
+  ]
+ },
+ {
+  "file": "p05_l_1.png",
+  "page": 5,
+  "column": "left_col",
+  "y_range": [
+   212,
+   990
+  ],
+  "x_range": [
+   104,
+   745
+  ]
+ },
+ {
+  "file": "p05_l_2.png",
+  "page": 5,
+  "column": "left_col",
+  "y_range": [
+   985,
+   2025
+  ],
+  "x_range": [
+   104,
+   745
+  ]
+ },
+ {
+  "file": "p05_r_1.png",
+  "page": 5,
+  "column": "right_col",
+  "y_range": [
+   212,
+   1076
+  ],
+  "x_range": [
+   772,
+   1397
+  ]
+ },
+ {
+  "file": "p05_r_2.png",
+  "page": 5,
+  "column": "right_col",
+  "y_range": [
+   1071,
+   2025
+  ],
+  "x_range": [
+   772,
+   1397
+  ]
+ },
+ {
+  "file": "p06_l_1.png",
+  "page": 6,
+  "column": "left_col",
+  "y_range": [
+   212,
+   1313
+  ],
+  "x_range": [
+   101,
+   715
+  ]
+ },
+ {
+  "file": "p06_l_2.png",
+  "page": 6,
+  "column": "left_col",
+  "y_range": [
+   1308,
+   2025
+  ],
+  "x_range": [
+   101,
+   715
+  ]
+ },
+ {
+  "file": "p06_r_1.png",
+  "page": 6,
+  "column": "right_col",
+  "y_range": [
+   80,
+   2025
+  ],
+  "x_range": [
+   743,
+   1394
+  ]
+ },
+ {
+  "file": "p07_l_1.png",
+  "page": 7,
+  "column": "left_col",
+  "y_range": [
+   211,
+   1207
+  ],
+  "x_range": [
+   103,
+   713
+  ]
+ },
+ {
+  "file": "p07_l_2.png",
+  "page": 7,
+  "column": "left_col",
+  "y_range": [
+   1202,
+   2025
+  ],
+  "x_range": [
+   103,
+   713
+  ]
+ },
+ {
+  "file": "p07_r_1.png",
+  "page": 7,
+  "column": "right_col",
+  "y_range": [
+   80,
+   2025
+  ],
+  "x_range": [
+   743,
+   1383
+  ]
+ },
+ {
+  "file": "p08_l_1.png",
+  "page": 8,
+  "column": "left_col",
+  "y_range": [
+   209,
+   577
+  ],
+  "x_range": [
+   103,
+   745
+  ]
+ },
+ {
+  "file": "p08_l_2.png",
+  "page": 8,
+  "column": "left_col",
+  "y_range": [
+   572,
+   1184
+  ],
+  "x_range": [
+   103,
+   745
+  ]
+ },
+ {
+  "file": "p08_l_3.png",
+  "page": 8,
+  "column": "left_col",
+  "y_range": [
+   1179,
+   2025
+  ],
+  "x_range": [
+   103,
+   745
+  ]
+ },
+ {
+  "file": "p08_r_1.png",
+  "page": 8,
+  "column": "right_col",
+  "y_range": [
+   209,
+   993
+  ],
+  "x_range": [
+   774,
+   1394
+  ]
+ },
+ {
+  "file": "p08_r_2.png",
+  "page": 8,
+  "column": "right_col",
+  "y_range": [
+   988,
+   2025
+  ],
+  "x_range": [
+   774,
+   1394
+  ]
+ },
+ {
+  "file": "p09_l_1.png",
+  "page": 9,
+  "column": "left_col",
+  "y_range": [
+   209,
+   1044
+  ],
+  "x_range": [
+   103,
+   745
+  ]
+ },
+ {
+  "file": "p09_l_2.png",
+  "page": 9,
+  "column": "left_col",
+  "y_range": [
+   1039,
+   2025
+  ],
+  "x_range": [
+   103,
+   745
+  ]
+ },
+ {
+  "file": "p09_r_1.png",
+  "page": 9,
+  "column": "right_col",
+  "y_range": [
+   209,
+   2025
+  ],
+  "x_range": [
+   774,
+   1394
+  ]
+ }
+]
