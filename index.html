@@ -1,0 +1,2557 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>지필평가 문항 분석기</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    /* 아이콘 톤: 진한 네이비 + 밝은 블루 + 화이트 */
+    --bg:#eef3fb;
+    --card:#ffffff;
+    --ink:#0f1d3d;
+    --ink-2:#2c3e70;
+    --muted:#6b7e9c;
+    --muted-2:#9aaac6;
+    --line:#dde6f3;
+    --line-2:#eef3fb;
+    --pri:#2563eb;          /* 메인 블루 */
+    --pri-deep:#1e3a8a;     /* 딥 네이비 */
+    --pri-light:#60a5fa;    /* 라이트 블루 */
+    --pri-50:#e0ecff;
+    --pri-100:#bfdbfe;
+    --accent:#38bdf8;       /* 시안 (포인트) */
+    --ok:#10b981; --warn:#f59e0b; --bad:#ef4444;
+    --shadow-sm:0 2px 4px rgba(30,58,138,.06);
+    --shadow:0 6px 20px rgba(30,58,138,.10);
+    --shadow-lg:0 14px 40px rgba(30,58,138,.16);
+    --shadow-blue:0 8px 24px rgba(37,99,235,.22);
+    --r:18px;               /* 라운드 더 크게 */
+    --r-sm:12px;
+    --ease:cubic-bezier(.4,0,.2,1);
+    --ease-bounce:cubic-bezier(.34,1.56,.64,1);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'에이투지체','AtoZ','Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    font-size:14px;
+    line-height:1.55;
+    letter-spacing:-.01em;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+
+  /* === HEADER === */
+  header{
+    background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 50%,#60a5fa 100%);
+    color:#fff;padding:20px 32px;
+    box-shadow:0 6px 24px rgba(30,58,138,.25);
+    position:relative;overflow:hidden;
+  }
+  header::before{
+    content:'';position:absolute;left:-40px;bottom:-40px;width:180px;height:180px;
+    background:radial-gradient(circle,rgba(56,189,248,.30) 0%,transparent 70%);pointer-events:none;
+  }
+  header::after{
+    content:'';position:absolute;right:-80px;top:-80px;width:280px;height:280px;
+    background:radial-gradient(circle,rgba(255,255,255,.22) 0%,transparent 70%);pointer-events:none;
+  }
+  header .icon-wrap{
+    width:64px;height:64px;border-radius:18px;
+    background:#fff;padding:0;box-shadow:0 6px 20px rgba(0,0,0,.15);
+    flex-shrink:0;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+  }
+  header .icon-wrap img{width:100%;height:100%;object-fit:cover;border-radius:18px;display:block}
+  header h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.025em;line-height:1.2}
+  header .sub{color:rgba(255,255,255,.92);font-size:13px;margin-top:3px;font-weight:500}
+
+  main{max-width:1320px;margin:0 auto;padding:24px}
+
+  /* === CARD === */
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--r);
+    padding:22px 24px;
+    margin-bottom:18px;
+    box-shadow:var(--shadow-sm);
+    transition:box-shadow .25s var(--ease), transform .25s var(--ease);
+    animation:fadeUp .55s var(--ease) both;
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+  .card h2{
+    margin:0 0 16px;font-size:16px;font-weight:800;
+    display:flex;align-items:center;gap:10px;letter-spacing:-.02em;color:var(--ink);
+  }
+  .card h2::before{
+    content:'';display:inline-block;width:5px;height:20px;
+    background:linear-gradient(180deg,var(--pri-deep),var(--pri-light));border-radius:3px;
+  }
+
+  /* === FORM === */
+  .row{display:flex;flex-wrap:wrap;gap:12px}
+  .row > *{flex:1;min-width:140px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500}
+  input[type="text"], select{
+    width:100%;padding:11px 14px;
+    border:2px solid var(--line);border-radius:12px;background:#fff;
+    font-size:14px;font-family:inherit;color:var(--ink);font-weight:500;
+    transition:border-color .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  input[type="text"]:focus, select:focus{
+    outline:none;border-color:var(--pri);
+    box-shadow:0 0 0 4px rgba(37,99,235,.15);
+  }
+  input[type="file"]{
+    padding:10px 12px;border:2px dashed var(--pri-100);border-radius:12px;
+    background:var(--pri-50);width:100%;cursor:pointer;font-family:inherit;font-size:13px;
+    color:var(--ink-2);font-weight:500;
+    transition:all .2s var(--ease);
+  }
+  input[type="file"]:hover{border-color:var(--pri);background:#d6e7ff;transform:translateY(-1px)}
+
+  button{
+    background:linear-gradient(135deg,var(--pri-deep),var(--pri));
+    color:#fff;border:0;padding:12px 24px;border-radius:14px;
+    cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;letter-spacing:-.005em;
+    box-shadow:var(--shadow-blue);
+    transition:transform .15s var(--ease-bounce), box-shadow .15s var(--ease), filter .15s;
+  }
+  button:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 10px 28px rgba(37,99,235,.35);filter:brightness(1.08)}
+  button:active{transform:translateY(0) scale(.98);box-shadow:0 2px 8px rgba(37,99,235,.25)}
+  button.ghost{
+    background:#fff;color:var(--ink);border:2px solid var(--line);
+    box-shadow:0 2px 6px rgba(30,58,138,.06);
+  }
+  button.ghost:hover{background:var(--pri-50);border-color:var(--pri);color:var(--pri-deep)}
+
+  .opts{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:13px;color:var(--muted)}
+  .opts label{display:inline-flex;align-items:center;gap:6px;color:var(--ink);font-size:13px;margin:0;font-weight:500}
+
+  /* === SUMMARY STATS === */
+  .summary{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px}
+  .stat{
+    background:linear-gradient(135deg,#e0ecff 0%,#dbeafe 100%);
+    border:1.5px solid rgba(37,99,235,.12);
+    border-radius:14px;padding:13px 15px;min-width:0;
+    transition:transform .2s var(--ease-bounce), box-shadow .2s var(--ease);
+    animation:fadeUp .5s var(--ease) both;
+    position:relative;overflow:hidden;
+  }
+  .stat::before{
+    content:'';position:absolute;top:0;right:0;width:50px;height:50px;
+    background:radial-gradient(circle,rgba(37,99,235,.10) 0%,transparent 70%);
+    pointer-events:none;
+  }
+  .stat:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(37,99,235,.20)}
+  .stat .k{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+  .stat .v{font-size:21px;font-weight:800;margin-top:6px;white-space:nowrap;letter-spacing:-.025em;color:var(--pri-deep)}
+  @media(max-width:900px){.summary{grid-auto-flow:row;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}}
+
+  /* === CHARTS === */
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .chart-box{
+    background:#fff;border:1.5px solid var(--line);border-radius:16px;
+    padding:16px;height:340px;position:relative;
+    transition:box-shadow .25s var(--ease), transform .25s var(--ease);
+    animation:fadeUp .55s var(--ease) both;
+  }
+  .chart-box:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
+  .chart-box.full{grid-column:1/-1;height:400px}
+
+  /* === TABLES === */
+  table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--line-2);text-align:right}
+  th:first-child,td:first-child{text-align:center}
+  th{
+    background:#eef4ff;font-weight:700;cursor:pointer;user-select:none;
+    position:sticky;top:0;z-index:1;
+    color:var(--ink);font-size:12.5px;letter-spacing:-.01em;
+    border-bottom:2px solid var(--pri-100);
+    transition:background .15s var(--ease);
+  }
+  th:hover{background:var(--pri-100);color:var(--pri-deep)}
+  td.dist-cell:hover{filter:brightness(.92);outline:2px solid var(--pri);outline-offset:-2px}
+  th .sort-ind{display:inline-block;margin-left:4px;font-size:10px;opacity:.35;transition:opacity .15s, color .15s}
+  th.sorted .sort-ind{opacity:1;color:var(--pri)}
+  tbody tr{transition:background .15s var(--ease)}
+  tbody tr:hover{background:var(--pri-50)}
+  tbody tr{animation:rowIn .4s var(--ease) both}
+
+  .tag{display:inline-block;padding:3px 9px;border-radius:11px;font-size:11px;font-weight:600;letter-spacing:-.005em}
+  .t-good{background:#d1fae5;color:#065f46}
+  .t-easy{background:#dbeafe;color:#1e40af}
+  .t-hard{background:#fef3c7;color:#92400e}
+  .t-warn{background:#fee2e2;color:#991b1b}
+  .t-risk{background:#7f1d1d;color:#fff}
+  .t-mid{background:#f1f5f9;color:#475569}
+
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .filters button{padding:6px 12px;font-size:12.5px;font-weight:500;box-shadow:none}
+
+  .table-wrap{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .table-wrap::-webkit-scrollbar{width:8px;height:8px}
+  .table-wrap::-webkit-scrollbar-thumb{background:#d1d5e3;border-radius:4px}
+  .table-wrap::-webkit-scrollbar-thumb:hover{background:var(--pri)}
+
+  details summary{
+    cursor:pointer;font-weight:600;padding:8px 0;
+    transition:color .15s var(--ease);list-style:none;
+  }
+  details summary::before{content:'▶';display:inline-block;margin-right:6px;font-size:10px;color:var(--muted);transition:transform .2s var(--ease)}
+  details[open] summary::before{transform:rotate(90deg)}
+  details summary:hover{color:var(--pri)}
+
+  /* === REVIEW === */
+  .review{
+    line-height:1.85;
+    background:linear-gradient(135deg,#f0f6ff 0%,#e6f1ff 100%);
+    padding:22px 24px;border-radius:16px;border:1.5px solid #cfe0ff;
+  }
+  .review h3{
+    margin:22px 0 12px;font-size:15px;font-weight:800;color:var(--ink);
+    display:flex;align-items:center;gap:8px;letter-spacing:-.02em;
+  }
+  .review h3::before{
+    content:'';width:5px;height:18px;background:linear-gradient(180deg,var(--pri-deep),var(--accent));border-radius:3px;
+  }
+  .review h3:first-child{margin-top:0}
+  .review p{margin:0 0 10px}
+  .review table{margin-top:8px;border:1.5px solid #cfe0ff;border-radius:10px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(30,58,138,.06)}
+  .review table th, .review table td{border:1px solid #e0e5f0;text-align:left;vertical-align:top;padding:9px 12px;background:#fff}
+  .review table th{background:#eef4ff;text-align:center;white-space:nowrap;color:var(--ink);font-weight:700}
+  .review table tbody tr:hover td{background:#f8faff}
+  .review .qcell{text-align:center;white-space:nowrap;font-weight:600}
+  .review .none{color:var(--muted-2);text-align:center}
+
+  .hidden{display:none}
+  .err{
+    background:#fee2e2;color:#991b1b;padding:12px 14px;border-radius:10px;margin-top:10px;
+    border-left:3px solid var(--bad);font-weight:500;
+    animation:shake .4s var(--ease);
+  }
+
+  /* === MODAL === */
+  .qmodal{position:fixed;inset:0;background:rgba(15,23,42,.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
+  .qmodal.on{display:flex;animation:fadeIn .25s var(--ease)}
+  .qmodal > div{animation:popIn .3s var(--ease)}
+  .qmodal img{max-width:95vw;max-height:90vh;background:#fff;border-radius:8px}
+  .qmodal .close{position:absolute;top:14px;right:18px;color:#fff;font-size:32px;cursor:pointer;background:none;border:0;line-height:1;box-shadow:none;padding:4px 10px;font-weight:300}
+  .qmodal .close:hover{transform:scale(1.1);background:rgba(255,255,255,.1)}
+
+  /* === ANIMATIONS === */
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(12px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+  @keyframes rowIn{
+    from{opacity:0;transform:translateX(-4px)}
+    to{opacity:1;transform:translateX(0)}
+  }
+  @keyframes fadeIn{from{opacity:0} to{opacity:1}}
+  @keyframes popIn{
+    from{opacity:0;transform:scale(.95)}
+    to{opacity:1;transform:scale(1)}
+  }
+  @keyframes shake{
+    0%,100%{transform:translateX(0)}
+    25%{transform:translateX(-4px)}
+    75%{transform:translateX(4px)}
+  }
+  /* 카드 등장 시 stagger */
+  #result .card:nth-child(1){animation-delay:.05s}
+  #result .card:nth-child(2){animation-delay:.12s}
+  #result .card:nth-child(3){animation-delay:.19s}
+  #result .card:nth-child(4){animation-delay:.26s}
+  #result .card:nth-child(5){animation-delay:.33s}
+  #result .card:nth-child(6){animation-delay:.40s}
+  .stat:nth-child(1){animation-delay:.05s}
+  .stat:nth-child(2){animation-delay:.10s}
+  .stat:nth-child(3){animation-delay:.15s}
+  .stat:nth-child(4){animation-delay:.20s}
+  .stat:nth-child(5){animation-delay:.25s}
+  .stat:nth-child(6){animation-delay:.30s}
+  .stat:nth-child(7){animation-delay:.35s}
+  .stat:nth-child(8){animation-delay:.40s}
+  .stat:nth-child(9){animation-delay:.45s}
+
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+  }
+  @media(max-width:800px){.charts{grid-template-columns:1fr}.chart-box.full{grid-column:auto} .ppr-grid, .cuts-grid{grid-template-columns:1fr !important}}
+  .cuts-mode.active{background:var(--pri-50)!important;border-color:var(--pri)!important;color:var(--pri-deep)!important}
+
+  /* ============ PRINT / PDF (A4 최적화) ============ */
+  @page {
+    size: A4 portrait;
+    margin: 10mm 9mm;
+  }
+  @media print {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    html, body { background: #fff !important; font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    /* 인쇄 불필요 요소 숨김 */
+    header, .no-print, #setup, .qmodal, footer, .filters { display: none !important; }
+    main { max-width: none; padding: 0; margin: 0; }
+
+    /* 인쇄용 헤더 (제목과 메타 정보) */
+    body::before {
+      content: "지필평가 문항 분석 보고서  ·  Exam Lens";
+      display: block;
+      font-size: 11px; font-weight: 700; color: #1a1f2e;
+      padding: 0 0 4px; margin: 0 0 8px;
+      border-bottom: 1.5px solid #5b6cff;
+      letter-spacing: -.01em;
+    }
+
+    /* 카드 압축 */
+    .card {
+      break-inside: avoid; page-break-inside: avoid;
+      border: 1px solid #d6dbe7; box-shadow: none; animation: none;
+      padding: 10px 12px; margin-bottom: 8px; border-radius: 6px;
+      background: #fff !important;
+    }
+    .card h2 { font-size: 11.5px; margin: 0 0 8px; gap: 6px; }
+    .card h2::before { width: 3px; height: 13px; }
+
+    /* 요약 통계 카드: 더 촘촘하게 */
+    .summary { gap: 4px; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); }
+    .stat { padding: 5px 7px; background: #f4f6ff !important; border: 1px solid #dde3ff; border-radius: 5px; }
+    .stat .k { font-size: 8px; }
+    .stat .v { font-size: 12px; margin-top: 2px; color: #1a1f2e; }
+
+    /* 차트: 인쇄용 적절한 크기 (2단 레이아웃 강제 유지) */
+    .charts { gap: 6px; grid-template-columns: 1fr 1fr !important; }
+    .chart-box {
+      height: 180px !important;
+      padding: 6px;
+      border: 1px solid #e0e5f0;
+      page-break-inside: avoid; break-inside: avoid;
+    }
+    .chart-box.full { height: 240px !important; grid-column: 1 / -1 !important; }
+    .chart-box canvas { max-height: 100% !important; max-width: 100% !important; }
+
+    /* 표 압축 */
+    table { font-size: 9.5px; }
+    th, td { padding: 3.5px 5px; border-bottom: 1px solid #eef1f7; }
+    th { background: #f4f6ff !important; font-size: 9px; }
+    th .sort-ind { display: none; }
+    .table-wrap { max-height: none !important; overflow: visible !important; border: 1px solid #d6dbe7; border-radius: 4px; }
+
+    /* 매트릭스/답지 분포(가로로 긴 표): 더 작게 */
+    #matrixTable, #distTable { font-size: 8.5px; }
+    #matrixTable th, #matrixTable td, #distTable th, #distTable td { padding: 3px 3px; }
+
+    /* 자동 총평 */
+    .review {
+      background: #fff !important; border: 1px solid #d6dbe7;
+      padding: 10px 12px; line-height: 1.55; font-size: 10px;
+    }
+    .review h3 { font-size: 11px; margin: 10px 0 5px; }
+    .review h3:first-child { margin-top: 0; }
+    .review table { font-size: 9px; }
+    .review table th, .review table td { padding: 4px 6px; }
+
+    /* 학생별 점수표 details는 강제 펼침 */
+    details > summary { display: none; }
+    details { display: block; }
+
+    /* 행 페이지 분리 방지 */
+    tbody tr { page-break-inside: avoid; }
+
+    /* 색상 보존 (Chart canvas는 자동, 표 배경은 위에서 설정) */
+    .stat .v, .review h3, .card h2 { color: #1a1f2e !important; }
+
+    /* 푸터 크레딧 (인쇄 시 다시 보이게) */
+    body::after {
+      content: "제작 · 산남고 이성훈   |   exam-lens   |   인쇄 페이지";
+      display: block; text-align: center;
+      font-size: 8.5px; color: #6b7280;
+      margin-top: 10px; padding-top: 6px; border-top: 1px solid #e5e7eb;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="position:relative;z-index:1;display:flex;align-items:center;gap:16px;max-width:1320px;margin:0 auto">
+    <div class="icon-wrap"><img src="icon.png" alt="Exam Lens"></div>
+    <div>
+      <h1>Exam-Lens · 지필평가 문항 분석기</h1>
+      <div class="sub">나이스 교과목별학생답정오표 기반 출제 검토 · 협의록 자동화 도구</div>
+    </div>
+  </div>
+</header>
+<link rel="icon" type="image/png" href="icon.png">
+
+<main>
+  <section class="card no-print" id="setup">
+    <h2>1. 파일 업로드 및 설정</h2>
+    <div style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border-left:4px solid var(--pri);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--ink-2);border-radius:10px;font-weight:500">
+      📥 <b style="color:var(--pri-deep)">다운로드 경로</b>: NEIS → 성적 → 지필평가조회 → 교과목별학생답정오표 → <b>[XLS data]</b> 저장
+    </div>
+    <div class="row">
+      <div style="flex:2">
+        <label>교과목별학생답정오표 (.xlsx, .xls) — 학급별 여러 파일 선택 가능</label>
+        <input type="file" id="file" accept=".xlsx,.xls" multiple>
+        <div id="fileList" style="margin-top:6px;font-size:12px;color:var(--muted)"></div>
+      </div>
+      <div>
+        <label>학년</label>
+        <select id="grade">
+          <option value="1">1학년 (5등급제)</option>
+          <option value="2">2학년 (5등급제)</option>
+          <option value="3">3학년 (9등급제)</option>
+        </select>
+      </div>
+      <div>
+        <label>과목명</label>
+        <input type="text" id="subject" placeholder="예: 통합사회">
+      </div>
+      <div>
+        <label>시험명</label>
+        <input type="text" id="examName" placeholder="예: 1학기 중간고사">
+      </div>
+    </div>
+    <div class="opts">
+      <label><input type="checkbox" id="anon"> 학생 이름 익명 처리</label>
+      <span style="color:var(--muted);font-size:12px">· 동점자는 중간석차백분율(NEIS 표준)로 등급 부여</span>
+    </div>
+
+    <div style="margin-top:14px;padding:12px 14px;background:#f8faff;border:1px solid var(--line);border-radius:12px">
+      <div style="font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">📋 학기말 환산 비율 (선택사항 · 학기 환산 분석용)</div>
+      <div class="row" style="gap:10px">
+        <div><label>중간 비율(%)</label><input type="number" id="midRatio" value="30" min="0" max="100" step="1"></div>
+        <div><label>기말 비율(%)</label><input type="number" id="finalRatio" value="30" min="0" max="100" step="1"></div>
+        <div><label>수행 비율(%)</label><input type="number" id="performRatio" value="40" min="0" max="100" step="1"></div>
+        <div><label>수행평가 평균 <span style="color:var(--muted);font-weight:400">(만점=수행 비율, 권장 90%)</span></label><input type="number" id="performMean" value="36" min="0" max="100" step="0.1"></div>
+        <div><label>이번 평가 종류</label>
+          <select id="examType">
+            <option value="mid">중간고사</option>
+            <option value="final">기말고사</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <button id="run">분석 시작</button>
+      <button class="ghost" onclick="window.print()">PDF / 인쇄</button>
+      <button class="ghost" onclick="saveHtml()" title="현재 앱을 HTML 파일로 저장 — 인터넷 없이도 더블클릭만으로 실행됩니다">HTML 저장</button>
+    </div>
+    <div id="err" class="err hidden"></div>
+  </section>
+
+  <div id="result" class="hidden">
+
+    <section class="card">
+      <h2 id="title">분석 요약</h2>
+      <div class="summary" id="summary"></div>
+    </section>
+
+    <section class="card">
+      <h2>점수 / 등급 분포</h2>
+      <div class="charts">
+        <div class="chart-box"><canvas id="histChart"></canvas></div>
+        <div class="chart-box"><canvas id="gradeChart"></canvas></div>
+        <div class="chart-box full"><canvas id="rankChart"></canvas></div>
+      </div>
+      <div id="gradeLegend" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;font-size:12px"></div>
+      <div style="margin-top:14px">
+        <table id="gradeTable"><thead><tr>
+          <th>등급</th><th>인원</th><th>비율(%)</th><th>최저점</th><th>최고점</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>성취도 분할점수 시뮬레이터</h2>
+      <p style="color:var(--muted);margin:0 0 12px;font-size:13px">분할점수를 바꿔 성취도(A~E·I) 분포가 어떻게 달라지는지 실시간으로 확인 · 정규분포 추천도 자동 계산</p>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="ghost cuts-mode" data-mode="fixed" style="background:var(--pri-50);border-color:var(--pri);color:var(--pri-deep)">고정 (90/80/70/60/40)</button>
+        <button class="ghost cuts-mode" data-mode="recommend">정규분포 추천 (10·25·30·25·10)</button>
+        <button class="ghost cuts-mode" data-mode="balanced">상위권 확대 (15·25·25·25·10)</button>
+        <button class="ghost cuts-mode" data-mode="custom">직접 입력 ↓</button>
+      </div>
+      <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:10px 12px;background:#f8faff;border:1px solid var(--line);border-radius:10px">
+        <div style="flex:0 0 auto"><label>A 컷 ≥</label><input type="number" id="cutA" value="90" min="0" max="100" step="0.1" style="width:80px"></div>
+        <div style="flex:0 0 auto"><label>B 컷 ≥</label><input type="number" id="cutB" value="80" min="0" max="100" step="0.1" style="width:80px"></div>
+        <div style="flex:0 0 auto"><label>C 컷 ≥</label><input type="number" id="cutC" value="70" min="0" max="100" step="0.1" style="width:80px"></div>
+        <div style="flex:0 0 auto"><label>D 컷 ≥</label><input type="number" id="cutD" value="60" min="0" max="100" step="0.1" style="width:80px"></div>
+        <div style="flex:0 0 auto"><label>E 컷 ≥</label><input type="number" id="cutE" value="40" min="0" max="100" step="0.1" style="width:80px"></div>
+        <button id="cutsApply" style="padding:9px 18px">시뮬레이션 적용</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:14px" class="cuts-grid">
+        <div class="chart-box" style="height:300px"><canvas id="cutsChart"></canvas></div>
+        <div>
+          <table id="cutsCompTable" style="font-size:12.5px"></table>
+          <div id="cutsNote"></div>
+          <p style="font-size:11.5px;color:var(--muted);margin:8px 0 0">※ 미도달(I) 기준은 40점으로 고정 권장 (성취평가제 표준) · 컷은 항상 A ≥ B ≥ C ≥ D ≥ E 순서 유지</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>학기말 환산 점수 분석</h2>
+      <p style="color:var(--muted);margin:0 0 12px;font-size:13px">위 [학기말 환산 비율] 입력 기준 · 이번 평가가 학기말 점수에 얼마나 기여하는지, 적정 평균을 위한 기말 평균 권고 산출</p>
+      <div id="finalScoreAnalysis"></div>
+    </section>
+
+    <section class="card">
+      <h2>문항별 정답률 / 변별도</h2>
+      <div class="charts">
+        <div class="chart-box"><canvas id="pChart"></canvas></div>
+        <div class="chart-box"><canvas id="dChart"></canvas></div>
+        <div class="chart-box"><canvas id="correctnessChart"></canvas></div>
+        <div class="chart-box"><canvas id="scatter"></canvas></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>문항 분석표</h2>
+      <div class="filters no-print">
+        <button class="ghost" data-f="all">전체</button>
+        <button class="ghost" data-f="review">검토 필요만</button>
+        <button class="ghost" data-f="good">우수 문항만</button>
+        <button class="ghost" data-f="lowp">정답률 낮은 순</button>
+        <button class="ghost" data-f="lowd">변별도 낮은 순</button>
+      </div>
+      <div class="table-wrap" style="max-height:none">
+        <table id="itemTable"><thead><tr>
+          <th>문항</th><th>배점</th><th>정답</th><th>응답수</th>
+          <th>정답률(%)</th><th>변별도</th><th>난이도</th><th>판정</th>
+          <th>검토 의견</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>배점-정답률 적정성 분석</h2>
+      <p style="color:var(--muted);margin:0 0 12px;font-size:13px">출제자가 부여한 배점(난이도 의도)과 실제 정답률의 일치 여부 점검 · 이상적으로는 <b>음의 상관</b>(배점↑ → 정답률↓) · 산점도 점 클릭 시 문항번호 표시</p>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px" class="ppr-grid">
+        <div class="chart-box" style="height:340px"><canvas id="pointRateChart"></canvas></div>
+        <div>
+          <div id="pprSummary" style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border:1.5px solid rgba(37,99,235,.12);border-radius:14px;padding:14px 16px;margin-bottom:10px"></div>
+          <div class="table-wrap" style="max-height:280px">
+            <table id="pprTable"></table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>성취도(A~E·I) × 문항 정답률 매트릭스</h2>
+      <p style="color:var(--muted);margin:0 0 12px;font-size:13px">상위 등급 학생일수록 정답률이 높아야 정상. 패턴이 깨진 셀은 문항 검토 신호입니다. (셀 색: 초록=높음 → 빨강=낮음)</p>
+      <div class="table-wrap" style="max-height:none">
+        <table id="matrixTable"></table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>답지 반응 분포 (선지별 응답률)</h2>
+      <p style="color:var(--muted);margin:0 0 12px;font-size:13px">셀 클릭 시 해당 응답 학생 명단 · 정답 선지 ✓ 초록 · 0% 선지는 매력도 부족 신호 · 30% 이상 매력적 오답은 빨강 · '복수답안' 컬럼은 알파벳 코드 (A=1,2 / B=1,3 …)</p>
+      <div class="table-wrap" style="max-height:none">
+        <table id="distTable"></table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>출제 검토 자동 총평</h2>
+      <div class="review" id="review"></div>
+    </section>
+
+    <div class="qmodal" id="gModal" onclick="if(event.target===this)this.classList.remove('on')">
+      <div style="background:#fff;border-radius:10px;max-width:720px;width:95vw;max-height:85vh;overflow:auto;padding:20px;position:relative">
+        <button class="close" style="color:#1f2330" onclick="document.getElementById('gModal').classList.remove('on')">×</button>
+        <h2 id="gModalTitle" style="margin:0 0 12px;font-size:16px"></h2>
+        <table style="width:100%;border-collapse:collapse;font-size:13px" id="gModalTable">
+          <thead><tr style="background:#f9fafb">
+            <th style="padding:6px;border-bottom:1px solid #e5e7eb">반</th>
+            <th style="padding:6px;border-bottom:1px solid #e5e7eb">번호</th>
+            <th style="padding:6px;border-bottom:1px solid #e5e7eb">이름</th>
+            <th style="padding:6px;border-bottom:1px solid #e5e7eb;text-align:right">총점</th>
+            <th style="padding:6px;border-bottom:1px solid #e5e7eb;text-align:right">석차</th>
+            <th style="padding:6px;border-bottom:1px solid #e5e7eb;text-align:right">등급</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <section class="card">
+      <details>
+        <summary>학생별 점수표 (내부 확인용)</summary>
+        <div class="table-wrap" style="margin-top:10px">
+          <table id="studentTable"><thead><tr>
+            <th>반</th><th>번호</th><th>이름</th><th>선택형</th><th>서답형</th><th>총점</th>
+            <th>석차</th><th>등급</th>
+          </tr></thead><tbody></tbody></table>
+        </div>
+      </details>
+    </section>
+
+  </div>
+</main>
+
+<footer style="text-align:center;padding:28px 20px 36px;color:var(--muted);font-size:12px;letter-spacing:.02em">
+  <div style="display:inline-flex;align-items:center;gap:10px;padding:10px 20px;background:#fff;border:1.5px solid var(--pri-100);border-radius:999px;box-shadow:var(--shadow-blue)">
+    <img src="icon.png" alt="" style="width:22px;height:22px;border-radius:6px;object-fit:contain">
+    <span>Exam-Lens · 제작 <b style="color:var(--pri-deep)">산남고 이성훈</b></span>
+  </div>
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let charts = {}, lastItems = [], lastFilter = 'all';
+
+function showErr(msg){
+  const e = $('err'); e.textContent = msg; e.classList.remove('hidden');
+}
+function clearErr(){ $('err').classList.add('hidden'); }
+
+function destroyChart(k){ if(charts[k]){ charts[k].destroy(); charts[k]=null; } }
+
+function num(v){
+  if(v===null||v===undefined||v==='') return null;
+  const n = Number(String(v).replace(/[^0-9.\-]/g,''));
+  return isFinite(n)?n:null;
+}
+
+function parseExamInfo(rows){
+  // 3행(index 2)에 시험 정보가 있음
+  // 예: "2026학년도  1학기  주간  3학년  2 강의실  중간고사  사회(역사/도덕포함):한국지리(3)"
+  const row = rows[2] || [];
+  const raw = row.map(c=>String(c||'').trim()).filter(Boolean).join(' ');
+  // "2026학년도"가 "6학년"으로 오인되지 않도록 학년도/학기 토큰 먼저 제거
+  const text = raw.replace(/\d+\s*학년도/g, '');
+  const info = {raw};
+  let m;
+  if((m = text.match(/([1-3])\s*학년/))) info.grade = +m[1];
+  const semester = (m = text.match(/(\d)\s*학기/)) ? (m[1]+'학기') : '';
+  const exam = (m = text.match(/(중간고사|기말고사|수행평가|쪽지시험)/)) ? m[1] : '';
+  info.examName = [semester, exam].filter(Boolean).join(' ');
+  // 과목: 콜론(:) 다음 괄호 전 텍스트, 없으면 "(N)" 앞 마지막 의미있는 단어
+  if((m = text.match(/:\s*([^():]+?)\s*\(/))) info.subject = m[1].trim();
+  else if((m = text.match(/:\s*([^():]+)$/))) info.subject = m[1].trim();
+  else if((m = text.match(/([가-힣A-Za-z]+)\s*\(\d+\)\s*$/))) info.subject = m[1].trim();
+  return info;
+}
+
+function parseSheet(rows){
+  // 나이스 교과목별학생답정오표 양식
+  // A=학번, B=반/번호(예 1/4), C=이름, D~=문항, 끝부분=선택형점수/서답형점수/기타점수/과목총점
+  // 4행=문항번호, 5행=정답, 6행=배점, 7행~=학생  (1-based) → index 3,4,5,6+
+  if(rows.length < 7) throw new Error('데이터 행이 부족합니다. 나이스 교과목별학생답정오표 양식인지 확인하세요.');
+  const headRow = rows[3] || [];
+  const ansRow  = rows[4] || [];
+  const ptsRow  = rows[5] || [];
+
+  const colNo = 0, colCls = 1, colName = 2;
+
+  // 요약 컬럼(선택형점수/서답형점수/기타점수/과목총점) 위치 — 행 1~6 전체에서 라벨 검색
+  let colSel=-1, colDesc=-1, colEtc=-1, colTotal=-1;
+  const maxCols = Math.max(...rows.slice(0,7).map(r=>(r||[]).length));
+  for(let r=0;r<Math.min(7,rows.length);r++){
+    const row = rows[r]||[];
+    for(let c=0;c<maxCols;c++){
+      const v = String(row[c]??'').replace(/\s/g,'');
+      if(!v) continue;
+      if(colSel<0 && v.includes('선택형점수')) colSel=c;
+      if(colDesc<0 && v.includes('서답형점수')) colDesc=c;
+      if(colEtc<0 && v.includes('기타점수')) colEtc=c;
+      if(colTotal<0 && (v.includes('과목총점')||v==='총점')) colTotal=c;
+    }
+  }
+  if(colTotal<0) throw new Error('과목총점 컬럼을 찾지 못했습니다. 파일 양식을 확인해주세요.');
+
+  // 문항 컬럼: D열(인덱스 3)부터 시작, 행4가 양의 정수인 셀만, 요약컬럼 직전까지
+  const summaryStart = Math.min(...[colSel,colDesc,colEtc,colTotal].filter(v=>v>=0));
+  const items = [];
+  for(let c=3;c<summaryStart;c++){
+    const h = headRow[c];
+    const qn = num(h);
+    if(qn===null || qn<=0 || !Number.isInteger(qn)) continue;
+    items.push({col:c, qno:qn, answer:String(ansRow[c]??'').trim(), points:num(ptsRow[c])||0});
+  }
+  if(items.length===0) throw new Error('문항 컬럼을 찾지 못했습니다 (D열부터 행4의 문항번호 확인).');
+
+  // 학생 데이터 (행7~)
+  const students = [];
+  for(let r=6;r<rows.length;r++){
+    const row = rows[r]; if(!row) continue;
+    const sno = row[colNo];
+    const cname = String(row[colName]??'').trim();
+    if((sno===undefined||sno===null||String(sno).trim()==='') && !cname) continue;
+    const total = num(row[colTotal]);
+    if(total===null) continue; // 응시하지 않은 행 제외
+    const sel = colSel>=0?num(row[colSel]):null;
+    const desc = colDesc>=0?num(row[colDesc]):null;
+    const responses = items.map(it=>String(row[it.col]??'').trim());
+    students.push({
+      no:String(sno??''),
+      cls:String(row[colCls]??''),
+      name:cname,
+      sel, desc, total,
+      responses
+    });
+  }
+  if(students.length===0) throw new Error('학생 데이터가 없습니다.');
+  return {items, students};
+}
+
+// ---- 등급별 색상 (1등급=빨강 → 마지막등급=보라) ----
+const GRADE_COLORS_5 = ['#dc2626','#f97316','#16a34a','#2563eb','#7c3aed'];
+const GRADE_COLORS_9 = ['#dc2626','#ea580c','#f97316','#eab308','#16a34a','#0891b2','#2563eb','#7c3aed','#581c87'];
+function gradeColor(g, max){ return (max===9?GRADE_COLORS_9:GRADE_COLORS_5)[Math.min(g,max)-1] || '#9ca3af'; }
+
+
+function isCorrect(resp){
+  // '.' = 정답
+  return resp === '.';
+}
+
+// 막대 위 값 라벨 플러그인 (전역)
+const valueLabel = {
+  id:'valueLabel',
+  afterDatasetsDraw(chart, args, opts){
+    if(!opts) return;
+    const {ctx} = chart;
+    const lineH = 13;
+    chart.data.datasets.forEach((ds, dsi)=>{
+      const meta = chart.getDatasetMeta(dsi);
+      meta.data.forEach((el, i)=>{
+        const v = ds.data[i];
+        if(v==null || v===0) return;
+        ctx.save();
+        ctx.fillStyle = opts.color||'#1a1f2e';
+        ctx.font = `600 11px ${(window.Chart && Chart.defaults && Chart.defaults.font && Chart.defaults.font.family) || 'sans-serif'}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        const out = opts.formatter ? opts.formatter(v, {dsi, i, chart}) : String(v);
+        const lines = Array.isArray(out) ? out : [out];
+        lines.forEach((line, idx)=>{
+          ctx.fillText(line, el.x, el.y - 4 - (lines.length-1-idx)*lineH);
+        });
+        ctx.restore();
+      });
+    });
+  }
+};
+
+// ---- 분할점수 시뮬레이터 ----
+let _lastStudents = null;
+
+function applyCuts(students, cuts){
+  const counts = {A:0, B:0, C:0, D:0, E:0, I:0};
+  students.forEach(s=>{
+    if(s.total==null) return;
+    if(s.total>=cuts.A) counts.A++;
+    else if(s.total>=cuts.B) counts.B++;
+    else if(s.total>=cuts.C) counts.C++;
+    else if(s.total>=cuts.D) counts.D++;
+    else if(s.total>=cuts.E) counts.E++;
+    else counts.I++;
+  });
+  return counts;
+}
+
+function recommendCuts(students, ratios){
+  // ratios: {A,B,C,D} 순서 누적 (E는 D 다음, I는 40 미만 고정)
+  const totals = students.map(s=>s.total).filter(v=>v!=null).sort((a,b)=>b-a);
+  const n = totals.length;
+  if(n===0) return {A:90,B:80,C:70,D:60,E:40};
+  const at = (cumRatio)=>{
+    const idx = Math.min(n-1, Math.max(0, Math.round(n*cumRatio)-1));
+    return Math.round(totals[idx]*10)/10;
+  };
+  const E = 40; // 미도달(I) 기준 고정
+  // 데이터 기반 추천 컷
+  let D = at(ratios.A+ratios.B+ratios.C+ratios.D);
+  let C = at(ratios.A+ratios.B+ratios.C);
+  let B = at(ratios.A+ratios.B);
+  let A = at(ratios.A);
+  // 단조성 보정: A ≥ B ≥ C ≥ D ≥ E (E 미만은 I)
+  D = Math.max(D, E);
+  C = Math.max(C, D);
+  B = Math.max(B, C);
+  A = Math.max(A, B);
+  return {A, B, C, D, E};
+}
+
+function validateCuts(cuts){
+  // A > B > C > D ≥ E 순서가 맞아야 함
+  const issues = [];
+  if(cuts.A < cuts.B) issues.push('A컷이 B컷보다 낮음');
+  if(cuts.B < cuts.C) issues.push('B컷이 C컷보다 낮음');
+  if(cuts.C < cuts.D) issues.push('C컷이 D컷보다 낮음');
+  if(cuts.D < cuts.E) issues.push('D컷이 E컷보다 낮음');
+  return issues;
+}
+
+function renderCutsChart(cuts, students){
+  destroyChart('cuts');
+  // 단조성 검증 및 자동 보정
+  const issues = validateCuts(cuts);
+  if(issues.length){
+    // 자동 보정 (낮은 등급 컷이 높은 등급 컷을 추월하지 않도록)
+    cuts.D = Math.max(cuts.D, cuts.E);
+    cuts.C = Math.max(cuts.C, cuts.D);
+    cuts.B = Math.max(cuts.B, cuts.C);
+    cuts.A = Math.max(cuts.A, cuts.B);
+    setCuts(cuts);
+  }
+  const counts = applyCuts(students, cuts);
+  const fixedCuts = {A:90,B:80,C:70,D:60,E:40};
+  const fixedCounts = applyCuts(students, fixedCuts);
+  const labels = ['A','B','C','D','E','I'];
+  const colors = ['#dc2626','#f97316','#eab308','#16a34a','#2563eb','#7c3aed'];
+  const totalN = students.filter(s=>s.total!=null).length;
+
+  charts.cuts = new Chart($('cutsChart'), {
+    type:'bar',
+    plugins:[valueLabel],
+    data:{
+      labels,
+      datasets:[
+        {label:'고정 분할', data: labels.map(l=>fixedCounts[l]), backgroundColor:'rgba(148,163,184,.5)', borderRadius:4, borderSkipped:false, categoryPercentage:0.7, barPercentage:0.85},
+        {label:'시뮬레이션', data: labels.map(l=>counts[l]), backgroundColor:colors, borderRadius:6, borderSkipped:false, categoryPercentage:0.7, barPercentage:0.85}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      animation:{duration:700, easing:'easeOutQuart'},
+      plugins:{
+        title:{display:true, text:'성취도 분포 비교 (회색=고정 / 컬러=시뮬레이션)', color:'#1a1f2e', font:{size:13,weight:'600'}, padding:{bottom:6}},
+        legend:{position:'bottom', labels:{boxWidth:14, font:{size:11}}},
+        tooltip:{
+          backgroundColor:'rgba(26,31,46,.92)', titleColor:'#fff', bodyColor:'#e5e7eb', padding:10, cornerRadius:8,
+          callbacks:{label:c=>{
+            const pct = totalN? (c.raw/totalN*100).toFixed(1)+'%' : '-';
+            return `${c.dataset.label}: ${c.raw}명 (${pct})`;
+          }}
+        },
+        valueLabel:{formatter:v=>v+'명'}
+      },
+      scales:{
+        x:{grid:{display:false}},
+        y:{beginAtZero:true, ticks:{precision:0}, grid:{color:'rgba(229,232,240,.6)'}}
+      }
+    }
+  });
+
+  // 비교 표
+  let html = '<thead><tr><th>등급</th><th>고정</th><th>시뮬레이션</th><th>변화</th></tr></thead><tbody>';
+  labels.forEach((l,i)=>{
+    const fc = fixedCounts[l], cc = counts[l];
+    const diff = cc - fc;
+    const diffStr = diff===0?'·' : (diff>0?`+${diff}`:`${diff}`);
+    const diffColor = diff===0?'#6b7280' : (diff>0?'#059669':'#dc2626');
+    html += `<tr>
+      <td style="text-align:center;font-weight:600"><span style="display:inline-block;width:10px;height:10px;background:${colors[i]};border-radius:2px;margin-right:6px"></span>${l}</td>
+      <td style="text-align:right">${fc}명</td>
+      <td style="text-align:right;font-weight:600">${cc}명 (${totalN?(cc/totalN*100).toFixed(1):'-'}%)</td>
+      <td style="text-align:center;color:${diffColor};font-weight:600">${diffStr}</td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  $('cutsCompTable').innerHTML = html;
+
+  // 보정 안내 (E 컷이 추천값보다 높아 다른 컷이 끌려올라간 경우)
+  const noteBox = document.getElementById('cutsNote');
+  if(noteBox){
+    if(issues.length){
+      noteBox.innerHTML = `<div style="background:#fef3c7;color:#92400e;padding:8px 12px;border-radius:8px;font-size:12px;margin-top:8px;border-left:3px solid #f59e0b">⚠ 추천 컷이 데이터 분포상 E컷(40)보다 낮아져 자동 보정됨 (${issues.join(' / ')}). 평균이 낮은 시험에서는 일부 등급이 비게 될 수 있음.</div>`;
+    } else {
+      noteBox.innerHTML = '';
+    }
+  }
+}
+
+function setCuts(cuts){
+  $('cutA').value = cuts.A; $('cutB').value = cuts.B; $('cutC').value = cuts.C;
+  $('cutD').value = cuts.D; $('cutE').value = cuts.E;
+}
+function readCuts(){
+  return {
+    A: parseFloat($('cutA').value)||90,
+    B: parseFloat($('cutB').value)||80,
+    C: parseFloat($('cutC').value)||70,
+    D: parseFloat($('cutD').value)||60,
+    E: parseFloat($('cutE').value)||40
+  };
+}
+
+function setupCutsSimulator(students){
+  _lastStudents = students;
+  renderCutsChart(readCuts(), students);
+}
+
+// ---- 학기말 환산 점수 분석 ----
+function renderFinalScoreAnalysis(stats){
+  const midR = parseFloat($('midRatio').value)||0;
+  const finR = parseFloat($('finalRatio').value)||0;
+  const perR = parseFloat($('performRatio').value)||0;
+  const perfMean = parseFloat($('performMean').value)||0;
+  const examType = $('examType').value;
+  const sum = midR + finR + perR;
+  const examMean = stats.mean;
+
+  let html = '';
+  // 비율 합계 검증
+  if(Math.abs(sum-100) > 0.5){
+    html += `<div style="background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:13px">⚠ 비율 합계가 ${sum}%로 100%가 아닙니다. 비율을 확인해주세요.</div>`;
+  }
+  if(midR===0 && finR===0 && perR===0){
+    $('finalScoreAnalysis').innerHTML = `<p style="color:var(--muted)">상단 [학기말 환산 비율]을 입력하세요.</p>`;
+    return;
+  }
+
+  const myRatio = examType==='mid'? midR : finR;
+  const otherExamRatio = examType==='mid'? finR : midR;
+  const otherExamLabel = examType==='mid'? '기말' : '중간';
+  const myLabel = examType==='mid'? '중간' : '기말';
+  const myContribution = examMean * (myRatio/100);
+
+  html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:16px">
+    <div style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border:1.5px solid rgba(37,99,235,.12);border-radius:12px;padding:12px 14px">
+      <div style="font-size:11px;color:var(--muted)">현재 ${myLabel} 평균</div>
+      <div style="font-size:22px;font-weight:800;color:var(--pri-deep)">${examMean.toFixed(1)}점</div>
+    </div>
+    <div style="background:linear-gradient(135deg,#dcfce7,#d1fae5);border:1.5px solid rgba(16,185,129,.15);border-radius:12px;padding:12px 14px">
+      <div style="font-size:11px;color:var(--muted)">학기 환산 기여 (${myRatio}%)</div>
+      <div style="font-size:22px;font-weight:800;color:#047857">+${myContribution.toFixed(2)}점</div>
+    </div>
+    <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1.5px solid rgba(245,158,11,.15);border-radius:12px;padding:12px 14px">
+      <div style="font-size:11px;color:var(--muted)">수행평가 기여 (만점 ${perR}점)</div>
+      <div style="font-size:22px;font-weight:800;color:#b45309">+${(perfMean).toFixed(2)}점</div>
+    </div>
+  </div>`;
+
+  // 시나리오 표: 다른 시험(기말 또는 중간) 평균에 따른 학기 환산
+  if(otherExamRatio>0){
+    html += `<div style="background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px">
+      <div style="background:#eef4ff;padding:8px 12px;font-weight:600;font-size:13px;color:var(--ink)">📊 시나리오 — ${otherExamLabel} 평균에 따른 학기말 환산 평균</div>
+      <table style="width:100%;font-size:13px;border-collapse:collapse">
+        <thead><tr style="background:#f8faff">
+          <th style="padding:7px;border-bottom:1px solid var(--line)">${otherExamLabel} 평균</th>
+          <th style="padding:7px;border-bottom:1px solid var(--line);text-align:right">${myLabel}(${myRatio}%) 기여</th>
+          <th style="padding:7px;border-bottom:1px solid var(--line);text-align:right">${otherExamLabel}(${otherExamRatio}%) 기여</th>
+          <th style="padding:7px;border-bottom:1px solid var(--line);text-align:right">수행(만점 ${perR}점) 기여</th>
+          <th style="padding:7px;border-bottom:1px solid var(--line);text-align:right;font-weight:700">학기 환산 평균</th>
+          <th style="padding:7px;border-bottom:1px solid var(--line);text-align:center">예상 성취도</th>
+        </tr></thead><tbody>`;
+    [40, 50, 60, 70, 80, 90].forEach(otherMean=>{
+      const semesterMean = examMean*myRatio/100 + otherMean*otherExamRatio/100 + perfMean;
+      const ach = semesterMean>=90?'A':semesterMean>=80?'B':semesterMean>=70?'C':semesterMean>=60?'D':semesterMean>=40?'E':'I';
+      const achColor = ach==='A'?'#dc2626':ach==='B'?'#f97316':ach==='C'?'#eab308':ach==='D'?'#16a34a':ach==='E'?'#2563eb':'#7c3aed';
+      html += `<tr>
+        <td style="padding:7px;text-align:center;border-bottom:1px solid var(--line-2)">${otherMean}점</td>
+        <td style="padding:7px;text-align:right;border-bottom:1px solid var(--line-2);color:#6b7280">${(examMean*myRatio/100).toFixed(2)}</td>
+        <td style="padding:7px;text-align:right;border-bottom:1px solid var(--line-2);color:#6b7280">${(otherMean*otherExamRatio/100).toFixed(2)}</td>
+        <td style="padding:7px;text-align:right;border-bottom:1px solid var(--line-2);color:#6b7280">${(perfMean).toFixed(2)}</td>
+        <td style="padding:7px;text-align:right;border-bottom:1px solid var(--line-2);font-weight:700;color:var(--pri-deep)">${semesterMean.toFixed(2)}점</td>
+        <td style="padding:7px;text-align:center;border-bottom:1px solid var(--line-2)"><span style="background:${achColor};color:#fff;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700">${ach}</span></td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+
+  // 권고 박스 (목표 학기 평균 → 필요 기말 평균 역산)
+  if(otherExamRatio>0){
+    const need = (target)=>{
+      // semesterMean = examMean*myR/100 + otherMean*otherExamR/100 + perfMean
+      // otherMean = (target - examMean*myR/100 - perfMean) / (otherExamR/100)
+      return (target - examMean*myRatio/100 - perfMean) / (otherExamRatio/100);
+    };
+    let recHtml = `<div style="background:linear-gradient(135deg,#f0f6ff,#e6f1ff);border:1.5px solid #cfe0ff;border-radius:12px;padding:14px 16px">
+      <div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:8px">🎯 적정 학기 환산 평균을 위한 ${otherExamLabel} 평균 권고</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">`;
+    [70, 75, 80].forEach(target=>{
+      const reqMean = need(target);
+      const feasible = reqMean>=0 && reqMean<=100;
+      const note = !feasible ? (reqMean<0?'(이미 초과 달성)':'(달성 불가)') : '';
+      const color = !feasible ? '#9ca3af' : (reqMean>85?'#dc2626':reqMean>70?'#f59e0b':'#10b981');
+      recHtml += `<div style="background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 12px">
+        <div style="font-size:11px;color:var(--muted)">학기 환산 평균 ${target}점 목표</div>
+        <div style="font-size:18px;font-weight:700;color:${color};margin-top:4px">${otherExamLabel} 평균 ${reqMean.toFixed(1)}점 ${note}</div>
+      </div>`;
+    });
+    recHtml += `</div>`;
+    // 종합 코멘트
+    const need70 = need(70);
+    let comment = '';
+    if(examMean<55){
+      const reachable = need70>=0 && need70<=100;
+      comment = reachable
+        ? `· 이번 ${myLabel} 평균이 다소 낮은 편이므로, 학기 환산 평균을 적정 수준(70점 내외)으로 끌어올리려면 ${otherExamLabel} 평균이 <b>${need70.toFixed(1)}점 이상</b> 나와야 함. ${otherExamLabel} 출제 시 정답률 70~80% 구간 기본 개념 확인 문항 비중을 높여 평균 회복이 필요함.`
+        : `· 이번 ${myLabel} 평균이 다소 낮아, ${otherExamLabel}만으로 학기 환산 평균 70점 달성은 사실상 어려움(${otherExamLabel} 평균 ${need70.toFixed(1)}점 필요). 차기 평가 출제 시 난이도 균형 재설계가 필요함.`;
+    } else if(examMean>80){
+      comment = `· 이번 ${myLabel} 평균이 높은 편이므로, ${otherExamLabel}을 동일한 난이도로 출제 시 학기 평균이 과도하게 높아질 수 있음. ${otherExamLabel}은 정답률 40~70% 중심의 변별 강화 문항 비중을 높여 균형을 맞출 필요가 있음.`;
+    } else {
+      comment = `· ${myLabel} 평균이 적정 수준이므로, ${otherExamLabel}도 유사한 난이도(평균 60~70점대)를 유지하면 학기 환산 평균이 안정적으로 형성될 것으로 예상됨.`;
+    }
+    recHtml += `<div style="margin-top:10px;font-size:12.5px;color:var(--ink-2);line-height:1.6">${comment}</div></div>`;
+    html += recHtml;
+  }
+
+  $('finalScoreAnalysis').innerHTML = html;
+}
+
+function pearsonCorr(xs, ys){
+  const n = xs.length;
+  if(n<2) return null;
+  const mx = xs.reduce((a,b)=>a+b,0)/n;
+  const my = ys.reduce((a,b)=>a+b,0)/n;
+  let num=0, dx2=0, dy2=0;
+  for(let i=0;i<n;i++){
+    const dx = xs[i]-mx, dy = ys[i]-my;
+    num += dx*dy; dx2 += dx*dx; dy2 += dy*dy;
+  }
+  const denom = Math.sqrt(dx2*dy2);
+  return denom===0 ? 0 : num/denom;
+}
+
+function analyzePointRate(items){
+  const xs = items.map(i=>i.points);
+  const ys = items.map(i=>i.p*100);
+  const r = pearsonCorr(xs, ys);
+  const meanPt = xs.reduce((a,b)=>a+b,0)/items.length;
+  const meanP  = ys.reduce((a,b)=>a+b,0)/items.length;
+  // 4사분면 분류
+  const flagged = items.map(i=>{
+    const ptHigh = i.points >= meanPt;
+    const pHigh  = i.p*100 >= meanP;
+    let kind=null, advice='';
+    if(ptHigh && pHigh){ kind='고배점-쉬움'; advice='고배점 문항임에도 정답률이 높음 → 점수 인플레 가능, 차기에는 동일 단원 심화 문항으로 대체 검토'; }
+    else if(!ptHigh && !pHigh){ kind='저배점-어려움'; advice='저배점 문항임에도 정답률이 낮음 → 학생 노력 보상 부족, 배점 상향 또는 난도 하향 검토'; }
+    else if(ptHigh && !pHigh){ kind='적정(고난도-고배점)'; }
+    else if(!ptHigh && pHigh){ kind='적정(기본-저배점)'; }
+    return {qno:i.qno, points:i.points, p:i.p, kind, advice, mismatch: !!advice};
+  });
+  return {r, meanPt, meanP, flagged};
+}
+
+function calcCronbach(items, students){
+  // KR-20/Cronbach α (선택형 문항만 기준)
+  const k = items.length;
+  if(k < 2) return null;
+  const itemTotals = students.map(s=>{
+    let sum = 0;
+    items.forEach((it,idx)=>{ if(s.responses[idx]==='.') sum += it.points; });
+    return sum;
+  });
+  const n = itemTotals.length; if(n<2) return null;
+  const mean = itemTotals.reduce((a,b)=>a+b,0)/n;
+  const totalVar = itemTotals.reduce((a,b)=>a+(b-mean)**2,0)/n;
+  if(totalVar === 0) return null;
+  let itemVarSum = 0;
+  items.forEach((it,idx)=>{
+    let cnt=0, ok=0;
+    students.forEach(s=>{
+      const r = s.responses[idx];
+      if(r==='' || r===undefined) return;
+      cnt++;
+      if(r==='.') ok++;
+    });
+    if(cnt===0) return;
+    const p = ok/cnt;
+    itemVarSum += (it.points**2) * p * (1-p);
+  });
+  return (k/(k-1)) * (1 - itemVarSum/totalVar);
+}
+
+function achievementMatrix(items, students){
+  const groups = [
+    {label:'A', filter:t=>t>=90},
+    {label:'B', filter:t=>t>=80&&t<90},
+    {label:'C', filter:t=>t>=70&&t<80},
+    {label:'D', filter:t=>t>=60&&t<70},
+    {label:'E', filter:t=>t>=40&&t<60},
+    {label:'I', filter:t=>t<40},
+  ];
+  return groups.map(g=>{
+    const grp = students.filter(s=>s.total!=null && g.filter(s.total));
+    const rates = items.map((it,idx)=>{
+      const valid = grp.filter(s=>s.responses[idx]!=='' && s.responses[idx]!==undefined);
+      if(valid.length===0) return null;
+      const ok = valid.filter(s=>s.responses[idx]==='.').length;
+      return ok/valid.length;
+    });
+    return {label:g.label, n:grp.length, rates};
+  });
+}
+
+function calcStats(students){
+  const totals = students.map(s=>s.total).filter(v=>v!==null);
+  const n = totals.length;
+  if(n===0) return null;
+  const sum = totals.reduce((a,b)=>a+b,0);
+  const mean = sum/n;
+  const sd = Math.sqrt(totals.reduce((a,b)=>a+(b-mean)**2,0)/n);
+  const sorted = [...totals].sort((a,b)=>a-b);
+  const median = n%2 ? sorted[(n-1)/2] : (sorted[n/2-1]+sorted[n/2])/2;
+  const sels = students.map(s=>s.sel).filter(v=>v!==null);
+  const descs = students.map(s=>s.desc).filter(v=>v!==null);
+  return {
+    n, mean, sd, median,
+    max: Math.max(...totals), min: Math.min(...totals),
+    selMean: sels.length? sels.reduce((a,b)=>a+b,0)/sels.length : null,
+    descMean: descs.length? descs.reduce((a,b)=>a+b,0)/descs.length : null
+  };
+}
+
+function calcItems(items, students){
+  // sort by total desc for discrimination
+  const sorted = [...students].filter(s=>s.total!==null).sort((a,b)=>b.total-a.total);
+  const n = sorted.length;
+  const k = Math.max(1, Math.round(n*0.27));
+  const top = sorted.slice(0,k);
+  const bot = sorted.slice(n-k);
+
+  return items.map((it, idx)=>{
+    // 정오표 코드: '.'=정답 / 1~5=오답 선지 / A~Z=복수답안 / '-'=무표기 / 빈칸=무응답
+    let cnt=0, ok=0;
+    const dist = {};
+    students.forEach(s=>{
+      const r = s.responses[idx];
+      if(r===''||r===undefined||r==='-') return; // 무응답/무표기 제외
+      cnt++;
+      if(isCorrect(r)) ok++;
+      const key = isCorrect(r) ? '정답' : r;
+      dist[key] = (dist[key]||0) + 1;
+    });
+    // 매력적 오답: 가장 많이 선택된 단일 숫자 오답 선지(알파벳/복수답안 제외)
+    const wrongs = Object.entries(dist)
+      .filter(([k])=>k!=='정답' && /^\d+$/.test(k))
+      .sort((a,b)=>b[1]-a[1]);
+    const topWrong = wrongs[0] ? {choice:wrongs[0][0], n:wrongs[0][1], rate: cnt?wrongs[0][1]/cnt:0} : null;
+    const p = cnt? ok/cnt : 0;
+    const tOk = top.filter(s=>isCorrect(s.responses[idx])).length / k;
+    const bOk = bot.filter(s=>isCorrect(s.responses[idx])).length / k;
+    const d = tOk - bOk;
+
+    let diff;
+    if(p>=0.8) diff='쉬움';
+    else if(p>=0.6) diff='적절';
+    else if(p>=0.4) diff='다소 어려움';
+    else if(p>=0.2) diff='어려움';
+    else diff='매우 어려움';
+
+    let verdict, tag, comment='';
+    if(d<0){ verdict='위험 문항'; tag='t-risk'; comment='음수 변별도 — 정답/선지 검토 필요'; }
+    else if(p>=0.9 && d<0.2){ verdict='과도하게 쉬움'; tag='t-easy'; comment='너무 쉬움 + 변별 낮음'; }
+    else if(p<0.2){ verdict='과도하게 어려움'; tag='t-warn'; comment='정답률 20% 미만'; }
+    else if(d<0.1){ verdict='검토 필요'; tag='t-warn'; comment='변별도 0.10 미만'; }
+    else if(p<0.4 && d>=0.3){ verdict='고난도 변별'; tag='t-good'; comment='어렵지만 변별 우수'; }
+    else if(p>=0.8){ verdict='쉬운 확인 문항'; tag='t-easy'; comment=''; }
+    else if(p>=0.4 && p<=0.8 && d>=0.3){ verdict='우수 문항'; tag='t-good'; comment=''; }
+    else { verdict='보통'; tag='t-mid'; comment=''; }
+
+    return {qno:it.qno, points:it.points, answer:it.answer, n:cnt, p, d, diff, verdict, tag, comment, dist, topWrong, tOk, bOk};
+  });
+}
+
+function gradeCuts(grade){
+  if(grade===3) return [0.04,0.11,0.23,0.40,0.60,0.77,0.89,0.96,1.00];
+  return [0.10,0.34,0.66,0.90,1.00];
+}
+
+function assignGrades(students, grade){
+  // NEIS 표준: 중간석차 = 석차 + (동석차 인원수 - 1) / 2
+  //           중간석차백분율 = 중간석차 / 수강자수 × 100
+  // 동점자 그룹 전체에 동일한 중간석차백분율을 적용해 같은 등급 부여
+  const cuts = gradeCuts(grade);
+  const list = students.filter(s=>s.total!==null).sort((a,b)=>b.total-a.total);
+  const n = list.length;
+  let i=0;
+  while(i<n){
+    let j=i;
+    while(j+1<n && list[j+1].total===list[i].total) j++;
+    const startRank = i + 1;                        // 석차
+    const groupSize = j - i + 1;
+    const midRank = startRank + (groupSize - 1) / 2; // 중간석차
+    const midPct = midRank / n;                       // 중간석차백분율(0~1)
+    let g = cuts.length;
+    for(let c=0;c<cuts.length;c++) if(midPct <= cuts[c]+1e-9){ g=c+1; break; }
+    for(let x=i;x<=j;x++){
+      list[x].rank = startRank;
+      list[x].midRank = midRank;
+      list[x].midPct = midPct;
+      list[x].grade = g;
+    }
+    i = j+1;
+  }
+  students.forEach(s=>{ if(s.total===null){ s.grade=null; s.rank=null; s.midRank=null; s.midPct=null; } });
+  return list;
+}
+
+function gradeDist(students, grade){
+  const max = grade===3?9:5;
+  const out = [];
+  for(let g=1;g<=max;g++){
+    const arr = students.filter(s=>s.grade===g);
+    const totals = arr.map(s=>s.total);
+    out.push({
+      grade:g, n:arr.length,
+      ratio: students.length? arr.length/students.length*100 : 0,
+      min: totals.length?Math.min(...totals):null,
+      max: totals.length?Math.max(...totals):null
+    });
+  }
+  return out;
+}
+
+function histogram(students){
+  const totals = students.map(s=>s.total).filter(v=>v!==null);
+  // 성취도 5단계 (A/B/C/D/E) — I(40미만)는 E에 포함되며 stacked로 시각화
+  const labels = ['A (90↑)','B (80~90)','C (70~80)','D (60~70)','E (60↓)'];
+  const counts  = [0,0,0,0,0]; // E는 40~60만
+  const iCounts = [0,0,0,0,0]; // E 위에 겹쳐 표시할 I(40미만) 인원
+  totals.forEach(t=>{
+    if(t>=90) counts[0]++;
+    else if(t>=80) counts[1]++;
+    else if(t>=70) counts[2]++;
+    else if(t>=60) counts[3]++;
+    else if(t>=40) counts[4]++;        // E (40~60)
+    else iCounts[4]++;                  // I (40미만) → E 위에 적층
+  });
+  // 클릭 시 학생 필터에 사용할 범위
+  const ranges = [
+    {label:'A (90 이상)',     test:t=>t>=90},
+    {label:'B (80 ~ 90)',     test:t=>t>=80&&t<90},
+    {label:'C (70 ~ 80)',     test:t=>t>=70&&t<80},
+    {label:'D (60 ~ 70)',     test:t=>t>=60&&t<70},
+    {label:'E (40 ~ 60)',     test:t=>t>=40&&t<60},
+  ];
+  const iRange = {label:'I (40 미만 · 미도달)', test:t=>t<40};
+  return {labels, data:counts, iData:iCounts, ranges, iRange};
+}
+
+function classBreakdown(students){
+  const map = {};
+  students.forEach(s=>{
+    const cls = (s.cls||'').split('/')[0] || '미상';
+    if(!map[cls]) map[cls] = [];
+    if(s.total!==null) map[cls].push(s.total);
+  });
+  const arr = Object.entries(map).map(([cls,vs])=>({
+    cls, n:vs.length,
+    mean: vs.length? vs.reduce((a,b)=>a+b,0)/vs.length : 0
+  })).sort((a,b)=>a.cls.localeCompare(b.cls,'ko',{numeric:true}));
+  const means = arr.map(a=>a.mean);
+  const spread = means.length>1 ? Math.max(...means)-Math.min(...means) : 0;
+  return {classes:arr, spread};
+}
+
+function tagOf(h){ return h ? [h.unit,h.element].filter(Boolean).join(' / ') : ''; }
+function reasonForHigh(item, h){
+  const tag = tagOf(h);
+  const intent = h?.difficulty || '';
+  const intentMatch = /상|어려/.test(intent);
+  if(item.d<0){
+    return `${tag?tag+'에 대한 ':''}쉬운 문항임에도 음수 변별도가 나타남. 상위권 학생들이 오히려 오답을 선택했을 가능성이 있으므로 정답 처리 및 선지 표현의 모호성을 우선 검토할 필요가 있음.`;
+  }
+  if(item.d<0.1){
+    return `${tag?tag+'에 대한 ':''}기본 개념 확인 문항으로 보이나 변별도가 낮아 모든 수준의 학생이 정답을 선택함. 변별 기능이 약하므로 차기 평가에서는 선지 구성을 보완하거나 동일 단원의 심화 문항으로 대체하는 방안을 검토할 필요가 있음.`;
+  }
+  if(intentMatch && item.p>=0.85){
+    return `${tag?tag+'에 대해 ':''}출제 난이도는 '${intent}'으로 의도했으나 정답률이 ${(item.p*100).toFixed(1)}%로 매우 높게 나타남. 발문이 단서를 과도하게 제공했거나 선지 매력도가 낮았을 가능성이 있으므로 차기 출제 시 자료 해석·추론 과정을 강화할 필요가 있음.`;
+  }
+  if(item.p>=0.95){
+    return `${tag?tag+'에 대한 ':''}거의 모든 학생이 정답을 선택한 기본 개념 확인 문항으로, 학습 내용에 대한 전반적 이해도가 안정적임을 보여줌. 다만 변별 측면에서는 기여도가 제한적이므로 출제 비중 조정이 필요함.`;
+  }
+  if(item.p>=0.9){
+    return `${tag?tag+'에 대한 ':''}기본적인 개념 이해를 확인하는 문항으로 학생 대다수가 정답을 선택함. 난이도를 고려했을 때 적정한 확인 문항으로 판단됨.`;
+  }
+  return `${tag?tag+' ':''}기본 개념 확인 문항으로 난이도를 고려했을 때 적정한 것으로 판단됨.`;
+}
+function reasonForLow(item, h){
+  const tag = tagOf(h);
+  const intent = h?.difficulty || '';
+  const intentEasy = /하|쉬/.test(intent);
+  const intentHard = /상|어려/.test(intent);
+  if(item.d<0){
+    return `${tag?tag+' — ':''}음수 변별도(${item.d.toFixed(2)})로 나타나 하위권의 정답률이 상위권보다 높은 비정상적 패턴을 보임. 정답 처리 오류 가능성, 선지 표현의 모호성, 발문 해석의 다의성 여부를 우선 점검하고 필요 시 복수 정답 처리 또는 문항 폐기를 검토할 필요가 있음.`;
+  }
+  if(intentEasy){
+    return `${tag?tag+'에 대한 ':''}출제 난이도는 '${intent}'(으)로 의도했으나 실제 정답률이 ${(item.p*100).toFixed(1)}%에 그침. 학생들의 사전 학습 수준과 수업 진행 속도가 출제 의도와 어긋났을 가능성이 있으므로 해당 단원의 수업 도입 단계 보완이 필요함.`;
+  }
+  const wrongNote = item.topWrong && item.topWrong.rate>=0.3 ? ` 학생들의 ${(item.topWrong.rate*100).toFixed(0)}%가 ${item.topWrong.choice}번 선지를 선택하여 특정 오개념이 광범위하게 형성되어 있는 것으로 판단되므로, 해당 오답 유형을 활용한 보충 지도가 효과적일 것으로 보임.` : '';
+  if(intentHard){
+    return `${tag?tag+'에 대한 ':''}고난도 문항으로 출제 의도(${intent})에 부합하는 결과임. 상위권 ${(item.tOk*100).toFixed(0)}% / 하위권 ${(item.bOk*100).toFixed(0)}%의 정답률 차이로 변별 기능을 적정 수준 수행함.${wrongNote}`;
+  }
+  return `${tag?tag+'에 대한 ':''}학생들의 이해도가 낮은 것으로 판단됨. 해당 단원에 대한 보충 지도와 함께 자료 해석·문제 해결 과정에 대한 학습 안내가 필요함.${wrongNote}`;
+}
+
+
+function buildReview(stats, items, gd, grade, subject, examName, students, alpha){
+  const cls = classBreakdown(students);
+  const totals = students.map(s=>s.total).filter(v=>v!==null);
+  // 만점은 항상 100점 가정 (성취도 분할기준 A:90~100)
+  const FULL = 100;
+  const perfect = totals.filter(t=>t>=FULL).length;
+  const aGrade = totals.filter(t=>t>=90).length;
+  const eGrade = totals.filter(t=>t>=40 && t<60).length;
+  const under40 = totals.filter(t=>t<40).length;
+  const aRate = stats.n? aGrade/stats.n : 0;
+  const under40Rate = stats.n? under40/stats.n : 0;
+
+  // 표현 보정 (의미 있는 학급만 spread에 반영)
+  const spreadDesc = cls.spread<5?'편차가 작은 편임'
+    : cls.spread<10?'편차가 크지 않은 편임'
+    : cls.spread<15?'편차가 다소 큰 편임':'편차가 큰 편임';
+  const aDesc = aRate>=0.20?'비교적 높은 성취를 보임'
+    : aRate>=0.10?'적정 수준의 성취를 보임'
+    : '다소 낮은 성취를 보임';
+  const meanDesc = stats.mean>=80?'매우 높은'
+    : stats.mean>=70?'다소 높은'
+    : stats.mean>=60?'적정한'
+    : stats.mean>=50?'다소 낮은'
+    : '낮은';
+
+  // 요약 서술
+  let narrative = '';
+  narrative += `<p>본 평가의 응시자는 <b>${stats.n}명</b>이며, 평균 <b>${stats.mean.toFixed(1)}점</b>(표준편차 ${stats.sd.toFixed(1)}점, 최고 ${stats.max}점 / 최저 ${stats.min}점)으로 ${meanDesc} 수준의 성취를 보임. `;
+  if(cls.classes.length>1){
+    const spreadNote = cls.significantCount>=2
+      ? `학급별(5명 이상 응시 학급 기준) 평균 차이는 약 ${cls.spread.toFixed(1)}점으로 ${spreadDesc}`
+      : `응시 학급 수가 적어 학급별 비교의 통계적 의미는 제한적`;
+    narrative += `${spreadNote}. `;
+  }
+  narrative += `</p>`;
+
+  narrative += `<p>성취도(고정분할 기준) 분포를 보면 `;
+  narrative += `<b>A(90점 이상)</b> ${aGrade}명(${(aRate*100).toFixed(1)}%)`;
+  if(perfect>0) narrative += ` 가운데 만점자 ${perfect}명을 포함`;
+  narrative += `, <b>E(40~60점)</b> ${eGrade}명, `;
+  narrative += `<b>I(40점 미만 · 미도달)</b> <span style="color:#dc2626;font-weight:600">${under40}명(${(under40Rate*100).toFixed(1)}%)</span>으로 나타남. `;
+  narrative += `해당 A구간 비중은 ${aDesc}. `;
+  if(under40>0){
+    narrative += `미도달(I) 학생에 대해서는 단원별 보충 지도와 함께 다음 학기 평가 전 진단·개별 피드백이 필요함. `;
+  }
+  narrative += `</p>`;
+
+  // 격차/난이도 통합 코멘트
+  let extra = '';
+  if(stats.sd>=22) extra += `표준편차가 ${stats.sd.toFixed(1)}점으로 상·하위권 점수 격차가 크게 나타나, 학습 격차 해소를 위한 수준별 지도 보완이 필요함. `;
+  else if(stats.sd<=10) extra += `표준편차가 ${stats.sd.toFixed(1)}점으로 점수 분포가 좁아 학생 간 변별이 충분히 이루어지지 않은 측면이 있음. `;
+  if(stats.mean<55) extra += `전반적인 정답률이 낮아 중하위권 학생의 학습 동기 유지를 위해 기본 개념 확인 문항 비중을 보완할 필요가 있음. `;
+  else if(stats.mean>=82) extra += `전반적인 정답률이 높아 상위권 변별이 어려운 구조이므로 차기 평가에서는 추론·자료 해석 중심의 고난도 문항을 추가할 필요가 있음. `;
+  if(extra) narrative += `<p>${extra}</p>`;
+
+  // 학급별 표 (5명 이상 학급은 ★ 표시)
+  let classTable = '';
+  if(cls.classes.length>1){
+    classTable = `<table><thead><tr><th>학급</th><th>응시</th><th>평균</th></tr></thead><tbody>`
+      + cls.classes.map(c=>{
+          const small = c.n<5;
+          const note = small ? ' <span style="color:#9ca3af;font-size:11px">(소규모)</span>' : '';
+          return `<tr><td class="qcell">${c.cls}반</td><td class="qcell">${c.n}</td><td class="qcell">${c.mean.toFixed(1)}${note}</td></tr>`;
+        }).join('')
+      + `</tbody></table>`;
+    if(cls.significantCount<cls.classes.length){
+      classTable += `<p style="font-size:11.5px;color:#6b7280;margin:4px 0 0">※ 응시 인원이 5명 미만인 학급은 평균값의 통계적 신뢰성이 낮아 학급별 편차 산정에서 제외됨.</p>`;
+    }
+  }
+
+  // 문항 분석 표 (90% 이상 / 30% 미만)
+  const high = items.filter(i=>i.p>=0.9).sort((a,b)=>a.qno-b.qno);
+  const low  = items.filter(i=>i.p<0.3).sort((a,b)=>a.qno-b.qno);
+  const itemRow = (label, list, kind) => {
+    if(list.length===0) return `<tr><td class="qcell" rowspan="1">${label}</td><td class="none">-</td><td class="none">해당 사항 없음</td></tr>`;
+    return list.map((i,idx)=>{
+      const reason = kind==='high' ? reasonForHigh(i,null) : reasonForLow(i,null);
+      return `<tr>${idx===0?`<td class="qcell" rowspan="${list.length}">${label}</td>`:''}<td class="qcell">${i.qno}번 (${(i.p*100).toFixed(1)}%)</td><td>${reason}</td></tr>`;
+    }).join('');
+  };
+  const itemTable = `<table><thead><tr><th>정답률</th><th>문항(정답률%)</th><th>원인분석 및 대책</th></tr></thead><tbody>`
+    + itemRow('90% 이상', high, 'high')
+    + itemRow('30% 미만', low, 'low')
+    + `</tbody></table>`;
+
+  // 매력적 오답 분석
+  let attractSection = '';
+  const attract = items.filter(i=>i.p<0.6 && i.topWrong && i.topWrong.rate>=0.3)
+                       .sort((a,b)=>b.topWrong.rate-a.topWrong.rate);
+  if(attract.length){
+    const rows = attract.slice(0,8).map(i=>`<tr>
+      <td class="qcell">${i.qno}번</td>
+      <td class="qcell">정답 ${i.answer}</td>
+      <td class="qcell">${i.topWrong.choice}번 (${(i.topWrong.rate*100).toFixed(1)}%)</td>
+      <td>학생 다수가 ${i.topWrong.choice}번 선지를 선택. 해당 선지가 정답으로 보일 만한 부분 개념 또는 오개념을 활용한 보충 지도 필요.</td>
+    </tr>`).join('');
+    attractSection = `<h3>4. 매력적 오답 분석</h3>`
+      + `<p>오답률이 30% 이상인 특정 선지가 존재하는 문항을 정리함. 매력적 오답이 형성된 문항은 학생들의 공통된 오개념을 보여주므로 해당 부분에 대한 집중 보충 지도가 필요함.</p>`
+      + `<table><thead><tr><th>문항</th><th>정답</th><th>최다 오답 선지</th><th>해석 및 지도 방향</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  // 변별도 위험 문항 상세
+  let riskSection = '';
+  const risk = items.filter(i=>i.d<0.1).sort((a,b)=>a.d-b.d);
+  if(risk.length){
+    const rows = risk.map(i=>{
+      let cause = '';
+      if(i.d<0) cause = `음수 변별도 — 정답 처리 / 선지 표현 우선 검토`;
+      else if(i.p>=0.9) cause = `과도하게 쉬워 변별 미작용 — 출제 비중 조정`;
+      else if(i.p<0.2) cause = `과도하게 어려워 모두 오답 경향 — 난도 조정 또는 발문 명료화`;
+      else cause = `정답률은 적정하나 상하위 구분 미흡 — 선지 매력도 재점검`;
+      return `<tr>
+        <td class="qcell">${i.qno}번</td>
+        <td class="qcell">${(i.p*100).toFixed(1)}%</td>
+        <td class="qcell">${i.d.toFixed(2)}</td>
+        <td class="qcell">상 ${(i.tOk*100).toFixed(0)}% / 하 ${(i.bOk*100).toFixed(0)}%</td>
+        <td>${cause}</td>
+      </tr>`;
+    }).join('');
+    riskSection = `<h3>5. 변별도 검토 필요 문항</h3>`
+      + `<table><thead><tr><th>문항</th><th>정답률</th><th>변별도</th><th>상/하 정답률</th><th>원인 및 조치</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  // 종합 의견
+  const goodN = items.filter(i=>i.verdict==='우수 문항'||i.verdict==='고난도 변별').length;
+  const reviewN = items.filter(i=>i.d<0.1).length;
+  const negD = items.filter(i=>i.d<0).length;
+  const goodPct = items.length? goodN/items.length*100 : 0;
+  const reviewPct = items.length? reviewN/items.length*100 : 0;
+
+  const alphaDesc = alpha==null ? null
+    : alpha>=0.9 ? '매우 높은'
+    : alpha>=0.8 ? '높은'
+    : alpha>=0.7 ? '적정'
+    : alpha>=0.6 ? '다소 낮은'
+    : alpha>=0.5 ? '낮은' : '매우 낮은';
+  const alphaText = alpha!=null
+    ? ` 검사 신뢰도(Cronbach α)는 <b>${alpha.toFixed(3)}</b>으로 <b>${alphaDesc}</b> 수준임.`
+    : '';
+
+  // 우수 문항 비중 차기 목표 — 100% 캡
+  let goalText;
+  if(goodPct < 40)      goalText = `차기 평가에서는 우수 문항 비중을 <b>50% 이상</b> 수준으로 확대 필요`;
+  else if(goodPct < 60) goalText = `우수 문항 비중을 <b>60~70% 수준</b>으로 높이는 것을 목표로 함`;
+  else if(goodPct < 80) goalText = `우수 문항 비중을 <b>80% 수준</b>으로 향상시키는 것을 목표로 함`;
+  else if(goodPct < 95) goalText = `현재 우수 문항 비중(${goodPct.toFixed(0)}%)을 <b>유지·향상</b>하며 단원별 균형에 집중`;
+  else                  goalText = `현재의 우수 문항 비중(${goodPct.toFixed(0)}%)을 <b>유지</b>하며 단원별 출제 비중과 난도 균형 점검에 집중`;
+
+  let closing = `<p>전체 ${items.length}문항 중 정답률 40~80%·변별도 0.30 이상의 <b>우수 문항</b>은 ${goodN}개(${goodPct.toFixed(0)}%), 변별도 0.10 미만으로 <b>검토가 필요한 문항</b>은 ${reviewN}개(${reviewPct.toFixed(0)}%), 그 중 음수 변별도 문항은 ${negD}개로 분석됨.${alphaText}</p>`;
+  closing += `<p>`;
+  // 평균 기반 코멘트
+  if(stats.mean>=82) closing += `· 평균이 ${stats.mean.toFixed(1)}점으로 다소 높아 상위권 변별 여지가 제한적임. 차기 평가에서는 정답률 30~50% 구간의 고난도 추론 문항을 2~3문항 추가하여 변별 기능을 보완할 필요가 있음.<br>`;
+  else if(stats.mean<55) closing += `· 평균이 ${stats.mean.toFixed(1)}점으로 낮아 학생들의 학습 동기 저하가 우려됨. 정답률 70% 이상의 기본 개념 확인 문항 비중을 30% 수준으로 확보하여 기본 학력 점검 기능을 강화할 필요가 있음.<br>`;
+  else closing += `· 평균 ${stats.mean.toFixed(1)}점·표준편차 ${stats.sd.toFixed(1)}점으로 전반적인 난이도는 적정 수준임.<br>`;
+  // 변별도 / 검토 필요 코멘트
+  if(negD>0) closing += `· 음수 변별도 문항 ${negD}개에 대한 정답 처리·선지 표현·복수 정답 가능성 점검이 우선 필요함.<br>`;
+  if(reviewPct>=25) closing += `· 검토 필요 문항 비율이 ${reviewPct.toFixed(0)}%로 다소 높아 출제 후 동료 교사 교차 검토 단계 강화가 요구됨.<br>`;
+  // 신뢰도 코멘트 (보정 권고)
+  if(alpha!=null && alpha<0.7) closing += `· 신뢰도(α=${alpha.toFixed(3)})가 적정 기준(0.7)에 미치지 못해, 변별도 낮은 문항 정비와 문항 수 보완이 필요함.<br>`;
+  // 배점-정답률 적정성 코멘트
+  const ppr = analyzePointRate(items);
+  if(ppr.r != null){
+    if(ppr.r > 0.1){
+      closing += `· 배점-정답률 상관계수가 ${ppr.r.toFixed(2)}로 양의 관계를 보여 쉬운 문항에 더 높은 배점이 매겨진 패턴임. 차기 출제 시 배점 체계를 난이도와 일치하도록 재설계할 필요가 있음.<br>`;
+    } else if(ppr.r > -0.1){
+      closing += `· 배점-정답률 상관계수가 ${ppr.r.toFixed(2)}로 배점이 실제 난이도와 무관하게 매겨진 경향이 있음. 출제 단계에서 예상 정답률에 근거한 배점 부여를 검토할 필요가 있음.<br>`;
+    } else if(ppr.r < -0.4){
+      closing += `· 배점-정답률 상관계수가 ${ppr.r.toFixed(2)}로 배점과 실제 난이도가 잘 매칭되어 있어, 출제자의 난이도 예측이 적정한 수준임.<br>`;
+    }
+    const mismCnt = ppr.flagged.filter(f=>f.mismatch).length;
+    if(mismCnt > items.length*0.3) closing += `· 배점-난이도 부조화 문항이 ${mismCnt}개(${Math.round(mismCnt/items.length*100)}%)로 다소 많음. 차기 출제 시 문항별 예상 정답률을 명시하고 그에 근거하여 배점을 재조정하는 절차가 필요함.<br>`;
+  }
+  // 학급 격차 (의미 있는 학급 수가 2개 이상일 때만)
+  if(cls.spread>=10 && cls.significantCount>=2) closing += `· 학급별 평균 편차가 ${cls.spread.toFixed(1)}점으로 다소 큼. 학급 간 학습 격차 원인 분석과 진도·수업 방식 점검이 필요함.<br>`;
+  // 미도달
+  if(under40Rate>=0.15) closing += `· 미도달(40점 미만) 학생 비율이 ${(under40Rate*100).toFixed(0)}%로 높아 해당 학생군에 대한 별도의 학습 지원 프로그램 운영 검토가 필요함.<br>`;
+  // 마무리 — 100% 캡 적용
+  closing += `· ${goalText}하고, 단원별 출제 비중과 난이도 균형을 사전 협의하는 절차를 강화하고자 함.`;
+  closing += `</p>`;
+
+  const head = `<h3>${grade}학년 · ${subject||'과목'} · ${examName||'중간고사'} 결과 분석</h3>`;
+  return head
+    + `<h3>1. 평균 및 성취도 해석</h3>` + narrative + classTable
+    + `<h3>2. 문항 분석 및 대책</h3>` + itemTable
+    + (attractSection || '')
+    + (riskSection || '')
+    + `<h3>6. 종합 의견 및 개선 방향</h3>` + closing;
+}
+
+function animateCount(el, target, duration, decimals, suffix){
+  const start = performance.now();
+  function frame(now){
+    const t = Math.min(1, (now-start)/duration);
+    const eased = 1 - Math.pow(1-t, 3); // easeOutCubic
+    const cur = target * eased;
+    el.textContent = cur.toFixed(decimals) + suffix;
+    if(t < 1) requestAnimationFrame(frame);
+    else el.textContent = (Number.isInteger(target)?target.toString():target.toFixed(decimals)) + suffix;
+  }
+  requestAnimationFrame(frame);
+}
+function activateCountUp(){
+  document.querySelectorAll('#summary .stat .v').forEach((el, i)=>{
+    const text = el.textContent;
+    const m = text.match(/^(-?\d+(?:\.\d+)?)(\D*)$/);
+    if(!m) return;
+    const target = parseFloat(m[1]);
+    const suffix = m[2] || '';
+    const decimals = m[1].includes('.') ? m[1].split('.')[1].length : 0;
+    el.textContent = '0' + suffix;
+    setTimeout(()=>animateCount(el, target, 1100, decimals, suffix), 80 + i*60);
+  });
+}
+
+function renderSummary(stats, grade, alpha){
+  const alphaInfo = alpha!=null ? (alpha>=0.9?'매우 높음':alpha>=0.8?'높음':alpha>=0.7?'적정':alpha>=0.6?'다소 낮음':alpha>=0.5?'낮음':'매우 낮음') : '';
+  const alphaTitle = alpha!=null ? `검사 신뢰도 — ${alphaInfo} (Cronbach α)` : '신뢰도 계산 불가';
+  const cards = [
+    ['응시자 수', stats.n+'명'],
+    ['평균', stats.mean.toFixed(2)],
+    ['표준편차', stats.sd.toFixed(2)],
+    ['중앙값', stats.median.toFixed(1)],
+    ['최고점', stats.max],
+    ['최저점', stats.min],
+    ['선택형 평균', stats.selMean!==null?stats.selMean.toFixed(2):'-'],
+    ['서답형 평균', stats.descMean!==null?stats.descMean.toFixed(2):'-'],
+    ['신뢰도 α', alpha!=null?alpha.toFixed(3):'-', alphaTitle],
+    ['등급제', grade===3?'9등급제':'5등급제'],
+  ];
+  $('summary').innerHTML = cards.map(([k,v,t])=>`<div class="stat"${t?` title="${t}"`:''}><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+}
+
+function renderGradeTable(gd, grade){
+  const maxG = grade===3?9:5;
+  const tb = $('gradeTable').querySelector('tbody');
+  tb.innerHTML = gd.map(g=>`<tr>
+    <td><span style="display:inline-block;width:10px;height:10px;background:${gradeColor(g.grade,maxG)};border-radius:2px;margin-right:6px;vertical-align:middle"></span>${g.grade}등급</td>
+    <td>${g.n}</td><td>${g.ratio.toFixed(1)}</td>
+    <td>${g.min??'-'}</td><td>${g.max??'-'}</td>
+  </tr>`).join('');
+  $('gradeLegend').innerHTML = gd.map(g=>`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:14px;height:14px;background:${gradeColor(g.grade,maxG)};border-radius:3px"></span>${g.grade}등급</span>`).join('');
+}
+
+// (HWPX/PDF 인식 코드 제거됨 — 정확도 한계)
+async function _removed_pdf(){
+  return;
+  /* removed
+  const pdf = null;
+  const SCALE = 2.0;
+  const pages = []; // {canvas, vp, w, h, tokens:[{x,y,w,h,text,fontH}]}
+  for(let p=1;p<=pdf.numPages;p++){
+    const page = await pdf.getPage(p);
+    const vp = page.getViewport({scale:SCALE});
+    const canvas = document.createElement('canvas');
+    canvas.width = vp.width; canvas.height = vp.height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    await page.render({canvasContext:ctx, viewport:vp}).promise;
+    const tc = await page.getTextContent();
+    const tokens = tc.items.map(it=>{
+      const tx = pdfjsLib.Util.transform(vp.transform, it.transform);
+      return {x:tx[4], y:tx[5], w:(it.width||0)*SCALE, h:(it.height||0)*SCALE, text:String(it.str||'').trim(), fontH:Math.abs(tx[3])};
+    }).filter(t=>t.text);
+    pages.push({canvas, vp, w:canvas.width, h:canvas.height, tokens});
+  }
+
+  // 진단: 텍스트 레이어 확인
+  const totalTokens = pages.reduce((a,p)=>a+p.tokens.length,0);
+  if(totalTokens===0) throw new Error('PDF에 텍스트 레이어가 없습니다(스캔본일 가능성). OCR된 PDF가 필요합니다.');
+
+  // 문항번호 후보 수집 — 다양한 패턴 허용
+  // (1) "1." / "1.다음~" / "1) ~" — 토큰이 숫자.으로 시작
+  // (2) "1" 단독 토큰 + 인접 토큰이 "." 또는 ".으로 시작"
+  // (3) 좌측 여백에 위치한 1~2자리 숫자 (소수점 아닌)
+  const cands = [];
+  pages.forEach((pg, pi)=>{
+    // 페이지의 좌측 컬럼 x를 추정: 모든 토큰 x의 최솟값
+    const xs = pg.tokens.map(t=>t.x);
+    const minX = xs.length ? Math.min(...xs) : 0;
+    pg.tokens.forEach((t, ti)=>{
+      let qn = null;
+      // 패턴 (1): "N." 또는 "N.텍스트" — 단 소수(N.M)는 제외
+      let m = t.text.match(/^(\d{1,2})[.)](?!\d)/);
+      if(m){ qn = +m[1]; }
+      // 패턴 (2): "N" 단일 + 다음 토큰이 "." 시작
+      else if(/^\d{1,2}$/.test(t.text)){
+        const next = pg.tokens[ti+1];
+        if(next && (next.text==='.' || /^[.)]/.test(next.text)) && Math.abs(next.y-t.y)<10){
+          qn = +t.text;
+        }
+      }
+      if(qn===null || qn<1 || qn>50) return;
+      // 좌측 여백 근처에 있는 토큰만 채택 (왼쪽 마진에서 페이지폭의 50% 이내)
+      if(t.x > minX + pg.w*0.55) return;
+      cands.push({qno:qn, page:pi, x:t.x, y:t.y, fontH:t.fontH||14, text:t.text});
+    });
+  });
+
+  if(cands.length===0){
+    throw new Error(`텍스트 ${totalTokens}개 추출됨. "1.", "1)" 형식 문항번호를 찾지 못함. PDF 형식을 확인해주세요.`);
+  }
+  cands.sort((a,b)=> a.page-b.page || a.y-b.y);
+
+  // 컬럼 분할 추정: 후보들의 x값 분포에서 가장 큰 갭
+  const xs = [...new Set(cands.map(c=>Math.round(c.x)))].sort((a,b)=>a-b);
+  let colSplit = null, maxGap = 0;
+  for(let i=1;i<xs.length;i++){
+    const g = xs[i]-xs[i-1];
+    if(g>maxGap){ maxGap = g; colSplit = (xs[i]+xs[i-1])/2; }
+  }
+  const twoCol = maxGap > 200;
+
+  // 컬럼 고려 정렬
+  const colOf = c => twoCol ? (c.x < colSplit ? 0 : 1) : 0;
+  cands.sort((a,b)=> a.page-b.page || colOf(a)-colOf(b) || a.y-b.y);
+
+  // 1, 2, 3 ... 순차 매칭. 같은 번호 여러 후보가 있을 수 있으므로 첫 출현만 채택.
+  const seen = new Set();
+  const seq = [];
+  let expect = 1;
+  for(const c of cands){
+    if(seen.has(c.qno)) continue;
+    if(c.qno === expect){
+      seq.push(c); seen.add(c.qno); expect++;
+    } else if(c.qno > expect && c.qno <= expect + 3){
+      // 작은 결번 허용
+      seq.push(c); seen.add(c.qno); expect = c.qno + 1;
+    }
+  }
+  if(seq.length===0){
+    // 순차 매칭 실패 시: 번호별 첫 출현만 모두 채택 (덜 보수적)
+    cands.forEach(c=>{
+      if(!seen.has(c.qno)){ seq.push(c); seen.add(c.qno); }
+    });
+    seq.sort((a,b)=>a.qno-b.qno);
+  }
+  if(seq.length===0) throw new Error('문항 번호 후보 ' + cands.length + '개 발견했으나 시퀀스 구성 실패.');
+
+  // 각 문항 영역 잘라내기
+  const out = {};
+  for(let i=0;i<seq.length;i++){
+    const q = seq[i];
+    const next = seq[i+1];
+    const pg = pages[q.page];
+    const colLeft = !twoCol ? 0 : (colOf(q)===0 ? Math.max(0, q.x - pg.w*0.03) : Math.max(colSplit, q.x - pg.w*0.02));
+    const colRight = !twoCol ? pg.w : (colOf(q)===0 ? colSplit : pg.w);
+    const top = Math.max(0, q.y - q.fontH - 4);
+    let bottom;
+    if(next && next.page===q.page && colOf(next)===colOf(q)){
+      bottom = next.y - next.fontH - 4;
+    } else if(next && next.page===q.page && colOf(next)!==colOf(q)){
+      bottom = pg.h - 20; // 같은 페이지에서 컬럼 전환
+    } else {
+      bottom = pg.h - 20;
+    }
+    const width = colRight - colLeft;
+    const height = Math.max(40, bottom - top);
+    const out2 = document.createElement('canvas');
+    out2.width = width; out2.height = height;
+    out2.getContext('2d').drawImage(pg.canvas, colLeft, top, width, height, 0, 0, width, height);
+    out[q.qno] = out2.toDataURL('image/jpeg', 0.85);
+  }
+  return {map: out, count: seq.length, pages: pdf.numPages, twoCol};
+}
+
+function renderPdfPreviews(){
+  const card = $('qPreviewCard');
+  const grid = $('qPreview');
+  if(!pdfQuestions){ card.classList.add('hidden'); grid.innerHTML=''; return; }
+  card.classList.remove('hidden');
+  const qnos = Object.keys(pdfQuestions).map(Number).sort((a,b)=>a-b);
+  grid.innerHTML = qnos.map(q=>{
+    const item = lastItems.find(i=>i.qno===q);
+    const sub = item ? `정답률 ${(item.p*100).toFixed(1)}% / 변별도 ${item.d.toFixed(2)}` : '';
+    return `<div class="qcard" data-q="${q}">
+      <div class="qhead"><b>${q}번</b><span style="color:#6b7280">${sub}</span></div>
+      <img loading="lazy" src="${pdfQuestions[q]}" alt="${q}번">
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('.qcard').forEach(el=>{
+  */
+}
+function renderItemTable(items, filter){
+  let arr = [...items];
+  if(filter==='review') arr = arr.filter(i=>i.d<0.1);
+  else if(filter==='good') arr = arr.filter(i=>i.verdict==='우수 문항'||i.verdict==='고난도 변별');
+  else if(filter==='lowp') arr.sort((a,b)=>a.p-b.p);
+  else if(filter==='lowd') arr.sort((a,b)=>a.d-b.d);
+  if(filter!=='lowp'&&filter!=='lowd') arr.sort((a,b)=>a.qno-b.qno);
+  const tb = $('itemTable').querySelector('tbody');
+  tb.innerHTML = arr.map(i=>`<tr>
+    <td>${i.qno}</td><td>${i.points}</td><td>${i.answer}</td><td>${i.n}</td>
+    <td>${(i.p*100).toFixed(1)}</td><td>${i.d.toFixed(2)}</td>
+    <td>${i.diff}</td>
+    <td><span class="tag ${i.tag}">${i.verdict}</span></td>
+    <td style="text-align:left;color:#6b7280">${i.comment}</td>
+  </tr>`).join('');
+}
+
+function anonOption(){ return $('anon').checked; }
+
+// 현재 분석 결과를 HTML 스냅샷으로 저장 (차트 포함)
+function saveHtml(){
+  const result = document.getElementById('result');
+  const hasResult = result && !result.classList.contains('hidden');
+
+  // 모달 닫기
+  document.querySelectorAll('.qmodal.on').forEach(m=>m.classList.remove('on'));
+
+  // 모든 canvas를 PNG 데이터 URL 이미지로 교체 (스냅샷 보존)
+  const swaps = [];
+  document.querySelectorAll('canvas').forEach(canvas=>{
+    if(!canvas.width || !canvas.height) return;
+    try{
+      const dataUrl = canvas.toDataURL('image/png');
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.alt = canvas.id || 'chart-snapshot';
+      img.style.cssText = 'width:100%;height:auto;display:block;background:#fff;border-radius:6px';
+      img.dataset.snapshot = '1';
+      canvas.parentNode.insertBefore(img, canvas);
+      canvas.style.display = 'none';
+      swaps.push({canvas, img});
+    }catch(e){ /* skip on taint */ }
+  });
+
+  // 저장된 파일에 안내 배너 삽입
+  let banner = null;
+  if(hasResult){
+    banner = document.createElement('div');
+    banner.dataset.savedBanner = '1';
+    banner.style.cssText = 'background:linear-gradient(135deg,#5b6cff,#a78bfa);color:#fff;padding:8px 14px;border-radius:8px;margin:12px 0;font-size:12px;text-align:center';
+    banner.textContent = `📁 저장된 분석 보고서 — ${new Date().toLocaleString('ko-KR')} · 차트는 스냅샷 이미지입니다 (재분석은 새 데이터 업로드 후 [분석 시작])`;
+    const main = document.querySelector('main');
+    if(main) main.insertBefore(banner, main.firstChild);
+  }
+
+  // 직렬화
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+  // 원복
+  swaps.forEach(({canvas, img})=>{
+    canvas.style.display = '';
+    img.remove();
+  });
+  if(banner) banner.remove();
+
+  const today = new Date().toISOString().slice(0,10);
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Exam-Lens_${today}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+
+function rateColor(p){
+  if(p==null) return '#f3f4f6';
+  if(p>=0.9) return '#16a34a';
+  if(p>=0.75) return '#65a30d';
+  if(p>=0.6) return '#eab308';
+  if(p>=0.4) return '#f97316';
+  if(p>=0.2) return '#ef4444';
+  return '#7f1d1d';
+}
+
+function renderPointRate(items){
+  destroyChart('ppr');
+  const a = analyzePointRate(items);
+  const r = a.r;
+  const interp = r==null?'-'
+    : r<=-0.5 ? '강한 음의 상관 — 배점이 난이도와 매우 잘 매칭됨'
+    : r<=-0.3 ? '뚜렷한 음의 상관 — 배점-난이도 매칭 양호'
+    : r<=-0.1 ? '약한 음의 상관 — 배점-난이도 일치도 보통'
+    : r<= 0.1 ? '상관 없음 — 배점이 난이도와 무관하게 매겨짐, 차기 출제 시 배점 체계 재검토 필요'
+    :            '양의 상관(이상치) — 쉬운 문항에 더 높은 배점이 매겨진 패턴, 즉시 검토 필요';
+  const rColor = r==null?'#6b7280' : r<=-0.3?'#10b981' : r<=-0.1?'#65a30d' : r<=0.1?'#f59e0b':'#dc2626';
+
+  const mismatches = a.flagged.filter(f=>f.mismatch);
+  const easyExpensive = mismatches.filter(f=>f.kind==='고배점-쉬움').length;
+  const hardCheap = mismatches.filter(f=>f.kind==='저배점-어려움').length;
+
+  // 요약 박스
+  $('pprSummary').innerHTML = `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px">상관계수 (Pearson r)</div>
+    <div style="font-size:26px;font-weight:800;color:${rColor};letter-spacing:-.02em;margin-bottom:6px">${r==null?'-':r.toFixed(3)}</div>
+    <div style="font-size:12.5px;color:var(--ink-2);line-height:1.55;margin-bottom:10px">${interp}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="flex:1;min-width:80px;background:#fff;border-radius:8px;padding:8px 10px;border:1px solid #ffd6d6">
+        <div style="font-size:11px;color:#991b1b">고배점-쉬움</div>
+        <div style="font-size:18px;font-weight:700;color:#991b1b">${easyExpensive}문항</div>
+      </div>
+      <div style="flex:1;min-width:80px;background:#fff;border-radius:8px;padding:8px 10px;border:1px solid #ffd6d6">
+        <div style="font-size:11px;color:#991b1b">저배점-어려움</div>
+        <div style="font-size:18px;font-weight:700;color:#991b1b">${hardCheap}문항</div>
+      </div>
+    </div>`;
+
+  // 부조화 문항 표
+  if(mismatches.length===0){
+    $('pprTable').innerHTML = '<thead><tr><th style="text-align:center">결과</th></tr></thead><tbody><tr><td style="padding:14px;text-align:center;color:#16a34a;font-weight:600">✓ 모든 문항이 배점-난이도 매칭 적정 영역에 있음</td></tr></tbody>';
+  }else{
+    let html = '<thead><tr><th>문항</th><th>배점</th><th>정답률</th><th>유형</th><th style="text-align:left">권고</th></tr></thead><tbody>';
+    mismatches.sort((x,y)=>x.qno-y.qno).forEach(f=>{
+      const tagColor = f.kind==='고배점-쉬움' ? '#fef3c7' : '#fee2e2';
+      const tagText = f.kind==='고배점-쉬움' ? '#92400e' : '#991b1b';
+      html += `<tr>
+        <td style="text-align:center;font-weight:600">${f.qno}</td>
+        <td style="text-align:right">${f.points}</td>
+        <td style="text-align:right">${(f.p*100).toFixed(1)}%</td>
+        <td style="text-align:center"><span style="background:${tagColor};color:${tagText};padding:2px 7px;border-radius:8px;font-size:11px;font-weight:600">${f.kind}</span></td>
+        <td style="text-align:left;font-size:11.5px;color:#374151">${f.advice}</td>
+      </tr>`;
+    });
+    html += '</tbody>';
+    $('pprTable').innerHTML = html;
+    makeSortable($('pprTable'));
+  }
+
+  // 산점도 (4사분면 색상)
+  Chart.defaults.font.family = "'에이투지체','AtoZ','Pretendard Variable','Pretendard',sans-serif";
+  const points = items.map(i=>{
+    const ptHigh = i.points >= a.meanPt;
+    const pHigh  = i.p*100 >= a.meanP;
+    let color = '#10b981'; // 적정
+    if(ptHigh && pHigh) color = '#f59e0b';   // 고배점-쉬움
+    else if(!ptHigh && !pHigh) color = '#dc2626'; // 저배점-어려움
+    return {x:i.points, y:+(i.p*100).toFixed(1), q:i.qno, color};
+  });
+  charts.ppr = new Chart($('pointRateChart'), {
+    type:'scatter',
+    data:{datasets:[{
+      label:'문항',
+      data: points,
+      backgroundColor: points.map(p=>p.color),
+      borderColor: points.map(p=>p.color),
+      pointRadius: 7, pointHoverRadius: 10, borderWidth: 1.5
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      animation:{ duration:900, easing:'easeOutQuart' },
+      plugins:{
+        title:{display:true, text:`배점 ↔ 정답률 산점도 (평균 배점 ${a.meanPt.toFixed(1)}점 / 평균 정답률 ${a.meanP.toFixed(1)}%)`, color:'#1a1f2e', font:{size:13.5,weight:'600'}, padding:{bottom:8}},
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(26,31,46,.92)', titleColor:'#fff', bodyColor:'#e5e7eb',
+          padding:10, cornerRadius:8,
+          callbacks:{
+            label:c=>`${c.raw.q}번 — 배점 ${c.raw.x}점 / 정답률 ${c.raw.y}%`
+          }
+        }
+      },
+      scales:{
+        x:{title:{display:true, text:'배점', color:'#6b7280'}, grid:{color:'rgba(229,232,240,.6)'}},
+        y:{title:{display:true, text:'정답률(%)', color:'#6b7280'}, min:0, max:100, grid:{color:'rgba(229,232,240,.6)'}}
+      }
+    }
+  });
+}
+
+function renderMatrix(items, students){
+  const m = achievementMatrix(items, students);
+  let html = '<thead><tr><th style="text-align:center">성취도(인원)</th>';
+  items.forEach(it=>{ html += `<th style="text-align:center">${it.qno}</th>`; });
+  html += '</tr></thead><tbody>';
+  m.forEach(g=>{
+    html += `<tr><td style="text-align:center;font-weight:600">${g.label} (${g.n})</td>`;
+    g.rates.forEach(r=>{
+      const txt = r==null ? '-' : Math.round(r*100);
+      const bg = r==null ? '#f9fafb' : rateColor(r);
+      const fg = r==null ? '#9ca3af' : (r>=0.4 && r<0.75 ? '#1a1f2e' : '#fff');
+      html += `<td style="text-align:center;background:${bg};color:${fg};font-weight:600;padding:6px 4px">${txt}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  $('matrixTable').innerHTML = html;
+}
+
+// 정오표 코드 해석 헬퍼 (A=1,2 / B=1,3 / ... / Z=1,2,3,4,5 등 복수답안)
+const MULTI_CODE_MAP = {
+  A:'1,2', B:'1,3', C:'1,4', D:'1,5', E:'2,3', F:'2,4', G:'2,5', H:'3,4', I:'3,5', J:'4,5',
+  K:'1,2,3', L:'1,2,4', M:'1,2,5', N:'1,3,4', O:'1,3,5', P:'1,4,5', Q:'2,3,4', R:'2,3,5', S:'2,4,5', T:'3,4,5',
+  U:'1,2,3,4', V:'1,2,3,5', W:'1,2,4,5', X:'1,3,4,5', Y:'2,3,4,5', Z:'1,2,3,4,5'
+};
+
+function renderDistribution(items, students){
+  // 단일 숫자 선지(1~5 등)만 컬럼으로 노출. 알파벳=복수답안, '-'/공백=무응답
+  const choiceSet = new Set();
+  items.forEach((it,idx)=>{
+    students.forEach(s=>{
+      const r = s.responses[idx];
+      if(r==='' || r===undefined || r==='.' || r==='-') return;
+      if(/^\d+$/.test(r)) choiceSet.add(r);
+    });
+  });
+  const choices = Array.from(choiceSet).sort((a,b)=>parseInt(a)-parseInt(b));
+
+  let html = '<thead><tr><th style="text-align:center">문항</th><th style="text-align:center">정답</th><th style="text-align:right">정답률</th>';
+  choices.forEach(c=>{ html += `<th style="text-align:center">${c}번</th>`; });
+  html += '<th style="text-align:center">복수답안</th><th style="text-align:center">무응답</th></tr></thead><tbody>';
+
+  items.forEach((it, idx)=>{
+    let cnt=0, ok=0, blank=0, multi=0;
+    const distMap = {};
+    students.forEach(s=>{
+      const r = s.responses[idx];
+      if(r===''||r===undefined||r==='-'){ blank++; return; }
+      cnt++;
+      if(r==='.') ok++;
+      else if(/^\d+$/.test(r)) distMap[r] = (distMap[r]||0)+1;
+      else { multi++; distMap[r]=(distMap[r]||0)+1; } // 알파벳 등 복수답안
+    });
+    const total = cnt + blank;
+    const p = cnt? ok/cnt : 0;
+
+    const fmt = (n, denom)=> n>0 ? `${n}명(${(n/denom*100).toFixed(0)}%)` : '0명';
+    const cell = (n, denom, opts={})=>{
+      const txt = fmt(n, denom);
+      const clickable = n>0 && opts.dataIdx!=null && opts.choice!=null;
+      let style = 'text-align:center;padding:5px 4px;';
+      if(opts.correct){ style += 'background:#dcfce7;color:#166534;font-weight:600;'; }
+      else if(opts.attractive){ style += 'background:#fee2e2;color:#991b1b;font-weight:600;'; }
+      else if(n===0){ style += 'color:#cbd5e1;'; }
+      else { style += 'color:#374151;'; }
+      if(clickable) style += 'cursor:pointer;text-decoration:underline dotted transparent;';
+      const dataAttr = clickable ? ` data-idx="${opts.dataIdx}" data-choice="${opts.choice}" data-label="${opts.label||''}"` : '';
+      const prefix = opts.correct ? '✓ ' : '';
+      return `<td style="${style}" class="${clickable?'dist-cell':''}"${dataAttr}>${prefix}${txt}</td>`;
+    };
+
+    html += `<tr><td style="text-align:center;font-weight:600">${it.qno}</td>`;
+    html += `<td style="text-align:center">${it.answer}</td>`;
+    html += `<td style="text-align:right;font-weight:600">${(p*100).toFixed(1)}%</td>`;
+    const correctChoices = String(it.answer).split(',').map(x=>x.trim());
+    choices.forEach(c=>{
+      const isCorrectChoice = correctChoices.includes(String(c));
+      const n = isCorrectChoice ? ok : (distMap[c]||0);
+      const rate = cnt? n/cnt : 0;
+      html += cell(n, cnt, {
+        correct: isCorrectChoice,
+        attractive: !isCorrectChoice && rate>=0.3,
+        dataIdx: idx,
+        choice: isCorrectChoice ? '.' : c,
+        label: `${it.qno}번 — ${isCorrectChoice?'정답('+c+'번)':c+'번 선지'}`
+      });
+    });
+    // 복수답안 컬럼
+    html += cell(multi, cnt, {dataIdx: idx, choice:'__MULTI__', label:`${it.qno}번 — 복수답안 응답`});
+    // 무응답 컬럼 (분모: 전체 응시자)
+    html += cell(blank, total, {dataIdx: idx, choice:'__BLANK__', label:`${it.qno}번 — 무응답`});
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  $('distTable').innerHTML = html;
+
+  // 셀 클릭 → 학생 명단 모달
+  $('distTable').querySelectorAll('.dist-cell').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const idx = +el.dataset.idx;
+      const choice = el.dataset.choice;
+      const label = el.dataset.label || '문항 응답';
+      showResponseStudents(students, idx, choice, label);
+    });
+  });
+}
+
+// 특정 문항에 특정 선지로 응답한 학생 목록 모달
+function showResponseStudents(students, itemIdx, choice, title){
+  const filterFn = (s)=>{
+    const r = s.responses[itemIdx];
+    if(choice === '.') return r === '.';
+    if(choice === '__BLANK__') return r==='' || r===undefined || r==='-';
+    if(choice === '__MULTI__') return r && r!=='.' && r!=='-' && !/^\d+$/.test(r);
+    return r === choice;
+  };
+  const arr = students.filter(filterFn).sort((a,b)=>(b.total??-1)-(a.total??-1));
+  const totalN = students.filter(s=>s.total!=null).length;
+  const anon = $('anon').checked;
+  let extraNote = '';
+  if(choice && choice.length===1 && MULTI_CODE_MAP[choice]){
+    extraNote = ` <span style="color:#6b7280;font-weight:400;font-size:12px">(${choice} = ${MULTI_CODE_MAP[choice]}번 복합)</span>`;
+  }
+  $('gModalTitle').innerHTML = `<span style="display:inline-block;width:14px;height:14px;background:#5b6cff;border-radius:3px;vertical-align:middle;margin-right:8px"></span>${title} · ${arr.length}명${extraNote}`;
+  const tb = $('gModalTable').querySelector('tbody');
+  if(arr.length===0){
+    tb.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:#9ca3af">해당 학생이 없습니다.</td></tr>`;
+  }else{
+    tb.innerHTML = arr.map((s,i)=>{
+      const {ban, num} = splitCls(s.cls);
+      return `<tr>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${ban}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${num}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6">${anon?`학생${String(i+1).padStart(3,'0')}`:s.name}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600">${s.total??'-'}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right">${s.rank!=null?`${s.rank}등 / ${totalN}명`:'-'}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right">${s.grade??'-'}등급</td>
+      </tr>`;
+    }).join('');
+  }
+  makeSortable($('gModalTable'));
+  $('gModal').classList.add('on');
+}
+
+// ---- 표 정렬 기능 ----
+function makeSortable(tableEl){
+  if(!tableEl || tableEl.dataset.sortable==='1') return;
+  tableEl.dataset.sortable = '1';
+  const ths = tableEl.querySelectorAll('thead th');
+  const state = {col:-1, asc:true};
+  ths.forEach((th, idx)=>{
+    // 정렬 인디케이터 추가
+    if(!th.querySelector('.sort-ind')){
+      const ind = document.createElement('span');
+      ind.className = 'sort-ind';
+      ind.textContent = '⇅';
+      th.appendChild(ind);
+    }
+    th.addEventListener('click', ()=>{
+      if(state.col===idx) state.asc = !state.asc;
+      else { state.col = idx; state.asc = true; }
+      const tbody = tableEl.querySelector('tbody');
+      if(!tbody) return;
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.sort((a,b)=>{
+        const av = (a.children[idx]?.textContent || '').trim();
+        const bv = (b.children[idx]?.textContent || '').trim();
+        const an = parseFloat(av.replace(/[^\d.\-]/g,''));
+        const bn = parseFloat(bv.replace(/[^\d.\-]/g,''));
+        const numeric = !isNaN(an) && !isNaN(bn) && av.match(/\d/) && bv.match(/\d/);
+        const cmp = numeric ? (an - bn) : av.localeCompare(bv, 'ko');
+        return state.asc ? cmp : -cmp;
+      });
+      rows.forEach(r=>tbody.appendChild(r));
+      // 헤더 인디케이터 갱신
+      ths.forEach((t,i)=>{
+        const ind = t.querySelector('.sort-ind');
+        if(i===idx){
+          t.classList.add('sorted');
+          if(ind) ind.textContent = state.asc ? '▲' : '▼';
+        }else{
+          t.classList.remove('sorted');
+          if(ind) ind.textContent = '⇅';
+        }
+      });
+    });
+  });
+}
+
+function showStudentsBy(students, filterFn, title, anon, color){
+  const totalN = students.filter(s=>s.total!=null).length;
+  const arr = students.filter(s=>s.total!=null && filterFn(s.total))
+                      .sort((a,b)=>(b.total??-1)-(a.total??-1));
+  const badge = color ? `<span style="display:inline-block;width:14px;height:14px;background:${color};border-radius:3px;vertical-align:middle;margin-right:8px"></span>` : '';
+  $('gModalTitle').innerHTML = `${badge}${title} · ${arr.length}명`;
+  const tb = $('gModalTable').querySelector('tbody');
+  if(arr.length===0){
+    tb.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:#9ca3af">해당 학생이 없습니다.</td></tr>`;
+  }else{
+    tb.innerHTML = arr.map((s,i)=>{
+      const {ban, num} = splitCls(s.cls);
+      return `<tr>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${ban}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${num}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6">${anon?`학생${String(i+1).padStart(3,'0')}`:s.name}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600">${s.total??'-'}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right">${s.rank!=null?`${s.rank}등 / ${totalN}명`:'-'}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right">${s.grade??'-'}등급</td>
+      </tr>`;
+    }).join('');
+  }
+  makeSortable($('gModalTable'));
+  $('gModal').classList.add('on');
+}
+
+function showGradeStudents(students, grade, anon, maxG){
+  const totalN = students.filter(s=>s.total!=null).length;
+  const arr = students.filter(s=>s.grade===grade)
+                      .sort((a,b)=>(b.total??-1)-(a.total??-1));
+  $('gModalTitle').innerHTML = `<span style="display:inline-block;width:14px;height:14px;background:${gradeColor(grade,maxG)};border-radius:3px;vertical-align:middle;margin-right:8px"></span>${grade}등급 학생 (${arr.length}명)`;
+  const tb = $('gModalTable').querySelector('tbody');
+  if(arr.length===0){
+    tb.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:#9ca3af">해당 등급 학생이 없습니다.</td></tr>`;
+  }else{
+    tb.innerHTML = arr.map((s,i)=>{
+      const {ban, num} = splitCls(s.cls);
+      return `<tr>
+        <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:center">${ban}</td>
+        <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:center">${num}</td>
+        <td style="padding:5px;border-bottom:1px solid #f3f4f6">${anon?`학생${String(i+1).padStart(3,'0')}`:s.name}</td>
+        <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:right">${s.total??'-'}</td>
+        <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:right">${s.rank!=null?`${s.rank}등 / ${totalN}명`:'-'}</td>
+        <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:right">${s.grade??'-'}등급</td>
+      </tr>`;
+    }).join('');
+  }
+  makeSortable($('gModalTable'));
+  $('gModal').classList.add('on');
+}
+
+function splitCls(cls){
+  const parts = String(cls||'').split('/');
+  return {ban: parts[0]||'', num: parts[1]||''};
+}
+function renderStudents(students, anon){
+  const sorted = [...students].sort((a,b)=>(b.total??-1)-(a.total??-1));
+  const tb = $('studentTable').querySelector('tbody');
+  tb.innerHTML = sorted.map((s,i)=>{
+    const {ban, num} = splitCls(s.cls);
+    return `<tr>
+      <td>${ban}</td><td>${num}</td>
+      <td>${anon?`학생${String(i+1).padStart(3,'0')}`:s.name}</td>
+      <td>${s.sel??'-'}</td><td>${s.desc??'-'}</td>
+      <td>${s.total??'-'}</td>
+      <td>${s.rank??'-'}</td>
+      <td>${s.grade??'-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function drawCharts(items, hist, gd, students, grade, anon){
+  destroyChart('hist'); destroyChart('grade'); destroyChart('p'); destroyChart('d'); destroyChart('scatter'); destroyChart('rank'); destroyChart('correctness');
+  const maxG = grade===3?9:5;
+
+  // Chart.js 글로벌 폰트/애니메이션 설정
+  Chart.defaults.font.family = "'에이투지체','AtoZ','Pretendard Variable','Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif";
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = '#374151';
+  const baseAnim = { duration: 1100, easing: 'easeOutQuart' };
+  // 차트별 맞춤 애니메이션
+  const staggerBar = (per=40)=>({
+    duration: 900, easing:'easeOutQuart',
+    delay: (ctx)=> ctx.type==='data' && ctx.mode==='default' ? ctx.dataIndex*per : 0
+  });
+  const waveBar = (per=10)=>({  // 많은 막대용 빠른 wave
+    duration: 700, easing:'easeOutCubic',
+    delay: (ctx)=> ctx.type==='data' && ctx.mode==='default' ? ctx.dataIndex*per : 0
+  });
+  const popScatter = {
+    radius: { duration: 900, easing:'easeOutBack', from: 0, to: 6,
+              delay: (ctx)=> ctx.type==='data' && ctx.mode==='default' ? ctx.dataIndex*30 : 0 },
+    numbers: { duration: 800, easing:'easeOutQuart' }
+  };
+  const stackGrow = {  // 적층 막대: 세그먼트별 stagger
+    duration: 1000, easing:'easeOutQuart',
+    delay: (ctx)=> ctx.type==='data' && ctx.mode==='default' ? ctx.datasetIndex*250 + ctx.dataIndex*60 : 0
+  };
+
+  // (valueLabel 플러그인은 모듈 레벨로 이동됨)
+  const baseTooltip = {
+    backgroundColor: 'rgba(26,31,46,.92)',
+    titleColor: '#fff', bodyColor:'#e5e7eb',
+    titleFont:{weight:'600',size:12.5}, bodyFont:{size:12},
+    padding:10, cornerRadius:8, displayColors:true,
+    borderColor:'rgba(255,255,255,.1)', borderWidth:1
+  };
+  const baseTitle = {color:'#1a1f2e', font:{size:13.5,weight:'600'}, padding:{bottom:10}};
+  const baseGrid = {color:'rgba(229,232,240,.6)', drawTicks:false};
+  // A → E 빨강 → 파랑, I(미도달)는 보라(E 위에 적층)
+  const HIST_COLORS = ['#dc2626','#f97316','#eab308','#16a34a','#2563eb'];
+  const I_COLOR = '#7c3aed';
+  charts.hist = new Chart($('histChart'), {
+    type:'bar',
+    plugins:[valueLabel],
+    data:{
+      labels:hist.labels,
+      datasets:[
+        {
+          label:'성취도', data:hist.data, backgroundColor:HIST_COLORS,
+          // E(인덱스4)에 I 적층되면 윗변은 평평(0), 그 외엔 둥근 윗변(6). 아랫변은 축에 붙도록 항상 평평.
+          borderRadius: hist.data.map((_,i)=> (i===4 && hist.iData[4]>0) ? 0 : 6),
+          borderSkipped:'bottom',
+          stack:'s', categoryPercentage:0.7, barPercentage:0.85
+        },
+        {
+          label:'I (40미만)', data:hist.iData, backgroundColor:I_COLOR,
+          borderRadius:6, borderSkipped:'bottom',
+          stack:'s', categoryPercentage:0.7, barPercentage:0.85
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:stackGrow,
+      onClick:(evt, els)=>{
+        if(!els.length) return;
+        const el = els[0];
+        const isI = el.datasetIndex===1;
+        if(isI){
+          showStudentsBy(students, hist.iRange.test, hist.iRange.label, anon, I_COLOR);
+        }else{
+          const r = hist.ranges[el.index];
+          showStudentsBy(students, r.test, r.label, anon, HIST_COLORS[el.index]);
+        }
+      },
+      onHover:(e,els)=>{ e.native.target.style.cursor = els.length?'pointer':'default'; },
+      plugins:{
+        title:{display:true,text:'성취도 분포 (막대 클릭 시 학생 목록 · I는 E 위에 적층)',...baseTitle},
+        legend:{display:true,position:'bottom',labels:{boxWidth:14,boxHeight:14,padding:12,font:{size:11.5},generateLabels:()=>[
+          {text:'A (90↑)', fillStyle:HIST_COLORS[0], strokeStyle:'transparent', lineWidth:0},
+          {text:'B (80~90)', fillStyle:HIST_COLORS[1], strokeStyle:'transparent', lineWidth:0},
+          {text:'C (70~80)', fillStyle:HIST_COLORS[2], strokeStyle:'transparent', lineWidth:0},
+          {text:'D (60~70)', fillStyle:HIST_COLORS[3], strokeStyle:'transparent', lineWidth:0},
+          {text:'E (40~60)', fillStyle:HIST_COLORS[4], strokeStyle:'transparent', lineWidth:0},
+          {text:'I (40미만)', fillStyle:I_COLOR, strokeStyle:'transparent', lineWidth:0}
+        ]}},
+        tooltip:{...baseTooltip, callbacks:{
+          label:c=>`${c.dataset.label}: ${c.raw}명`,
+          footer:c=>{
+            const el = c[0];
+            if(el.datasetIndex===1) return '클릭 → I(40미만) 학생 보기';
+            return '클릭 → ' + hist.labels[el.dataIndex] + ' 학생 보기';
+          }
+        }},
+        valueLabel:{formatter:(v)=>{
+          const total = hist.data.reduce((s,n)=>s+n,0) + hist.iData.reduce((s,n)=>s+n,0);
+          if(total===0) return [v+'명'];
+          return [v+'명', (v/total*100).toFixed(1)+'%'];
+        }}
+      },
+      scales:{
+        x:{stacked:true, grid:{display:false}},
+        y:{stacked:true, beginAtZero:true, ticks:{precision:0}, grid:baseGrid}
+      }
+    }
+  });
+  charts.grade = new Chart($('gradeChart'), {
+    type:'bar',
+    plugins:[valueLabel],
+    data:{labels:gd.map(g=>g.grade+'등급'), datasets:[{label:'인원', data:gd.map(g=>g.n),
+      backgroundColor: gd.map(g=>gradeColor(g.grade,maxG)), borderRadius:6, borderSkipped:false}]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:staggerBar(60),
+      onClick: (evt, els)=>{
+        if(!els.length) return;
+        const g = gd[els[0].index].grade;
+        showGradeStudents(students, g, anon, maxG);
+      },
+      onHover:(e,els)=>{ e.native.target.style.cursor = els.length?'pointer':'default'; },
+      plugins:{
+        title:{display:true,text:'등급 분포 (막대 클릭 시 학생 목록)',...baseTitle},
+        legend:{display:false},
+        tooltip:{...baseTooltip, callbacks:{footer:()=>'클릭하여 학생 보기'}},
+        valueLabel:{formatter:v=>v+'명'}
+      },
+      scales:{y:{beginAtZero:true, ticks:{precision:0}, grid:baseGrid}, x:{grid:{display:false}}}
+    }
+  });
+
+  // 석차순 점수 분포 (1등 → 꼴찌, 등급별 색상)
+  const ranked = [...students].filter(s=>s.total!==null && s.grade!=null)
+                              .sort((a,b)=>(b.total)-(a.total));
+  const labels = ranked.map((s,i)=>`${i+1}등`);
+  const data = ranked.map(s=>s.total);
+  const colors = ranked.map(s=>gradeColor(s.grade, maxG));
+  // 등급별 범례용 데이터셋 (실제 표시는 단일 막대지만 색상은 등급별)
+  charts.rank = new Chart($('rankChart'), {
+    type:'bar',
+    data:{labels, datasets:[{label:'점수', data, backgroundColor:colors, borderWidth:0, categoryPercentage:0.95, barPercentage:1.0, borderRadius:3}]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:waveBar(8),
+      plugins:{
+        title:{display:true,text:`석차순 점수 분포 (전체 ${ranked.length}명, 색상: 등급)`,...baseTitle},
+        legend:{display:false},
+        tooltip:{...baseTooltip, callbacks:{
+          title:c=>{
+            const s = ranked[c[0].dataIndex];
+            const {ban, num} = splitCls(s.cls);
+            const sid = `${grade}${String(ban).padStart(2,'0')}${String(num).padStart(2,'0')}`;
+            const nm = anon ? `학생${String(c[0].dataIndex+1).padStart(3,'0')}` : (s.name||'');
+            return `${sid} · ${nm}`;
+          },
+          label:c=>{
+            const s = ranked[c.dataIndex];
+            const {ban, num} = splitCls(s.cls);
+            return `${ban}반 ${num}번 · 총점 ${s.total} · ${s.grade}등급 · 석차 ${c.dataIndex+1}등 (중간석차 ${s.midRank?.toFixed(1)})`;
+          }
+        }}
+      },
+      scales:{
+        x:{ ticks:{maxTicksLimit:20, autoSkip:true, font:{size:10}}, grid:{display:false} },
+        y:{ beginAtZero:true, title:{display:true,text:'점수',color:'#6b7280'}, grid:baseGrid }
+      }
+    }
+  });
+  charts.p = new Chart($('pChart'), {
+    type:'bar',
+    data:{labels:items.map(i=>i.qno), datasets:[{label:'정답률(%)', data:items.map(i=>+(i.p*100).toFixed(1)),
+      backgroundColor: items.map(i=>i.p<0.4?'#ef4444':i.p>=0.8?'#94a3b8':'#5b6cff'), borderRadius:4, borderSkipped:false}]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:staggerBar(35),
+      plugins:{title:{display:true,text:'문항별 정답률',...baseTitle}, legend:{display:false}, tooltip:baseTooltip},
+      scales:{y:{min:0,max:100, grid:baseGrid}, x:{grid:{display:false}}}
+    }
+  });
+  charts.d = new Chart($('dChart'), {
+    type:'bar',
+    data:{labels:items.map(i=>i.qno), datasets:[{label:'변별도', data:items.map(i=>+i.d.toFixed(3)),
+      backgroundColor: items.map(i=>i.d<0?'#7f1d1d':i.d<0.1?'#ef4444':i.d<0.3?'#f59e0b':'#10b981'), borderRadius:4, borderSkipped:false}]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:staggerBar(35),
+      plugins:{title:{display:true,text:'문항별 변별도',...baseTitle}, legend:{display:false}, tooltip:baseTooltip},
+      scales:{y:{grid:baseGrid}, x:{grid:{display:false}}}
+    }
+  });
+  // 정답률 구간별 문항 수 (양 끝 빨강 = 검토 대상)
+  const cBuckets = [
+    {label:'≥90% (변별 부족)', short:'≥90', from:0.9, to:Infinity, color:'#dc2626', note:'변별 부족 — 문항 검토 필요'},
+    {label:'80~90% (쉬움)',     short:'80~90', from:0.8, to:0.9, color:'#94a3b8', note:'쉬움'},
+    {label:'70~80% (적정)',     short:'70~80', from:0.7, to:0.8, color:'#10b981', note:'적정'},
+    {label:'60~70% (적정)',     short:'60~70', from:0.6, to:0.7, color:'#10b981', note:'적정'},
+    {label:'50~60% (적정-약간 어려움)', short:'50~60', from:0.5, to:0.6, color:'#65a30d', note:'적정-약간 어려움'},
+    {label:'40~50% (어려움)',    short:'40~50', from:0.4, to:0.5, color:'#eab308', note:'어려움'},
+    {label:'20~40% (고난도)',    short:'20~40', from:0.2, to:0.4, color:'#f97316', note:'고난도'},
+    {label:'<20% (킬러)',         short:'<20',   from:0,   to:0.2, color:'#7f1d1d', note:'킬러문항급 — 사유서 작성 검토'}
+  ];
+  const cCounts = cBuckets.map(b=>items.filter(i=>i.p>=b.from && i.p<b.to).length);
+  const cColors = cBuckets.map(b=>b.color);
+  charts.correctness = new Chart($('correctnessChart'), {
+    type:'bar',
+    plugins:[valueLabel],
+    data:{labels:cBuckets.map(b=>b.short), datasets:[{label:'문항 수', data:cCounts, backgroundColor:cColors, borderRadius:6, borderSkipped:false}]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:staggerBar(60),
+      plugins:{
+        title:{display:true,text:'정답률 구간별 문항 수 (양 끝 빨강 = 검토 대상)',...baseTitle},
+        legend:{display:false},
+        tooltip:{...baseTooltip, callbacks:{
+          title:c=>cBuckets[c[0].dataIndex].label,
+          label:c=>`${c.raw}문항 — ${cBuckets[c.dataIndex].note}`,
+          footer:c=>{
+            const b = cBuckets[c[0].dataIndex];
+            const matching = items.filter(i=>i.p>=b.from && i.p<b.to).map(i=>i.qno);
+            return matching.length ? '문항: ' + matching.join(', ') + '번' : '';
+          }
+        }},
+        valueLabel:{formatter:v=>v+'문항'}
+      },
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{size:10.5}, maxRotation:0, autoSkip:false}},
+        y:{beginAtZero:true, ticks:{precision:0}, grid:baseGrid}
+      }
+    }
+  });
+
+  charts.scatter = new Chart($('scatter'), {
+    type:'scatter',
+    data:{datasets:[{label:'문항(정답률 vs 변별도)',
+      data: items.map(i=>({x:+(i.p*100).toFixed(1), y:+i.d.toFixed(3), q:i.qno})),
+      backgroundColor:'rgba(91,108,255,.7)', borderColor:'#5b6cff', borderWidth:1.5, pointRadius:6, pointHoverRadius:9}]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animations:popScatter,
+      plugins:{
+        title:{display:true,text:'정답률 ↔ 변별도 산점도',...baseTitle},
+        legend:{display:false},
+        tooltip:{...baseTooltip, callbacks:{label:c=>`${c.raw.q}번  정답률 ${c.raw.x}%, 변별도 ${c.raw.y}`}}
+      },
+      scales:{
+        x:{title:{display:true,text:'정답률(%)',color:'#6b7280'}, min:0, max:100, grid:baseGrid},
+        y:{title:{display:true,text:'변별도',color:'#6b7280'}, grid:baseGrid}
+      }
+    }
+  });
+}
+
+async function run(){
+  clearErr();
+  const files = selectedFiles.length ? selectedFiles : Array.from($('file').files);
+  if(files.length===0){ showErr('엑셀 파일을 선택해주세요.'); return; }
+  try{
+    const anon = $('anon').checked;
+    let items = null;
+    const students = [];
+    const fileLog = [];
+
+    for(const f of files){
+      const buf = await f.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      const parsed = parseSheet(rows);
+
+      if(items===null){
+        items = parsed.items;
+        // 첫 파일에서 시험 정보 보강 (사용자가 비워둔 경우만)
+        const info = parseExamInfo(rows);
+        if(info.grade && [1,2,3].includes(info.grade)) $('grade').value = String(info.grade);
+        if(info.subject && !$('subject').value.trim()) $('subject').value = info.subject;
+        if(info.examName && !$('examName').value.trim()) $('examName').value = info.examName;
+      }else{
+        // verify item consistency (qno + answer + points)
+        if(parsed.items.length !== items.length)
+          throw new Error(`${f.name}: 문항 수가 다릅니다 (${parsed.items.length} vs ${items.length})`);
+        for(let i=0;i<items.length;i++){
+          if(parsed.items[i].qno !== items[i].qno)
+            throw new Error(`${f.name}: ${i+1}번째 문항번호 불일치 (${parsed.items[i].qno} vs ${items[i].qno})`);
+        }
+      }
+      parsed.students.forEach(s=>{ s._src = f.name; students.push(s); });
+      fileLog.push(`${f.name} (${parsed.students.length}명)`);
+    }
+
+    $('fileList').innerHTML = `<div style="background:#dcfce7;color:#166534;padding:8px 12px;border-radius:9px;font-size:12.5px;margin-top:6px;font-weight:500">✓ 병합 완료: ${fileLog.join(', ')} · 총 <b>${students.length}명</b></div>`;
+
+    // 시험 정보 보강 후 최종값 읽기
+    const grade = +$('grade').value;
+    const subject = $('subject').value.trim();
+    const examName = $('examName').value.trim();
+
+    const stats = calcStats(students);
+    if(!stats){ showErr('총점 데이터를 계산할 수 없습니다.'); return; }
+    window._lastStats = stats;
+    assignGrades(students, grade);
+    const gd = gradeDist(students, grade);
+    const itemRes = calcItems(items, students);
+    const hist = histogram(students);
+
+    const alpha = calcCronbach(items, students);
+    $('title').textContent = `${subject||'분석 결과'} ${examName? '— '+examName:''}`;
+    renderSummary(stats, grade, alpha);
+    activateCountUp();
+    renderGradeTable(gd, grade);
+    lastItems = itemRes; lastFilter='all';
+    renderItemTable(itemRes, 'all');
+    renderStudents(students, anon);
+    drawCharts(itemRes, hist, gd, students, grade, anon);
+    renderPointRate(itemRes);
+    renderMatrix(items, students);
+    renderDistribution(items, students);
+    $('review').innerHTML = buildReview(stats, itemRes, gd, grade, subject, examName, students, alpha);
+
+    // 분할점수 시뮬레이터 + 학기 환산 분석
+    setupCutsSimulator(students);
+    renderFinalScoreAnalysis(stats);
+
+    // 모든 메인 표에 정렬 기능 부여
+    makeSortable($('itemTable'));
+    makeSortable($('studentTable'));
+    makeSortable($('gradeTable'));
+    makeSortable($('distTable'));
+    makeSortable($('cutsCompTable'));
+
+    $('result').classList.remove('hidden');
+    window.scrollTo({top:$('result').offsetTop-10, behavior:'smooth'});
+  }catch(e){
+    console.error(e);
+    showErr('분석 실패: '+e.message);
+  }
+}
+
+$('run').addEventListener('click', run);
+
+// 인쇄 시 Chart.js 캔버스 강제 리사이즈
+// (print 미디어쿼리로 컨테이너만 축소되면 캔버스 픽셀 크기는 그대로라 잘림)
+function resizeAllCharts(){
+  Object.values(charts).forEach(c=>{ if(c){ try{ c.resize(); }catch(e){} } });
+}
+window.addEventListener('beforeprint', resizeAllCharts);
+window.addEventListener('afterprint',  resizeAllCharts);
+// matchMedia 콜백도 함께 (일부 브라우저에서 beforeprint 누락)
+if(window.matchMedia){
+  const mql = window.matchMedia('print');
+  if(mql.addEventListener) mql.addEventListener('change', resizeAllCharts);
+}
+// 파일 누적 선택 — 여러 번 [파일 선택]을 눌러도 기존 파일에 추가됨
+let selectedFiles = [];
+
+function renderFileList(){
+  const box = $('fileList');
+  if(selectedFiles.length===0){ box.innerHTML = ''; return; }
+  let html = '<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">';
+  selectedFiles.forEach((f,i)=>{
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 11px;background:#fff;border:1px solid var(--line);border-radius:9px;font-size:12.5px">
+      <span style="font-size:14px">📄</span>
+      <span style="flex:1;color:var(--ink-2);font-weight:500;word-break:break-all">${f.name} <span style="color:var(--muted-2);font-weight:400">(${(f.size/1024).toFixed(0)} KB)</span></span>
+      <button class="ghost remove-file" data-idx="${i}" style="padding:3px 10px;font-size:11px;font-weight:600;border-radius:7px;color:#991b1b;border-color:#fecaca;box-shadow:none">제거</button>
+    </div>`;
+  });
+  html += `<div style="font-size:12px;color:var(--muted);margin-top:4px">총 <b style="color:var(--pri-deep)">${selectedFiles.length}개</b> 파일 선택됨 · [파일 선택]을 다시 누르면 추가 업로드됩니다</div>`;
+  if(window._examInfoMsg) html += `<div style="font-size:12px;color:var(--pri-deep);margin-top:2px">자동 인식: ${window._examInfoMsg}</div>`;
+  html += '</div>';
+  box.innerHTML = html;
+  box.querySelectorAll('.remove-file').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      selectedFiles.splice(+btn.dataset.idx, 1);
+      renderFileList();
+    });
+  });
+}
+
+$('file').addEventListener('change', async e=>{
+  const newFiles = Array.from(e.target.files);
+  if(!newFiles.length) return;
+  // 같은 파일(name+size) 중복 제외 후 추가
+  newFiles.forEach(f=>{
+    if(!selectedFiles.some(s=>s.name===f.name && s.size===f.size)){
+      selectedFiles.push(f);
+    }
+  });
+  e.target.value = ''; // 같은 파일 다시 선택 가능하도록 초기화
+  // 첫 파일에서 시험 정보 자동 추출
+  if(selectedFiles.length>0){
+    try{
+      const buf = await selectedFiles[0].arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      const info = parseExamInfo(rows);
+      const detected = [];
+      if(info.grade && [1,2,3].includes(info.grade)){ $('grade').value=String(info.grade); detected.push(`${info.grade}학년`); }
+      if(info.subject && !$('subject').value.trim()){ $('subject').value=info.subject; detected.push(`과목: ${info.subject}`); }
+      if(info.examName && !$('examName').value.trim()){ $('examName').value=info.examName; detected.push(`시험명: ${info.examName}`); }
+      window._examInfoMsg = detected.length ? detected.join(' / ') : '';
+    }catch(e){ /* 무시 */ }
+  }
+  renderFileList();
+});
+document.querySelectorAll('.filters button').forEach(b=>{
+  b.addEventListener('click', ()=>{ lastFilter=b.dataset.f; renderItemTable(lastItems, lastFilter); });
+});
+
+// 분할점수 모드 버튼
+document.querySelectorAll('.cuts-mode').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    if(!_lastStudents) return;
+    document.querySelectorAll('.cuts-mode').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const mode = btn.dataset.mode;
+    if(mode==='fixed') setCuts({A:90,B:80,C:70,D:60,E:40});
+    else if(mode==='recommend') setCuts(recommendCuts(_lastStudents, {A:0.10, B:0.25, C:0.30, D:0.25}));
+    else if(mode==='balanced') setCuts(recommendCuts(_lastStudents, {A:0.15, B:0.25, C:0.25, D:0.25}));
+    // custom 모드는 입력값 그대로
+    if(mode!=='custom') renderCutsChart(readCuts(), _lastStudents);
+  });
+});
+$('cutsApply').addEventListener('click', ()=>{
+  if(_lastStudents) renderCutsChart(readCuts(), _lastStudents);
+});
+['cutA','cutB','cutC','cutD','cutE'].forEach(id=>{
+  $(id).addEventListener('change', ()=>{
+    if(_lastStudents) renderCutsChart(readCuts(), _lastStudents);
+  });
+});
+
+// 학기 환산 비율 변경 시 자동 재계산
+['midRatio','finalRatio','performRatio','performMean','examType'].forEach(id=>{
+  $(id).addEventListener('change', ()=>{
+    const stats = window._lastStats;
+    if(stats) renderFinalScoreAnalysis(stats);
+  });
+});
+// 수행 비율 변경 시 수행 평균을 자동 추천(만점의 90%)
+$('performRatio').addEventListener('input', ()=>{
+  const perR = parseFloat($('performRatio').value)||0;
+  $('performMean').value = (perR * 0.9).toFixed(1);
+});
+</script>
+</body>
+</html>
