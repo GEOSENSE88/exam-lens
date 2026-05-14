@@ -1,3 +1,6 @@
+# Claude 내부 설정
+.claude/
+
 # 테스트용 PDF
 test.pdf
 test_combined.pdf

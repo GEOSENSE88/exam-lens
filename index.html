@@ -9,6 +9,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="icon" type="image/png" href="icon.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root {
@@ -393,7 +395,6 @@
     </div>
   </div>
 </header>
-<link rel="icon" type="image/png" href="icon.png">
 
 <main>
   <section class="card no-print" id="setup">
@@ -864,6 +865,7 @@ function renderCutsChart(cuts, students){
     </tr>`;
   });
   html += '</tbody>';
+  $('cutsCompTable').dataset.sortable = '';
   $('cutsCompTable').innerHTML = html;
 
   // 보정 안내 (E 컷이 추천값보다 높아 다른 컷이 끌려올라간 경우)
@@ -1214,7 +1216,7 @@ function gradeDist(students, grade){
 function histogram(students){
   const totals = students.map(s=>s.total).filter(v=>v!==null);
   // 성취도 5단계 (A/B/C/D/E) — I(40미만)는 E에 포함되며 stacked로 시각화
-  const labels = ['A (90↑)','B (80~90)','C (70~80)','D (60~70)','E (60↓)'];
+  const labels = ['A (90↑)','B (80~90)','C (70~80)','D (60~70)','E (40~60)'];
   const counts  = [0,0,0,0,0]; // E는 40~60만
   const iCounts = [0,0,0,0,0]; // E 위에 겹쳐 표시할 I(40미만) 인원
   totals.forEach(t=>{
@@ -1248,9 +1250,11 @@ function classBreakdown(students){
     cls, n:vs.length,
     mean: vs.length? vs.reduce((a,b)=>a+b,0)/vs.length : 0
   })).sort((a,b)=>a.cls.localeCompare(b.cls,'ko',{numeric:true}));
-  const means = arr.map(a=>a.mean);
-  const spread = means.length>1 ? Math.max(...means)-Math.min(...means) : 0;
-  return {classes:arr, spread};
+  const significantClasses = arr.filter(c=>c.n>=5);
+  const significantCount = significantClasses.length;
+  const significantMeans = significantClasses.map(c=>c.mean);
+  const spread = significantMeans.length>1 ? Math.max(...significantMeans)-Math.min(...significantMeans) : 0;
+  return {classes:arr, spread, significantCount};
 }
 
 function tagOf(h){ return h ? [h.unit,h.element].filter(Boolean).join(' / ') : ''; }
@@ -1390,7 +1394,7 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
       <td class="qcell">${i.topWrong.choice}번 (${(i.topWrong.rate*100).toFixed(1)}%)</td>
       <td>학생 다수가 ${i.topWrong.choice}번 선지를 선택. 해당 선지가 정답으로 보일 만한 부분 개념 또는 오개념을 활용한 보충 지도 필요.</td>
     </tr>`).join('');
-    attractSection = `<h3>4. 매력적 오답 분석</h3>`
+    attractSection = `<h3>3. 매력적 오답 분석</h3>`
       + `<p>오답률이 30% 이상인 특정 선지가 존재하는 문항을 정리함. 매력적 오답이 형성된 문항은 학생들의 공통된 오개념을 보여주므로 해당 부분에 대한 집중 보충 지도가 필요함.</p>`
       + `<table><thead><tr><th>문항</th><th>정답</th><th>최다 오답 선지</th><th>해석 및 지도 방향</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
@@ -1413,7 +1417,7 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
         <td>${cause}</td>
       </tr>`;
     }).join('');
-    riskSection = `<h3>5. 변별도 검토 필요 문항</h3>`
+    riskSection = `<h3>4. 변별도 검토 필요 문항</h3>`
       + `<table><thead><tr><th>문항</th><th>정답률</th><th>변별도</th><th>상/하 정답률</th><th>원인 및 조치</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
@@ -1480,7 +1484,7 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
     + `<h3>2. 문항 분석 및 대책</h3>` + itemTable
     + (attractSection || '')
     + (riskSection || '')
-    + `<h3>6. 종합 의견 및 개선 방향</h3>` + closing;
+    + `<h3>5. 종합 의견 및 개선 방향</h3>` + closing;
 }
 
 function animateCount(el, target, duration, decimals, suffix){
@@ -1537,145 +1541,6 @@ function renderGradeTable(gd, grade){
   $('gradeLegend').innerHTML = gd.map(g=>`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:14px;height:14px;background:${gradeColor(g.grade,maxG)};border-radius:3px"></span>${g.grade}등급</span>`).join('');
 }
 
-// (HWPX/PDF 인식 코드 제거됨 — 정확도 한계)
-async function _removed_pdf(){
-  return;
-  /* removed
-  const pdf = null;
-  const SCALE = 2.0;
-  const pages = []; // {canvas, vp, w, h, tokens:[{x,y,w,h,text,fontH}]}
-  for(let p=1;p<=pdf.numPages;p++){
-    const page = await pdf.getPage(p);
-    const vp = page.getViewport({scale:SCALE});
-    const canvas = document.createElement('canvas');
-    canvas.width = vp.width; canvas.height = vp.height;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    await page.render({canvasContext:ctx, viewport:vp}).promise;
-    const tc = await page.getTextContent();
-    const tokens = tc.items.map(it=>{
-      const tx = pdfjsLib.Util.transform(vp.transform, it.transform);
-      return {x:tx[4], y:tx[5], w:(it.width||0)*SCALE, h:(it.height||0)*SCALE, text:String(it.str||'').trim(), fontH:Math.abs(tx[3])};
-    }).filter(t=>t.text);
-    pages.push({canvas, vp, w:canvas.width, h:canvas.height, tokens});
-  }
-
-  // 진단: 텍스트 레이어 확인
-  const totalTokens = pages.reduce((a,p)=>a+p.tokens.length,0);
-  if(totalTokens===0) throw new Error('PDF에 텍스트 레이어가 없습니다(스캔본일 가능성). OCR된 PDF가 필요합니다.');
-
-  // 문항번호 후보 수집 — 다양한 패턴 허용
-  // (1) "1." / "1.다음~" / "1) ~" — 토큰이 숫자.으로 시작
-  // (2) "1" 단독 토큰 + 인접 토큰이 "." 또는 ".으로 시작"
-  // (3) 좌측 여백에 위치한 1~2자리 숫자 (소수점 아닌)
-  const cands = [];
-  pages.forEach((pg, pi)=>{
-    // 페이지의 좌측 컬럼 x를 추정: 모든 토큰 x의 최솟값
-    const xs = pg.tokens.map(t=>t.x);
-    const minX = xs.length ? Math.min(...xs) : 0;
-    pg.tokens.forEach((t, ti)=>{
-      let qn = null;
-      // 패턴 (1): "N." 또는 "N.텍스트" — 단 소수(N.M)는 제외
-      let m = t.text.match(/^(\d{1,2})[.)](?!\d)/);
-      if(m){ qn = +m[1]; }
-      // 패턴 (2): "N" 단일 + 다음 토큰이 "." 시작
-      else if(/^\d{1,2}$/.test(t.text)){
-        const next = pg.tokens[ti+1];
-        if(next && (next.text==='.' || /^[.)]/.test(next.text)) && Math.abs(next.y-t.y)<10){
-          qn = +t.text;
-        }
-      }
-      if(qn===null || qn<1 || qn>50) return;
-      // 좌측 여백 근처에 있는 토큰만 채택 (왼쪽 마진에서 페이지폭의 50% 이내)
-      if(t.x > minX + pg.w*0.55) return;
-      cands.push({qno:qn, page:pi, x:t.x, y:t.y, fontH:t.fontH||14, text:t.text});
-    });
-  });
-
-  if(cands.length===0){
-    throw new Error(`텍스트 ${totalTokens}개 추출됨. "1.", "1)" 형식 문항번호를 찾지 못함. PDF 형식을 확인해주세요.`);
-  }
-  cands.sort((a,b)=> a.page-b.page || a.y-b.y);
-
-  // 컬럼 분할 추정: 후보들의 x값 분포에서 가장 큰 갭
-  const xs = [...new Set(cands.map(c=>Math.round(c.x)))].sort((a,b)=>a-b);
-  let colSplit = null, maxGap = 0;
-  for(let i=1;i<xs.length;i++){
-    const g = xs[i]-xs[i-1];
-    if(g>maxGap){ maxGap = g; colSplit = (xs[i]+xs[i-1])/2; }
-  }
-  const twoCol = maxGap > 200;
-
-  // 컬럼 고려 정렬
-  const colOf = c => twoCol ? (c.x < colSplit ? 0 : 1) : 0;
-  cands.sort((a,b)=> a.page-b.page || colOf(a)-colOf(b) || a.y-b.y);
-
-  // 1, 2, 3 ... 순차 매칭. 같은 번호 여러 후보가 있을 수 있으므로 첫 출현만 채택.
-  const seen = new Set();
-  const seq = [];
-  let expect = 1;
-  for(const c of cands){
-    if(seen.has(c.qno)) continue;
-    if(c.qno === expect){
-      seq.push(c); seen.add(c.qno); expect++;
-    } else if(c.qno > expect && c.qno <= expect + 3){
-      // 작은 결번 허용
-      seq.push(c); seen.add(c.qno); expect = c.qno + 1;
-    }
-  }
-  if(seq.length===0){
-    // 순차 매칭 실패 시: 번호별 첫 출현만 모두 채택 (덜 보수적)
-    cands.forEach(c=>{
-      if(!seen.has(c.qno)){ seq.push(c); seen.add(c.qno); }
-    });
-    seq.sort((a,b)=>a.qno-b.qno);
-  }
-  if(seq.length===0) throw new Error('문항 번호 후보 ' + cands.length + '개 발견했으나 시퀀스 구성 실패.');
-
-  // 각 문항 영역 잘라내기
-  const out = {};
-  for(let i=0;i<seq.length;i++){
-    const q = seq[i];
-    const next = seq[i+1];
-    const pg = pages[q.page];
-    const colLeft = !twoCol ? 0 : (colOf(q)===0 ? Math.max(0, q.x - pg.w*0.03) : Math.max(colSplit, q.x - pg.w*0.02));
-    const colRight = !twoCol ? pg.w : (colOf(q)===0 ? colSplit : pg.w);
-    const top = Math.max(0, q.y - q.fontH - 4);
-    let bottom;
-    if(next && next.page===q.page && colOf(next)===colOf(q)){
-      bottom = next.y - next.fontH - 4;
-    } else if(next && next.page===q.page && colOf(next)!==colOf(q)){
-      bottom = pg.h - 20; // 같은 페이지에서 컬럼 전환
-    } else {
-      bottom = pg.h - 20;
-    }
-    const width = colRight - colLeft;
-    const height = Math.max(40, bottom - top);
-    const out2 = document.createElement('canvas');
-    out2.width = width; out2.height = height;
-    out2.getContext('2d').drawImage(pg.canvas, colLeft, top, width, height, 0, 0, width, height);
-    out[q.qno] = out2.toDataURL('image/jpeg', 0.85);
-  }
-  return {map: out, count: seq.length, pages: pdf.numPages, twoCol};
-}
-
-function renderPdfPreviews(){
-  const card = $('qPreviewCard');
-  const grid = $('qPreview');
-  if(!pdfQuestions){ card.classList.add('hidden'); grid.innerHTML=''; return; }
-  card.classList.remove('hidden');
-  const qnos = Object.keys(pdfQuestions).map(Number).sort((a,b)=>a-b);
-  grid.innerHTML = qnos.map(q=>{
-    const item = lastItems.find(i=>i.qno===q);
-    const sub = item ? `정답률 ${(item.p*100).toFixed(1)}% / 변별도 ${item.d.toFixed(2)}` : '';
-    return `<div class="qcard" data-q="${q}">
-      <div class="qhead"><b>${q}번</b><span style="color:#6b7280">${sub}</span></div>
-      <img loading="lazy" src="${pdfQuestions[q]}" alt="${q}번">
-    </div>`;
-  }).join('');
-  grid.querySelectorAll('.qcard').forEach(el=>{
-  */
-}
 function renderItemTable(items, filter){
   let arr = [...items];
   if(filter==='review') arr = arr.filter(i=>i.d<0.1);
@@ -1796,6 +1661,7 @@ function renderPointRate(items){
     </div>`;
 
   // 부조화 문항 표
+  $('pprTable').dataset.sortable = '';
   if(mismatches.length===0){
     $('pprTable').innerHTML = '<thead><tr><th style="text-align:center">결과</th></tr></thead><tbody><tr><td style="padding:14px;text-align:center;color:#16a34a;font-weight:600">✓ 모든 문항이 배점-난이도 매칭 적정 영역에 있음</td></tr></tbody>';
   }else{
@@ -1817,7 +1683,6 @@ function renderPointRate(items){
   }
 
   // 산점도 (4사분면 색상)
-  Chart.defaults.font.family = "'에이투지체','AtoZ','Pretendard Variable','Pretendard',sans-serif";
   const points = items.map(i=>{
     const ptHigh = i.points >= a.meanPt;
     const pHigh  = i.p*100 >= a.meanP;
@@ -1951,6 +1816,7 @@ function renderDistribution(items, students){
     html += '</tr>';
   });
   html += '</tbody>';
+  $('distTable').dataset.sortable = '';
   $('distTable').innerHTML = html;
 
   // 셀 클릭 → 학생 명단 모달
