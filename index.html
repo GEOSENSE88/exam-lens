@@ -1213,6 +1213,37 @@ window.__restoreExamLensSnapshot = function(snap){
     if(snap.qImages) qImages = snap.qImages;
     if(snap.qImageOrder) qImageOrder = snap.qImageOrder;
     if(snap.qSlotMap) qSlotMap = snap.qSlotMap;
+
+    // 차트/표를 원본 데이터로 다시 렌더링 — PNG 스냅샷이 아닌 인터랙티브 차트
+    if(_lastStudents && lastItems && lastItems.length){
+      const grade = +($('grade')?.value) || 3;
+      const subject = ($('subject')?.value || '').trim();
+      const examName = ($('examName')?.value || '').trim();
+      const anon = $('anon')?.checked || false;
+      const stats = window._lastStats || calcStats(_lastStudents);
+      const gd = gradeDist(_lastStudents, grade);
+      const hist = histogram(_lastStudents);
+      const alpha = calcCronbach(lastItems, _lastStudents);
+      try{ renderSummary(stats, grade, alpha); }catch(e){ console.warn('renderSummary', e); }
+      try{ renderGradeTable(gd, grade); }catch(e){ console.warn('renderGradeTable', e); }
+      try{ renderItemTable(lastItems, lastFilter); }catch(e){ console.warn('renderItemTable', e); }
+      try{ renderStudents(_lastStudents, anon); }catch(e){ console.warn('renderStudents', e); }
+      try{ drawCharts(lastItems, hist, gd, _lastStudents, grade, anon); }catch(e){ console.warn('drawCharts (Chart.js 로드 실패 가능)', e); }
+      try{ renderPointRate(lastItems); }catch(e){ console.warn('renderPointRate', e); }
+      try{ renderMatrix(lastItems, _lastStudents); }catch(e){ console.warn('renderMatrix', e); }
+      try{ renderDistribution(lastItems, _lastStudents); }catch(e){ console.warn('renderDistribution', e); }
+      try{ $('review').innerHTML = buildReview(stats, lastItems, gd, grade, subject, examName, _lastStudents, alpha); }catch(e){ console.warn('buildReview', e); }
+      try{ setupCutsSimulator(_lastStudents); }catch(e){ console.warn('setupCutsSimulator', e); }
+      try{ renderFinalScoreAnalysis(stats); }catch(e){ console.warn('renderFinalScoreAnalysis', e); }
+      try{ makeSortable($('itemTable')); }catch(e){}
+      try{ makeSortable($('studentTable')); }catch(e){}
+      try{ makeSortable($('gradeTable')); }catch(e){}
+      try{ makeSortable($('distTable')); }catch(e){}
+      try{ makeSortable($('cutsCompTable')); }catch(e){}
+      try{ makeSortable($('pprTable')); }catch(e){}
+      const _result = document.getElementById('result');
+      if(_result) _result.classList.remove('hidden');
+    }
     console.log('[Exam-Lens] 스냅샷 복원 완료: 학생 ' + (_lastStudents||[]).length + '명, 문항 ' + (lastItems||[]).length + '개');
   }catch(e){ console.error('[Exam-Lens] 스냅샷 복원 중 오류', e); }
 };
@@ -3828,7 +3859,7 @@ function renderItemTable(items, filter){
 
 function anonOption(){ return $('anon').checked; }
 
-// 현재 분석 결과를 HTML 스냅샷으로 저장 (차트 포함)
+// 현재 분석 결과를 HTML 보고서로 저장 (차트는 원본 데이터로 다시 그려짐)
 function saveHtml(){
   const result = document.getElementById('result');
   const hasResult = result && !result.classList.contains('hidden');
@@ -3839,36 +3870,17 @@ function saveHtml(){
   const _qp = document.getElementById('qPanel'); if(_qp) _qp.classList.remove('on');
   const _qb = document.getElementById('qBackdrop'); if(_qb) _qb.classList.remove('on');
 
-  // 🔧 저장 HTML은 file:// 에서 열릴 가능성이 큼.
-  //    외부 CDN(cdnjs, jsdelivr) <script> 가 file:// 환경에서 실패하면 페이지 JS 전체가 깨짐.
-  //    저장본은 재분석·차트 재렌더가 필요 없으므로(이미 PNG 스냅샷) 외부 스크립트 태그를 임시 제거.
-  const removedExternalScripts = [];
-  document.querySelectorAll('script[src]').forEach(s => {
-    const src = s.getAttribute('src') || '';
-    if(/^https?:\/\//i.test(src)){
-      const placeholder = document.createComment(`EXTERNAL_SCRIPT_REMOVED:${src}`);
-      s.parentNode.insertBefore(placeholder, s);
-      s.parentNode.removeChild(s);
-      removedExternalScripts.push({node: s, placeholder});
-    }
-  });
+  // [1. 파일 업로드 및 설정] 카드는 저장본에서 제거 — 보고서 전용
+  const setupCard = document.getElementById('setup');
+  let setupParent = null, setupNext = null;
+  if(setupCard){
+    setupParent = setupCard.parentNode;
+    setupNext = setupCard.nextSibling;
+    setupParent.removeChild(setupCard);
+  }
 
-  // 모든 canvas를 PNG 데이터 URL 이미지로 교체 (스냅샷 보존)
-  const swaps = [];
-  document.querySelectorAll('canvas').forEach(canvas=>{
-    if(!canvas.width || !canvas.height) return;
-    try{
-      const dataUrl = canvas.toDataURL('image/png');
-      const img = document.createElement('img');
-      img.src = dataUrl;
-      img.alt = canvas.id || 'chart-snapshot';
-      img.style.cssText = 'width:100%;height:auto;display:block;background:#fff;border-radius:6px';
-      img.dataset.snapshot = '1';
-      canvas.parentNode.insertBefore(img, canvas);
-      canvas.style.display = 'none';
-      swaps.push({canvas, img});
-    }catch(e){ /* skip on taint */ }
-  });
+  // 외부 CDN 스크립트(Chart.js 등)는 그대로 유지 — 저장 HTML 열 때 차트를 데이터로 다시 그리기 위함.
+  // 캔버스도 비우지 않고 직렬화 — 페이지 로드 후 snapshot 스크립트가 drawCharts() 로 다시 그림.
 
   // 저장된 파일에 안내 배너 삽입
   let banner = null;
@@ -3876,7 +3888,7 @@ function saveHtml(){
     banner = document.createElement('div');
     banner.dataset.savedBanner = '1';
     banner.style.cssText = 'background:linear-gradient(135deg,#5b6cff,#a78bfa);color:#fff;padding:8px 14px;border-radius:8px;margin:12px 0;font-size:12px;text-align:center';
-    banner.textContent = `📁 저장된 분석 보고서 — ${new Date().toLocaleString('ko-KR')} · 차트는 스냅샷 이미지입니다 (재분석은 새 데이터 업로드 후 [분석 시작])`;
+    banner.textContent = `📁 저장된 분석 보고서 — ${new Date().toLocaleString('ko-KR')} · 차트는 원본 데이터로 다시 그려집니다 (Chart.js CDN 필요)`;
     const main = document.querySelector('main');
     if(main) main.insertBefore(banner, main.firstChild);
   }
@@ -3931,19 +3943,13 @@ function saveHtml(){
   const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
 
   // 원복
-  swaps.forEach(({canvas, img})=>{
-    canvas.style.display = '';
-    img.remove();
-  });
   if(banner) banner.remove();
   if(snapshotScript) snapshotScript.remove();
-  // 외부 스크립트 태그 원복 (placeholder 자리에 다시 삽입)
-  removedExternalScripts.forEach(({node, placeholder}) => {
-    if(placeholder.parentNode){
-      placeholder.parentNode.insertBefore(node, placeholder);
-      placeholder.parentNode.removeChild(placeholder);
-    }
-  });
+  // setup 카드 원래 위치로 복귀
+  if(setupCard && setupParent){
+    if(setupNext) setupParent.insertBefore(setupCard, setupNext);
+    else setupParent.appendChild(setupCard);
+  }
 
   // 파일명 — [학년_과목명_시험명_문항분석결과(날짜)].html
   // 비어있는 항목은 자연스럽게 생략. 윈도우/맥에서 안전한 문자만 사용
