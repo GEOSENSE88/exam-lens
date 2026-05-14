@@ -2809,10 +2809,15 @@ async function processOriginalPDFTextBased(file, statusEl){
         vpHeight: v.vpHeight,
         items: c.items,
         fives: c.fives,
+        allChoices: c.allChoices,
         xRangeStart: c.xRangeStart,
         xRangeEnd: c.xRangeEnd,
+        // header/footer 경계는 텍스트 검출 시 사용한 footerYStart(0.93) / headerYEnd(0.04) 와
+        // 동일한 기준을 사용해야 함. 25px 만 잘라내면 "2026학년도 ... 중간고사" 같은
+        // 페이지 꼬리말 텍스트가 단/페이지 넘기는 문항의 크롭에 그대로 포함됨.
         headerY: v.vpHeight * 0.04,
-        footerY: v.vpHeight - 25,
+        footerY: v.vpHeight * 0.93,
+        allTextItems: v.allTextItems || c.allTextItems || null,
       });
     });
   });
@@ -2831,8 +2836,12 @@ async function processOriginalPDFTextBased(file, statusEl){
       const segments = [];
 
       if(lastFive){
-        // 같은 컬럼에서 ⑤ 발견 — ⑤ 라인 + 여분까지
-        const yEnd = Math.min(yLimit, lastFive.y + lastFive.fontH * 2.5);
+        // 같은 컬럼에서 ⑤ 발견 — ⑤의 본문이 2~4줄로 wrap 되는 경우가 많아
+        // 단순히 fontH*2.5 만큼만 잡으면 잘림. 다음 문항이 같은 컬럼에 있으면
+        // 그 직전(yLimit)까지 안전하게 확장. 없으면 충분한 여유(10*fontH)까지.
+        const yEnd = nextQ
+          ? yLimit
+          : Math.min(yLimit, lastFive.y + lastFive.fontH * 10);
         segments.push({canvas: c.canvas, x0: c.xRangeStart, x1: c.xRangeEnd, y0: yStart, y1: yEnd});
       } else if(nextQ){
         // 같은 컬럼 다음 문항 있음 + ⑤ 없음 — 다음 문항 직전까지
@@ -2852,11 +2861,16 @@ async function processOriginalPDFTextBased(file, statusEl){
           );
           if(eligibleFives.length){
             const last = eligibleFives[eligibleFives.length-1];
+            // 확장 컬럼에서도 ⑤가 여러 줄로 wrap 되므로 위쪽 한도를 넉넉히 확보
+            // 다음 문항(ncFirstQ)이 있으면 그 직전까지, 없으면 fontH*10 까지
+            const extYEnd = ncFirstQ
+              ? Math.min(ncFirstQ.y - ncFirstQ.fontH - 4, nc.footerY)
+              : Math.min(nc.footerY, last.y + last.fontH * 10);
             segments.push({
               canvas: nc.canvas,
               x0: nc.xRangeStart, x1: nc.xRangeEnd,
               y0: nc.headerY,
-              y1: last.y + last.fontH * 2.5,
+              y1: extYEnd,
             });
             extensionFound = true;
             break;
