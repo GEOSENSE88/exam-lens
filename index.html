@@ -810,7 +810,7 @@
       <div style="flex:1">
         <label>📋 NEIS 문항정보표 (선택사항) — <span style="color:var(--muted);font-weight:400">의도 난이도 · 성취기준 · 내용영역 분석용</span></label>
         <input type="file" id="neisFile" accept=".xlsx,.xls">
-        <div id="neisStatus" style="margin-top:6px;font-size:12px;color:var(--muted)">NEIS에서 다운받은 문항정보표 엑셀을 업로드하면 출제 의도 대비 결과 분석과 성취기준별 분석이 추가됩니다.</div>
+        <div id="neisStatus" style="margin-top:6px;font-size:12px;color:var(--muted)">NEIS에서 다운받은 문항정보표 엑셀을 업로드하면 출제 의도 대비 결과 분석과 성취기준별 분석이 추가됩니다. <b>분석 대상은 선택형 문항만</b> (서답형은 정답이 별도관리되어 제외).</div>
       </div>
     </div>
 
@@ -1360,41 +1360,51 @@ function parseNeisItemSheet(rows){
 }
 
 // 학생답안 items 배열에 NEIS 데이터(intent/area/standard*)를 매핑
-// 단순 순서 매칭 가정: items[0..N-1] = NEIS 선택형 1..N, items[N..K-1] = NEIS 서답형 1..M
-// (학생답안 엑셀에서 선택형이 먼저, 서답형이 뒤에 오는 NEIS 표준 양식)
-// 매칭 실패 시 null 반환 (분석 비활성화)
+// 정책: NEIS 분석은 선택형만 대상 (서답형은 분석 제외)
+//   case A — items.length === sel.length         → 학생답안이 선택형만. 1:1 매칭 (이상적)
+//   case B — items.length === sel.length + open  → 학생답안에 선택형+서답형 모두. 앞 sel.length 만 매칭,
+//                                                  뒷부분(서답형)은 NEIS 필드 부여 안 함 → 분석 자동 제외
+//   그 외 → 매칭 실패
 function mergeNeisIntoItems(items, neis){
   if(!neis || !items) return { merged: false, reason: 'NEIS 또는 items 없음' };
   const sel = neis.selectItems || [];
   const open = neis.openItems || [];
-  const totalExpected = sel.length + open.length;
-  if(items.length !== totalExpected){
+  if(sel.length === 0){
+    return { merged: false, reason: 'NEIS 문항정보표에 선택형 문항이 없습니다.' };
+  }
+
+  let mode;
+  if(items.length === sel.length){
+    mode = 'select-only';        // 학생답안이 선택형만
+  } else if(items.length === sel.length + open.length){
+    mode = 'select-front';       // 학생답안에 선택형+서답형 모두 (앞부분만 매칭)
+  } else {
     return {
       merged: false,
-      reason: `문항 수 불일치 (학생답안: ${items.length}, NEIS: 선택형 ${sel.length} + 서답형 ${open.length} = ${totalExpected})`
+      reason: `문항 수 불일치 (학생답안: ${items.length}문항, NEIS 선택형: ${sel.length}문항${open.length > 0 ? ` · 서답형 ${open.length}문항은 분석 제외` : ''})`
     };
   }
+
   // 정답 일치 검증 (선택형만; 서답형은 NEIS에서 '별도관리'라 skip)
   let answerMismatch = 0;
   const mismatchList = [];
-  for(let i = 0; i < items.length; i++){
-    const src = i < sel.length ? sel[i] : open[i - sel.length];
+  for(let i = 0; i < sel.length; i++){
+    const src = sel[i];
     items[i].intent = src.intent;
     items[i].area = src.area;
     items[i].standardCode = src.standardCode;
     items[i].standardDesc = src.standardDesc;
     items[i].standardRaw = src.standardRaw;
-    items[i].neisKind = src.kind; // 'Q' or 'S'
+    items[i].neisKind = 'Q';
     items[i].neisQno = src.qno;
-    // 정답 비교 (선택형만)
-    if(src.kind === 'Q' && src.answer && /^\d+$/.test(src.answer)){
+    if(src.answer && /^\d+$/.test(src.answer)){
       if(String(items[i].answer).trim() !== String(src.answer).trim()){
         answerMismatch++;
         mismatchList.push(`${items[i].qno}번: 학생답안=${items[i].answer} / NEIS=${src.answer}`);
       }
     }
   }
-  return { merged: true, answerMismatch, mismatchList, selectN: sel.length, openN: open.length };
+  return { merged: true, answerMismatch, mismatchList, selectN: sel.length, openN: open.length, mode };
 }
 
 // ============ 의도 난이도 분석 (A) ============
@@ -6143,7 +6153,10 @@ async function run(){
             const warn = mergeRes.answerMismatch > 0
               ? ` <span style="color:#b45309">⚠ 정답 ${mergeRes.answerMismatch}개 불일치 (NEIS 갱신 권장)</span>`
               : '';
-            nstat.innerHTML = `<span style="color:#166534;font-weight:600">✓ NEIS 문항정보표 적용 — 선택형 ${mergeRes.selectN} + 서답형 ${mergeRes.openN} 매칭</span>${warn}`;
+            const openNote = mergeRes.openN > 0
+              ? ` <span style="color:#6b7280">· 서답형 ${mergeRes.openN}개는 분석 제외 (정책)</span>`
+              : '';
+            nstat.innerHTML = `<span style="color:#166534;font-weight:600">✓ NEIS 문항정보표 적용 — 선택형 ${mergeRes.selectN}문항 매칭</span>${openNote}${warn}`;
           } else {
             nstat.innerHTML = `<span style="color:#b91c1c">✗ NEIS 매칭 실패: ${escHTML(mergeRes.reason)} — 의도/성취기준 분석 건너뜀</span>`;
           }
