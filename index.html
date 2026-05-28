@@ -1661,6 +1661,12 @@ let _lastStudents = null;
 window.__restoreExamLensSnapshot = function(snap){
   try{
     if(!snap) return;
+    // 라이브 페이지 가드: 이미 분석 데이터가 메모리에 있으면 복원 건너뜀.
+    // (saveHtml 이 라이브 DOM 에 스냅샷 스크립트를 append 하면서 즉시 실행되는 흐름에서
+    //  $('grade') 가 null 인 채로 재렌더 → 9등급제로 박혀버리는 깜빡임 방지)
+    if(_lastStudents && Array.isArray(_lastStudents) && _lastStudents.length > 0){
+      return;
+    }
     if(snap._lastStudents) _lastStudents = snap._lastStudents;
     if(snap.lastItems) lastItems = snap.lastItems;
     if(snap.lastFilter) lastFilter = snap.lastFilter;
@@ -1669,15 +1675,19 @@ window.__restoreExamLensSnapshot = function(snap){
     if(snap.qImageOrder) qImageOrder = snap.qImageOrder;
     if(snap.qSlotMap) qSlotMap = snap.qSlotMap;
 
+    // 폼 값 복원 — 저장된 파일에선 setup 카드가 제거되어 $('grade') 등이 null.
+    // snap._form 에 저장 직전 캡처된 값이 있으면 그걸 우선 사용 (9등급 폴백 방지).
+    const _form = snap._form || {};
+
     // 차트/표를 원본 데이터로 다시 렌더링 — PNG 스냅샷이 아닌 인터랙티브 차트
     if(_lastStudents && lastItems && lastItems.length){
-      const grade = +($('grade')?.value) || 3;
-      const subject = ($('subject')?.value || '').trim();
-      const examName = ($('examName')?.value || '').trim();
-      const anon = $('anon')?.checked || false;
+      const grade = +(_form.grade || ($('grade') && $('grade').value)) || 1;
+      const subject = (_form.subject || ($('subject') && $('subject').value) || '').trim();
+      const examName = (_form.examName || ($('examName') && $('examName').value) || '').trim();
+      const anon = (_form.anon != null) ? !!_form.anon : !!($('anon') && $('anon').checked);
       const stats = window._lastStats || calcStats(_lastStudents);
       const gd = gradeDist(_lastStudents, grade);
-      const hist = histogram(_lastStudents);
+      const hist = histogram(_lastStudents, subject);
       const alpha = calcCronbach(lastItems, _lastStudents);
       try{ renderSummary(stats, grade, alpha); }catch(e){ console.warn('renderSummary', e); }
       try{ renderGradeTable(gd, grade); }catch(e){ console.warn('renderGradeTable', e); }
@@ -1784,8 +1794,23 @@ function renderCutsChart(cuts, students){
       responsive:true, maintainAspectRatio:false,
       animation:{duration:700, easing:'easeOutQuart'},
       plugins:{
-        title:{display:true, text:'성취도 분포 비교 (회색=고정 / 컬러=시뮬레이션)', color:'#1a1f2e', font:{size:13,weight:'600'}, padding:{bottom:6}},
-        legend:{position:'bottom', labels:{boxWidth:14, font:{size:11}}},
+        title:{display:true, text:'성취도 분포 비교 (회색=고정 / 무지개=시뮬레이션 — 빨주노초파보)', color:'#1a1f2e', font:{size:13,weight:'600'}, padding:{bottom:6}},
+        legend:{
+          position:'bottom',
+          labels:{
+            boxWidth:14, boxHeight:14, padding:10, font:{size:11},
+            // 시뮬레이션 dataset 의 backgroundColor 가 배열이라 기본 범례는 첫 색(빨강) 만 노출 → 직접 6색 + 고정 회색으로 구성
+            generateLabels: () => [
+              {text:'고정 (90/80/70/60/40)', fillStyle:'rgba(148,163,184,.6)', strokeStyle:'transparent', lineWidth:0},
+              {text:'시뮬 A', fillStyle:'#dc2626', strokeStyle:'transparent', lineWidth:0},
+              {text:'시뮬 B', fillStyle:'#f97316', strokeStyle:'transparent', lineWidth:0},
+              {text:'시뮬 C', fillStyle:'#eab308', strokeStyle:'transparent', lineWidth:0},
+              {text:'시뮬 D', fillStyle:'#16a34a', strokeStyle:'transparent', lineWidth:0},
+              {text:'시뮬 E', fillStyle:'#2563eb', strokeStyle:'transparent', lineWidth:0},
+              {text:'시뮬 I', fillStyle:'#7c3aed', strokeStyle:'transparent', lineWidth:0},
+            ]
+          }
+        },
         tooltip:{
           backgroundColor:'rgba(26,31,46,.92)', titleColor:'#fff', bodyColor:'#e5e7eb', padding:10, cornerRadius:8,
           callbacks:{label:c=>{
@@ -1797,7 +1822,8 @@ function renderCutsChart(cuts, students){
       },
       scales:{
         x:{grid:{display:false}},
-        y:{beginAtZero:true, ticks:{precision:0}, grid:{color:'rgba(229,232,240,.6)'}}
+        y:{beginAtZero:true, ticks:{precision:0}, grid:{color:'rgba(229,232,240,.6)'},
+           suggestedMax: Math.ceil(Math.max(...labels.map(l=>Math.max(fixedCounts[l]||0, counts[l]||0)))*1.35)}
       }
     }
   });
@@ -2176,22 +2202,28 @@ function gradeDist(students, grade){
   return out;
 }
 
-function histogram(students){
+// 공통과목 판별 — 1학년 공통 6과목(국·수·영·한국사·통합사회·통합과학)은
+// 성취평가제에서 I등급(40 미만 · 미도달)을 별도로 관리. 막대 그래프도 분리 표시.
+function isCommonSubject(subjectName){
+  if(!subjectName) return false;
+  const n = String(subjectName).replace(/\s+/g, '').toLowerCase();
+  // 1·2 접미사가 붙거나 안 붙은 형태 모두 허용
+  const commons = [
+    '공통국어1','공통국어2','공통국어',
+    '공통수학1','공통수학2','공통수학',
+    '공통영어1','공통영어2','공통영어',
+    '한국사1','한국사2','한국사',
+    '통합사회1','통합사회2','통합사회',
+    '통합과학1','통합과학2','통합과학',
+  ].map(s=>s.toLowerCase());
+  return commons.includes(n);
+}
+
+function histogram(students, subject){
   const totals = students.map(s=>s.total).filter(v=>v!==null);
-  // 성취도 5단계 (A/B/C/D/E) — I(40미만)는 E에 포함되며 stacked로 시각화
-  const labels = ['A (90↑)','B (80~90)','C (70~80)','D (60~70)','E (40~60)'];
-  const counts  = [0,0,0,0,0]; // E는 40~60만
-  const iCounts = [0,0,0,0,0]; // E 위에 겹쳐 표시할 I(40미만) 인원
-  totals.forEach(t=>{
-    if(t>=90) counts[0]++;
-    else if(t>=80) counts[1]++;
-    else if(t>=70) counts[2]++;
-    else if(t>=60) counts[3]++;
-    else if(t>=40) counts[4]++;        // E (40~60)
-    else iCounts[4]++;                  // I (40미만) → E 위에 적층
-  });
-  // 클릭 시 학생 필터에 사용할 범위
-  const ranges = [
+  const common = isCommonSubject(subject);
+  // 클릭 필터용 5단계 + I 범위 (양쪽 모드 공통)
+  const rangesAE = [
     {label:'A (90 이상)',     test:t=>t>=90},
     {label:'B (80 ~ 90)',     test:t=>t>=80&&t<90},
     {label:'C (70 ~ 80)',     test:t=>t>=70&&t<80},
@@ -2199,7 +2231,40 @@ function histogram(students){
     {label:'E (40 ~ 60)',     test:t=>t>=40&&t<60},
   ];
   const iRange = {label:'I (40 미만 · 미도달)', test:t=>t<40};
-  return {labels, data:counts, iData:iCounts, ranges, iRange};
+
+  if(common){
+    // 공통과목: I 별도 막대 (6 카테고리, stacked 아님)
+    const labels = ['A (90↑)','B (80~90)','C (70~80)','D (60~70)','E (40~60)','I (40미만)'];
+    const data = [0,0,0,0,0,0];
+    totals.forEach(t=>{
+      if(t>=90) data[0]++;
+      else if(t>=80) data[1]++;
+      else if(t>=70) data[2]++;
+      else if(t>=60) data[3]++;
+      else if(t>=40) data[4]++;
+      else data[5]++; // I 별도 카테고리
+    });
+    return {
+      labels, data,
+      iData: null, // stacked I 데이터 없음 — 공통과목 분리 모드
+      ranges: [...rangesAE, iRange],
+      iRange,
+      isCommon: true,
+    };
+  }
+  // 일반(선택과목 등): 5단계 + I는 E 위에 stacked
+  const labels = ['A (90↑)','B (80~90)','C (70~80)','D (60~70)','E (40~60)'];
+  const counts  = [0,0,0,0,0];
+  const iCounts = [0,0,0,0,0];
+  totals.forEach(t=>{
+    if(t>=90) counts[0]++;
+    else if(t>=80) counts[1]++;
+    else if(t>=70) counts[2]++;
+    else if(t>=60) counts[3]++;
+    else if(t>=40) counts[4]++;
+    else iCounts[4]++; // I → E 위에 적층
+  });
+  return {labels, data:counts, iData:iCounts, ranges: rangesAE, iRange, isCommon: false};
 }
 
 function classBreakdown(students){
@@ -4883,6 +4948,16 @@ function saveHtml(){
   const _qp = document.getElementById('qPanel'); if(_qp) _qp.classList.remove('on');
   const _qb = document.getElementById('qBackdrop'); if(_qb) _qb.classList.remove('on');
 
+  // ⚠ #setup 카드를 제거하기 BEFORE 에 현재 폼 값을 캡처해야 함.
+  //   카드를 떼고 나서 캡처하면 $('grade').value 가 null 이 되어 스냅샷이 9등급(기본 폴백)으로 박힘.
+  //   라이브 페이지의 스냅샷 스크립트 실행과 저장된 파일 재로딩 모두에 영향.
+  const _snapForm = {
+    grade: ($('grade') && $('grade').value) || '',
+    subject: ($('subject') && $('subject').value) || '',
+    examName: ($('examName') && $('examName').value) || '',
+    anon: !!($('anon') && $('anon').checked),
+  };
+
   // [1. 파일 업로드 및 설정] 카드는 저장본에서 제거 — 보고서 전용
   const setupCard = document.getElementById('setup');
   let setupParent = null, setupNext = null;
@@ -4926,6 +5001,8 @@ function saveHtml(){
         qImages: (typeof qImages !== 'undefined' ? qImages : {}),
         qImageOrder: (typeof qImageOrder !== 'undefined' ? qImageOrder : []),
         qSlotMap: (typeof qSlotMap !== 'undefined' ? qSlotMap : {}),
+        // 폼 값 — 저장 직전 캡처 (setup 카드 제거 전 값). 9등급 폴백 버그 방지
+        _form: _snapForm,
       };
       // JSON.stringify로 직렬화 (함수·DOM 제외) — 부모 스크립트 종료 토큰 충돌 방지
       // (소스에 리터럴로 닫는 태그가 들어가면 안 되니, 정규식·치환문자열 모두 문자열 조합으로 구성)
@@ -5833,70 +5910,122 @@ function drawCharts(items, hist, gd, students, grade, anon){
   // 성취도 A~E 색상 — 무지개(상위 빨강 → 하위 파랑) + 인접 단계 대비 강화. I(40 미만)는 보라.
   const HIST_COLORS = ['#dc2626','#f97316','#facc15','#10b981','#0ea5e9'];
   const I_COLOR = '#7c3aed';
-  charts.hist = new Chart($('histChart'), {
-    type:'bar',
-    plugins:[valueLabel],
-    data:{
-      labels:hist.labels,
-      datasets:[
-        {
-          label:'성취도', data:hist.data, backgroundColor:HIST_COLORS,
-          // E(인덱스4)에 I 적층되면 윗변은 평평(0), 그 외엔 둥근 윗변(6). 아랫변은 축에 붙도록 항상 평평.
-          borderRadius: hist.data.map((_,i)=> (i===4 && hist.iData[4]>0) ? 0 : 6),
-          borderSkipped:'bottom',
-          stack:'s', categoryPercentage:0.7, barPercentage:0.85
-        },
-        {
-          label:'I (40미만)', data:hist.iData, backgroundColor:I_COLOR,
+
+  if(hist.isCommon){
+    // ===== 공통과목 모드: A·B·C·D·E·I 6막대 분리 표시 =====
+    const HIST_COLORS_6 = [...HIST_COLORS, I_COLOR];
+    const totalCommon = hist.data.reduce((s,n)=>s+n,0);
+    charts.hist = new Chart($('histChart'), {
+      type:'bar',
+      plugins:[valueLabel],
+      data:{
+        labels: hist.labels,
+        datasets:[{
+          label:'성취도', data: hist.data, backgroundColor: HIST_COLORS_6,
           borderRadius:6, borderSkipped:'bottom',
-          stack:'s', categoryPercentage:0.7, barPercentage:0.85
-        }
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false, animation:stackGrow,
-      onClick:(evt, els)=>{
-        if(!els.length) return;
-        const el = els[0];
-        const isI = el.datasetIndex===1;
-        if(isI){
-          showStudentsBy(students, hist.iRange.test, hist.iRange.label, anon, I_COLOR);
-        }else{
-          const r = hist.ranges[el.index];
-          showStudentsBy(students, r.test, r.label, anon, HIST_COLORS[el.index]);
-        }
+          categoryPercentage:0.7, barPercentage:0.85
+        }]
       },
-      onHover:(e,els)=>{ e.native.target.style.cursor = els.length?'pointer':'default'; },
-      plugins:{
-        title:{display:true,text:'성취도 분포 (막대 클릭 시 학생 목록 · I는 E 위에 적층)',...baseTitle},
-        legend:{display:true,position:'bottom',labels:{boxWidth:14,boxHeight:14,padding:12,font:{size:11.5},generateLabels:()=>[
-          {text:'A (90↑)', fillStyle:HIST_COLORS[0], strokeStyle:'transparent', lineWidth:0},
-          {text:'B (80~90)', fillStyle:HIST_COLORS[1], strokeStyle:'transparent', lineWidth:0},
-          {text:'C (70~80)', fillStyle:HIST_COLORS[2], strokeStyle:'transparent', lineWidth:0},
-          {text:'D (60~70)', fillStyle:HIST_COLORS[3], strokeStyle:'transparent', lineWidth:0},
-          {text:'E (40~60)', fillStyle:HIST_COLORS[4], strokeStyle:'transparent', lineWidth:0},
-          {text:'I (40미만)', fillStyle:I_COLOR, strokeStyle:'transparent', lineWidth:0}
-        ]}},
-        tooltip:{...baseTooltip, callbacks:{
-          label:c=>`${c.dataset.label}: ${c.raw}명`,
-          footer:c=>{
-            const el = c[0];
-            if(el.datasetIndex===1) return '클릭 → I(40미만) 학생 보기';
-            return '클릭 → ' + hist.labels[el.dataIndex] + ' 학생 보기';
-          }
-        }},
-        valueLabel:{formatter:(v)=>{
-          const total = hist.data.reduce((s,n)=>s+n,0) + hist.iData.reduce((s,n)=>s+n,0);
-          if(total===0) return [v+'명'];
-          return [v+'명', (v/total*100).toFixed(1)+'%'];
-        }}
-      },
-      scales:{
-        x:{stacked:true, grid:{display:false}},
-        y:{stacked:true, beginAtZero:true, ticks:{precision:0}, grid:baseGrid, suggestedMax: Math.ceil(Math.max(...hist.data.map((v,i)=>v+(hist.iData[i]||0)))*1.18)}
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:staggerBar(50),
+        onClick:(evt, els)=>{
+          if(!els.length) return;
+          const r = hist.ranges[els[0].index];
+          if(r) showStudentsBy(students, r.test, r.label, anon, HIST_COLORS_6[els[0].index]);
+        },
+        onHover:(e,els)=>{ e.native.target.style.cursor = els.length?'pointer':'default'; },
+        plugins:{
+          title:{display:true,text:'성취도 분포 (공통과목 · I등급 분리 표시 · 막대 클릭 시 학생 목록)',...baseTitle},
+          legend:{display:true,position:'bottom',labels:{boxWidth:14,boxHeight:14,padding:12,font:{size:11.5},generateLabels:()=>[
+            {text:'A (90↑)', fillStyle:HIST_COLORS[0], strokeStyle:'transparent', lineWidth:0},
+            {text:'B (80~90)', fillStyle:HIST_COLORS[1], strokeStyle:'transparent', lineWidth:0},
+            {text:'C (70~80)', fillStyle:HIST_COLORS[2], strokeStyle:'transparent', lineWidth:0},
+            {text:'D (60~70)', fillStyle:HIST_COLORS[3], strokeStyle:'transparent', lineWidth:0},
+            {text:'E (40~60)', fillStyle:HIST_COLORS[4], strokeStyle:'transparent', lineWidth:0},
+            {text:'I (40미만)', fillStyle:I_COLOR, strokeStyle:'transparent', lineWidth:0}
+          ]}},
+          tooltip:{...baseTooltip, callbacks:{
+            label:c=>`${hist.labels[c.dataIndex]}: ${c.raw}명`,
+            footer:c=>`클릭 → ${hist.labels[c[0].dataIndex]} 학생 보기`
+          }},
+          valueLabel:{formatter:(v)=>{
+            if(totalCommon===0) return [v+'명'];
+            return [v+'명', (v/totalCommon*100).toFixed(1)+'%'];
+          }}
+        },
+        scales:{
+          x:{grid:{display:false}},
+          y:{beginAtZero:true, ticks:{precision:0}, grid:baseGrid, suggestedMax: Math.ceil(Math.max(...hist.data)*1.35)}
+        }
       }
-    }
-  });
+    });
+  } else {
+    // ===== 일반(선택과목 등): I는 E 위에 stacked =====
+    charts.hist = new Chart($('histChart'), {
+      type:'bar',
+      plugins:[valueLabel],
+      data:{
+        labels:hist.labels,
+        datasets:[
+          {
+            label:'성취도', data:hist.data, backgroundColor:HIST_COLORS,
+            // E(인덱스4)에 I 적층되면 윗변은 평평(0), 그 외엔 둥근 윗변(6). 아랫변은 축에 붙도록 항상 평평.
+            borderRadius: hist.data.map((_,i)=> (i===4 && hist.iData[4]>0) ? 0 : 6),
+            borderSkipped:'bottom',
+            stack:'s', categoryPercentage:0.7, barPercentage:0.85
+          },
+          {
+            label:'I (40미만)', data:hist.iData, backgroundColor:I_COLOR,
+            borderRadius:6, borderSkipped:'bottom',
+            stack:'s', categoryPercentage:0.7, barPercentage:0.85
+          }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:stackGrow,
+        onClick:(evt, els)=>{
+          if(!els.length) return;
+          const el = els[0];
+          const isI = el.datasetIndex===1;
+          if(isI){
+            showStudentsBy(students, hist.iRange.test, hist.iRange.label, anon, I_COLOR);
+          }else{
+            const r = hist.ranges[el.index];
+            showStudentsBy(students, r.test, r.label, anon, HIST_COLORS[el.index]);
+          }
+        },
+        onHover:(e,els)=>{ e.native.target.style.cursor = els.length?'pointer':'default'; },
+        plugins:{
+          title:{display:true,text:'성취도 분포 (막대 클릭 시 학생 목록 · I는 E 위에 적층)',...baseTitle},
+          legend:{display:true,position:'bottom',labels:{boxWidth:14,boxHeight:14,padding:12,font:{size:11.5},generateLabels:()=>[
+            {text:'A (90↑)', fillStyle:HIST_COLORS[0], strokeStyle:'transparent', lineWidth:0},
+            {text:'B (80~90)', fillStyle:HIST_COLORS[1], strokeStyle:'transparent', lineWidth:0},
+            {text:'C (70~80)', fillStyle:HIST_COLORS[2], strokeStyle:'transparent', lineWidth:0},
+            {text:'D (60~70)', fillStyle:HIST_COLORS[3], strokeStyle:'transparent', lineWidth:0},
+            {text:'E (40~60)', fillStyle:HIST_COLORS[4], strokeStyle:'transparent', lineWidth:0},
+            {text:'I (40미만)', fillStyle:I_COLOR, strokeStyle:'transparent', lineWidth:0}
+          ]}},
+          tooltip:{...baseTooltip, callbacks:{
+            label:c=>`${c.dataset.label}: ${c.raw}명`,
+            footer:c=>{
+              const el = c[0];
+              if(el.datasetIndex===1) return '클릭 → I(40미만) 학생 보기';
+              return '클릭 → ' + hist.labels[el.dataIndex] + ' 학생 보기';
+            }
+          }},
+          valueLabel:{formatter:(v)=>{
+            const total = hist.data.reduce((s,n)=>s+n,0) + (hist.iData||[]).reduce((s,n)=>s+n,0);
+            if(total===0) return [v+'명'];
+            return [v+'명', (v/total*100).toFixed(1)+'%'];
+          }}
+        },
+        scales:{
+          x:{stacked:true, grid:{display:false}},
+          y:{stacked:true, beginAtZero:true, ticks:{precision:0}, grid:baseGrid, suggestedMax: Math.ceil(Math.max(...hist.data.map((v,i)=>v+((hist.iData||[])[i]||0)))*1.35)}
+        }
+      }
+    });
+  }
   charts.grade = new Chart($('gradeChart'), {
     type:'bar',
     plugins:[valueLabel],
@@ -5916,7 +6045,7 @@ function drawCharts(items, hist, gd, students, grade, anon){
         tooltip:{...baseTooltip, callbacks:{footer:()=>'클릭하여 학생 보기'}},
         valueLabel:{formatter:v=>v+'명'}
       },
-      scales:{y:{beginAtZero:true, ticks:{precision:0}, grid:baseGrid, suggestedMax:Math.ceil(Math.max(...gd.map(g=>g.n))*1.18)}, x:{grid:{display:false}}}
+      scales:{y:{beginAtZero:true, ticks:{precision:0}, grid:baseGrid, suggestedMax:Math.ceil(Math.max(...gd.map(g=>g.n))*1.35)}, x:{grid:{display:false}}}
     }
   });
 
@@ -6181,7 +6310,7 @@ async function run(){
     assignGrades(students, grade);
     const gd = gradeDist(students, grade);
     const itemRes = calcItems(items, students);
-    const hist = histogram(students);
+    const hist = histogram(students, subject);
 
     const alpha = calcCronbach(items, students);
     $('title').textContent = `${subject||'분석 결과'} ${examName? '— '+examName:''}`;
