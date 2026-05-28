@@ -6,20 +6,24 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>정기시험 문항 분석기</title>
-<!-- ============ CDN 라이브러리 로드 (다중 폴백) ============
-     일부 학교/회사 네트워크에서 cdnjs/jsdelivr 가 차단되는 경우가 있어
-     primary 가 실패하면 다음 CDN 으로 순차 시도. document.write 는 동기적이라
-     순서가 보장되고, window.XLSX 등 글로벌 확인으로 중복 로드도 회피.        -->
+<!-- ============ 라이브러리 로드 (로컬 우선 + CDN 다중 폴백) ============
+     일부 학교/회사 네트워크에서 모든 외부 CDN(cdnjs/jsdelivr/unpkg)이 차단되는
+     경우가 있어, 우리 서버에 직접 호스팅한 libs/ 경로를 1차로 시도. 그래도 실패
+     시(예: 저장된 HTML 을 로컬에서 열어 file:// 경로가 깨진 경우) CDN 폴백.
+     window.XLSX 등 글로벌 확인으로 중복 로드 회피.                            -->
 <!-- XLSX -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="libs/xlsx.full.min.js"></script>
+<script>window.XLSX || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');</script>
 <script>window.XLSX || document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
 <script>window.XLSX || document.write('<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
 <!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="libs/chart.umd.min.js"></script>
+<script>window.Chart || document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');</script>
 <script>window.Chart || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>');</script>
 <script>window.Chart || document.write('<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');</script>
 <!-- PDF.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="libs/pdf.min.js"></script>
+<script>window.pdfjsLib || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>');</script>
 <script>window.pdfjsLib || document.write('<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"><\/script>');</script>
 <script>window.pdfjsLib || document.write('<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"><\/script>');</script>
 <script>
@@ -28,7 +32,7 @@
     var _pdfScripts = Array.from(document.scripts).filter(function(s){ return /\/pdf\.min\.js(\?|$)/.test(s.src); });
     var _last = _pdfScripts[_pdfScripts.length - 1];
     var _workerSrc = _last && _last.src ? _last.src.replace(/pdf\.min\.js(\?.*)?$/, 'pdf.worker.min.js$1')
-                                        : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                                        : 'libs/pdf.worker.min.js';
     pdfjsLib.GlobalWorkerOptions.workerSrc = _workerSrc;
   }
 </script>
@@ -5037,10 +5041,23 @@ function saveHtml(){
     }
   }
 
+  // <base href> 주입 — 저장된 HTML 을 로컬(file://)에서 열어도 libs/, icon.png 등
+  // 상대 경로가 라이브 서버(26sannam3.site/exam-lens/)로 resolve 되도록.
+  // 라이브러리(libs/xlsx, chart, pdf.js)는 학교망에서 CDN 차단되더라도 우리 서버에서 받아옴.
+  const _existingBase = document.head.querySelector('base[data-snapshot-base]');
+  let baseEl = null;
+  if(!_existingBase){
+    baseEl = document.createElement('base');
+    baseEl.href = 'https://26sannam3.site/exam-lens/';
+    baseEl.dataset.snapshotBase = '1';
+    document.head.insertBefore(baseEl, document.head.firstChild);
+  }
+
   // 직렬화
   const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
 
   // 원복
+  if(baseEl) baseEl.remove();
   if(banner) banner.remove();
   if(snapshotScript) snapshotScript.remove();
   // setup 카드 원래 위치로 복귀
