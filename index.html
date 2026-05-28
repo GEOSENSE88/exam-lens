@@ -580,95 +580,86 @@
     #qPanel .qstats{grid-template-columns:repeat(2, 1fr)}
   }
 
-  /* ============ PRINT / PDF (A4 최적화) ============ */
-  @page {
-    size: A4 portrait;
-    margin: 10mm 9mm;
-  }
+  /* ============ PRINT / PDF (보고서 모드 — #printReport 출력) ============ */
+  /* 화면에서는 보고서 컨테이너 숨김. 인쇄 직전 buildPrintReport()가 채움 */
+  #printReport { display: none; }
+
+  /* 명명 페이지: 기본 세로 + landscape (매트릭스/분포표 가로 출력용) */
+  @page { size: A4 portrait; margin: 12mm 10mm; }
+  @page landscape { size: A4 landscape; margin: 10mm; }
+
   @media print {
     *, *::before, *::after { animation: none !important; transition: none !important; }
-    html, body { background: #fff !important; font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    html, body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
 
-    /* 인쇄 불필요 요소 숨김 */
-    header, .no-print, #setup, .qmodal, footer, .filters, #qPanel, #qBackdrop { display: none !important; }
-    main { max-width: none; padding: 0; margin: 0; }
+    /* 보고서 모드 (모달에서 인쇄): 화면 DOM 전부 숨기고 #printReport 만 출력 */
+    body.printing-report header,
+    body.printing-report main > *:not(#printReport),
+    body.printing-report .qmodal,
+    body.printing-report #qPanel,
+    body.printing-report #qBackdrop,
+    body.printing-report footer,
+    body.printing-report #toast { display: none !important; }
+    body.printing-report main { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+    body.printing-report #printReport { display: block !important; }
 
-    /* 인쇄용 헤더 (제목과 메타 정보) */
-    body::before {
-      content: "정기시험 문항 분석 보고서  ·  Exam Lens";
-      display: block;
-      font-size: 11px; font-weight: 700; color: #1a1f2e;
-      padding: 0 0 4px; margin: 0 0 8px;
-      border-bottom: 1.5px solid #5b6cff;
-      letter-spacing: -.01em;
-    }
-
-    /* 카드 압축 */
-    .card {
-      break-inside: avoid; page-break-inside: avoid;
-      border: 1px solid #d6dbe7; box-shadow: none; animation: none;
-      padding: 10px 12px; margin-bottom: 8px; border-radius: 6px;
-      background: #fff !important;
-    }
-    .card h2 { font-size: 11.5px; margin: 0 0 8px; gap: 6px; }
-    .card h2::before { width: 3px; height: 13px; }
-
-    /* 요약 통계 카드: 더 촘촘하게 */
-    .summary { gap: 4px; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); }
-    .stat { padding: 5px 7px; background: #f4f6ff !important; border: 1px solid #dde3ff; border-radius: 5px; }
-    .stat .k { font-size: 8px; }
-    .stat .v { font-size: 12px; margin-top: 2px; color: #1a1f2e; }
-
-    /* 차트: 인쇄용 적절한 크기 (2단 레이아웃 강제 유지) */
-    .charts { gap: 6px; grid-template-columns: 1fr 1fr !important; }
-    .chart-box {
-      height: 180px !important;
-      padding: 6px;
-      border: 1px solid #e0e5f0;
-      page-break-inside: avoid; break-inside: avoid;
-    }
-    .chart-box.full { height: 240px !important; grid-column: 1 / -1 !important; }
-    .chart-box canvas { max-height: 100% !important; max-width: 100% !important; }
-
-    /* 표 압축 */
-    table { font-size: 9.5px; }
-    th, td { padding: 3.5px 5px; border-bottom: 1px solid #eef1f7; }
-    th { background: #f4f6ff !important; font-size: 9px; }
-    th .sort-ind { display: none; }
-    .table-wrap { max-height: none !important; overflow: visible !important; border: 1px solid #d6dbe7; border-radius: 4px; }
-
-    /* 매트릭스/답지 분포(가로로 긴 표): 더 작게 */
-    #matrixTable, #distTable { font-size: 8.5px; }
-    #matrixTable th, #matrixTable td, #distTable th, #distTable td { padding: 3px 3px; }
-
-    /* 자동 총평 */
-    .review {
-      background: #fff !important; border: 1px solid #d6dbe7;
-      padding: 10px 12px; line-height: 1.55; font-size: 10px;
-    }
-    .review h3 { font-size: 11px; margin: 10px 0 5px; }
-    .review h3:first-child { margin-top: 0; }
-    .review table { font-size: 9px; }
-    .review table th, .review table td { padding: 4px 6px; }
-
-    /* 학생별 점수표 details는 강제 펼침 */
-    details > summary { display: none; }
-    details { display: block; }
-
-    /* 행 페이지 분리 방지 */
-    tbody tr { page-break-inside: avoid; }
-
-    /* 색상 보존 (Chart canvas는 자동, 표 배경은 위에서 설정) */
-    .stat .v, .review h3, .card h2 { color: #1a1f2e !important; }
-
-    /* 푸터 크레딧 (인쇄 시 다시 보이게) */
-    body::after {
-      content: "제작 · 산남고 이성훈   |   exam-lens   |   인쇄 페이지";
-      display: block; text-align: center;
-      font-size: 8.5px; color: #6b7280;
-      margin-top: 10px; padding-top: 6px; border-top: 1px solid #e5e7eb;
-    }
+    /* 직접 Ctrl+P 등 fallback 경로: 화면 DOM 그대로 인쇄하되 노이즈만 제거 */
+    body:not(.printing-report) header,
+    body:not(.printing-report) .no-print,
+    body:not(.printing-report) #setup,
+    body:not(.printing-report) #qPanel,
+    body:not(.printing-report) #qBackdrop,
+    body:not(.printing-report) .qmodal,
+    body:not(.printing-report) footer,
+    body:not(.printing-report) #privacyNotice,
+    body:not(.printing-report) #aiNotice,
+    body:not(.printing-report) #printReport { display: none !important; }
+    body:not(.printing-report) .card { break-inside: avoid; page-break-inside: avoid; }
   }
+
+  /* ===== #printReport 내부 보고서 스타일 ===== */
+  #printReport { color:#1a1f2e; font-size:11px; line-height:1.55; font-family: inherit; }
+  #printReport .pr-page { page-break-after: always; break-after: page; padding: 0 0 6mm; }
+  #printReport .pr-page:last-child { page-break-after: auto; break-after: auto; }
+  #printReport .pr-landscape { page: landscape; }
+  #printReport h1.pr-title { font-size:22px; font-weight:800; letter-spacing:-.02em; margin:0 0 6px; color:#1a1f2e; }
+  #printReport h2.pr-h2 { font-size:14px; font-weight:700; margin:14px 0 8px; padding:0 0 4px; border-bottom:1.5px solid #5b6cff; color:#1a1f2e; }
+  #printReport h3.pr-h3 { font-size:12px; font-weight:700; margin:10px 0 4px; color:#1a1f2e; }
+  #printReport .pr-meta { font-size:11px; color:#475569; margin:0 0 14px; }
+  #printReport .pr-cover {
+    border:2px solid #5b6cff; border-radius:10px;
+    padding:24mm 16mm; margin:6mm 0 0; background:linear-gradient(180deg,#f4f6ff,#fff);
+  }
+  #printReport .pr-cover h1.pr-title { font-size:26px; margin:0 0 6px; }
+  #printReport .pr-cover .pr-cover-sub { font-size:13px; color:#475569; margin-bottom:16mm; letter-spacing:.01em; }
+  #printReport .pr-cover dl { display:grid; grid-template-columns:auto 1fr; gap:8px 18px; margin:0; font-size:12px; }
+  #printReport .pr-cover dt { font-weight:700; color:#5b6cff; white-space:nowrap; }
+  #printReport .pr-cover dd { margin:0; color:#1a1f2e; }
+  #printReport .pr-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:0 0 12px; }
+  #printReport .pr-summary .s { border:1px solid #d6dbe7; border-radius:6px; padding:7px 9px; background:#f8faff; }
+  #printReport .pr-summary .s .k { font-size:9px; color:#5b6cff; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+  #printReport .pr-summary .s .v { font-size:15px; font-weight:700; color:#1a1f2e; margin-top:2px; }
+  #printReport .pr-chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:6px 0 10px; }
+  #printReport .pr-chart-grid.full { grid-template-columns:1fr; }
+  #printReport .pr-chart-grid img { width:100%; height:auto; border:1px solid #e0e5f0; border-radius:6px; display:block; }
+  #printReport table.pr-table { width:100%; border-collapse:collapse; font-size:10px; margin:6px 0 10px; }
+  #printReport table.pr-table th { background:#f4f6ff; padding:5px 6px; border-bottom:1.5px solid #5b6cff; text-align:center; color:#1a1f2e; font-weight:700; }
+  #printReport table.pr-table td { padding:4px 6px; border-bottom:1px solid #eef1f7; text-align:center; }
+  #printReport table.pr-table td.l, #printReport table.pr-table th.l { text-align:left; }
+  #printReport table.pr-table tr.bad td { background:#fef2f2; }
+  #printReport table.pr-table tr.good td { background:#f0fdf4; }
+  #printReport table.pr-table tr { page-break-inside: avoid; break-inside: avoid; }
+  #printReport .pr-landscape table.pr-table { font-size:9px; }
+  #printReport .pr-landscape table.pr-table th, #printReport .pr-landscape table.pr-table td { padding:3px 4px; }
+  #printReport .pr-section { break-inside: avoid; page-break-inside: avoid; margin: 0 0 10px; }
+  #printReport .pr-note { font-size:10px; color:#6b7280; margin:4px 0 0; }
+  #printReport .pr-footer { font-size:9.5px; color:#6b7280; text-align:right; margin-top:6mm; border-top:1px solid #e5e7eb; padding-top:4px; }
+  #printReport .pr-review h3 { font-size:12px; font-weight:700; margin:10px 0 4px; color:#1a1f2e; }
+  #printReport .pr-review p { margin:4px 0 8px; }
+  #printReport .pr-review table { width:100%; border-collapse:collapse; font-size:10px; margin:4px 0 10px; }
+  #printReport .pr-review th, #printReport .pr-review td { padding:4px 6px; border-bottom:1px solid #eef1f7; text-align:left; }
+  #printReport .pr-review th { background:#f4f6ff; font-weight:700; }
+  #printReport .pr-orig-img { width:100%; height:auto; display:block; margin:4px 0 6px; border:1px solid #e5e7eb; border-radius:4px; }
 </style>
 </head>
 <body>
@@ -681,10 +672,10 @@
       <div class="sub">제작 · <b>산남고 이성훈</b></div>
     </div>
     <div class="header-actions no-print" style="display:flex;gap:8px;flex-shrink:0">
-      <button class="hdr-btn" id="hdrBtnPrint" onclick="window.print()" title="현재 분석을 PDF로 저장 또는 인쇄" disabled>
+      <button class="hdr-btn" id="hdrBtnPrint" onclick="openPrintOptions()" title="보고서 양식으로 PDF 출력/인쇄 — 구성·옵션 선택 가능" disabled>
         <span class="ico">🖨</span><span>PDF / 인쇄</span>
       </button>
-      <button class="hdr-btn" id="hdrBtnSave" onclick="saveHtml()" title="현재 앱을 HTML 파일로 저장 — 인터넷 없이도 더블클릭으로 실행" disabled>
+      <button class="hdr-btn" id="hdrBtnSave" onclick="saveHtml()" title="현재 분석 결과를 HTML 파일로 저장" disabled>
         <span class="ico">💾</span><span>HTML 저장</span>
       </button>
     </div>
@@ -795,6 +786,15 @@
       </ol>
     </div>
     <div id="pdfMappingInfo" style="margin-top:8px;display:none;font-size:11.5px;background:#f0f7ff;border:1px solid #cfe2ff;border-radius:8px;padding:8px 12px;color:#1e40af"></div>
+
+    <div class="row" style="margin-top:10px">
+      <div style="flex:1">
+        <label>📋 NEIS 문항정보표 (선택사항) — <span style="color:var(--muted);font-weight:400">의도 난이도 · 성취기준 · 내용영역 분석용</span></label>
+        <input type="file" id="neisFile" accept=".xlsx,.xls">
+        <div id="neisStatus" style="margin-top:6px;font-size:12px;color:var(--muted)">NEIS에서 다운받은 문항정보표 엑셀을 업로드하면 출제 의도 대비 결과 분석과 성취기준별 분석이 추가됩니다.</div>
+      </div>
+    </div>
+
     <div class="opts">
       <label><input type="checkbox" id="anon"> 학생 이름 익명 처리</label>
       <span style="color:var(--muted);font-size:12px">· 동점자는 중간석차백분율(NEIS 표준)로 등급 부여</span>
@@ -832,6 +832,8 @@
       <button class="nav-link" data-target="navSim">⚖ 시뮬·환산</button>
       <button class="nav-link" data-target="navItem">📝 문항 분석</button>
       <button class="nav-link" data-target="navMatrix">🧮 매트릭스</button>
+      <button class="nav-link neis-only" data-target="navIntent" style="display:none">🎯 의도 vs 실제</button>
+      <button class="nav-link neis-only" data-target="navStandard" style="display:none">📚 성취기준별</button>
       <button class="nav-link" data-target="navReview">🔎 자동 총평</button>
       <button class="nav-link" data-target="navStudents">👥 학생별</button>
     </nav>
@@ -954,6 +956,38 @@
       </div>
     </section>
 
+    <!-- ============ NEIS 문항정보표 분석 (파일 업로드 시에만 표시) ============ -->
+    <section class="card neis-only" id="navIntentCard" style="display:none">
+      <h2 id="navIntent">출제 의도(NEIS 난이도) vs 실제 정답률<span class="tip" data-tip="문항정보표에 적힌 의도 난이도(쉬움/보통/어려움)와 실제 정답률의 일치 정도를 분석.&#10;·정상: 쉬움 70~95% / 보통 50~70% / 어려움 30~50%&#10;·박스의 검은 가로선: 그룹별 평균 정답률&#10;·산점도 점 색상: 의도 난이도&#10;·우측 표: 의도와 가장 어긋난 문항(쉬움인데 어렵게 풀렸거나, 어려움인데 너무 쉽게 풀린 경우)">?</span></h2>
+      <p style="color:var(--muted);margin:0 0 12px;font-size:13px">출제 계획서(NEIS 문항정보표)의 난이도와 실제 학생 응답 결과를 비교 · <b>Spearman 순위 상관</b>으로 출제 의도의 일치도를 단일 지표로 제시</p>
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start" class="intent-grid">
+        <div class="chart-box" style="height:340px"><canvas id="intentChart"></canvas></div>
+        <div>
+          <div id="intentSummary" style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border:1.5px solid rgba(37,99,235,.12);border-radius:14px;padding:14px 16px;margin-bottom:10px"></div>
+          <div class="table-wrap" style="max-height:300px">
+            <table id="intentMismatchTable"></table>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <h3 style="font-size:13px;font-weight:700;color:var(--ink-2);margin:0 0 8px">의도 난이도 × 실제 난이도 매트릭스</h3>
+        <p style="color:var(--muted);margin:0 0 8px;font-size:12px">대각선(왼쪽 위 → 오른쪽 아래)에 채워지면 의도와 실제가 일치. 좌하/우상 셀이 굵게 보일수록 의도와 실제가 어긋난 문항.</p>
+        <div class="table-wrap" style="max-height:none">
+          <table id="intentMatrixTable"></table>
+        </div>
+      </div>
+    </section>
+
+    <section class="card neis-only" id="navStandardCard" style="display:none">
+      <h2 id="navStandard">성취기준별 분석<span class="tip" data-tip="NEIS 문항정보표의 성취기준 코드 단위로 묶어 평균 정답률을 산출.&#10;·학습 약점이 단원/성취기준 단위로 어디에 있는지 파악&#10;·차트 막대를 클릭하면 해당 성취기준에 속한 문항 목록 팝업">?</span></h2>
+      <p style="color:var(--muted);margin:0 0 12px;font-size:13px">성취기준 코드별 평균 정답률 · 가장 약한 성취기준을 식별해 다음 학기 보충 지도/형성평가 설계 참고</p>
+      <div class="chart-box" style="height:auto;min-height:300px;padding:14px"><canvas id="standardChart"></canvas></div>
+      <div style="margin-top:14px" class="table-wrap" style="max-height:none">
+        <table id="standardTable"></table>
+      </div>
+      <div id="standardAdvice" style="margin-top:12px;padding:12px 14px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:8px;font-size:12.5px;color:#92400e;line-height:1.65;display:none"></div>
+    </section>
+
     <section class="card">
       <h2 id="navReview">출제 검토 자동 총평<span class="tip" data-tip="시험 결과를 종합하여 자연어로 작성된 검토 보고서.&#10;·평균·표준편차·등급분포·매력적 오답·변별도 위험 문항 등을 자동 분석.&#10;·출제 협의록·동료 장학에 활용 가능">?</span></h2>
       <div class="review" id="review"></div>
@@ -1041,7 +1075,50 @@
       </details>
     </section>
 
+    <!-- 인쇄 옵션 모달 (PDF/인쇄 버튼 → openPrintOptions()) -->
+    <div class="qmodal" id="printOptModal" onclick="if(event.target===this)closePrintOptions()">
+      <div style="background:#fff;border-radius:12px;max-width:560px;width:95vw;max-height:90vh;overflow:auto;padding:22px 24px;position:relative">
+        <button class="close" style="color:#1f2330" onclick="closePrintOptions()">×</button>
+        <h2 style="margin:0 0 6px;font-size:17px;letter-spacing:-.01em">PDF / 인쇄 옵션</h2>
+        <p style="margin:0 0 14px;font-size:12px;color:var(--muted);line-height:1.55">화면을 그대로 캡처하지 않고 <b>보고서 양식</b>으로 새로 생성합니다. 옵션을 고른 뒤 [인쇄]를 누르면 브라우저 인쇄 미리보기가 열립니다.</p>
+
+        <div style="display:grid;gap:14px">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--pri-deep);margin-bottom:6px;letter-spacing:.02em">보고서 형식</div>
+            <label style="display:flex;align-items:flex-start;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;cursor:pointer;margin-bottom:6px;font-size:12.5px">
+              <input type="radio" name="prMode" value="summary" style="margin-top:3px">
+              <span><b>요약 보고서</b><br><span style="color:var(--muted);font-size:11.5px">표지 · 핵심 요약 · 주요 차트 · 검토 필요 문항</span></span>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:12.5px">
+              <input type="radio" name="prMode" value="full" checked style="margin-top:3px">
+              <span><b>전체 보고서</b><br><span style="color:var(--muted);font-size:11.5px">요약 + 문항 분석표(전체) + 매트릭스(가로) + 답지 분포(가로)</span></span>
+            </label>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--pri-deep);margin-bottom:6px;letter-spacing:.02em">추가 옵션</div>
+            <label style="display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:12.5px;cursor:pointer">
+              <input type="checkbox" id="prOptReview" checked> 자동 총평 포함
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:12.5px;cursor:pointer">
+              <input type="checkbox" id="prOptStudents"> 학생별 점수표 포함 <span style="color:var(--muted);font-size:11px">(익명 모드 설정 적용)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:12.5px;cursor:pointer">
+              <input type="checkbox" id="prOptOriginals"> 원안지 이미지 포함 <span id="prOptOriginalsNote" style="color:var(--muted);font-size:11px"></span>
+            </label>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
+          <button class="ghost" onclick="closePrintOptions()" style="padding:9px 16px">취소</button>
+          <button onclick="runPrint()" style="padding:9px 22px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px">🖨 인쇄</button>
+        </div>
+      </div>
+    </div>
+
   </div>
+
+  <!-- 보고서 출력 컨테이너 — 인쇄 직전 buildPrintReport()가 채우고, afterprint에서 비움 -->
+  <div id="printReport" aria-hidden="true"></div>
 </main>
 
 <div id="qBackdrop" onclick="closeQPanel()"></div>
@@ -1083,6 +1160,19 @@ let qSlotPages = {};    // 슬롯 번호 → 원본 페이지 통째 dataURL
 let qImageOrder = [];   // 사이드 패널 prev/next 정렬 키
 let activeQKey = null;
 
+function escHTML(v){
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[ch]));
+}
+
+function missingLibs(){
+  const libs = [];
+  if(!window.XLSX) libs.push('엑셀 처리 라이브러리(XLSX)');
+  if(!window.Chart) libs.push('차트 라이브러리(Chart.js)');
+  return libs;
+}
+
 function showErr(msg){
   const e = $('err'); e.textContent = msg; e.classList.remove('hidden');
 }
@@ -1114,6 +1204,304 @@ function parseExamInfo(rows){
   else if((m = text.match(/:\s*([^():]+)$/))) info.subject = m[1].trim();
   else if((m = text.match(/([가-힣A-Za-z]+)\s*\(\d+\)\s*$/))) info.subject = m[1].trim();
   return info;
+}
+
+// ============ NEIS 문항정보표 파서 ============
+// NEIS에서 다운받은 문항정보표 엑셀(.xlsx) 구조:
+//   - R1~7: 헤더(시험명, 학년, 교사, 총점/배점 등)
+//   - 컬럼 헤더 행: 문항번호 | 내용영역 | 성취기준 | 난이도(어려움/보통/쉬움 ○) | 배점 | 정답
+//   - "선택형 문항" 마커 행 다음부터 선택형 데이터 (1~N)
+//   - "서답형 문항" 마커 행 다음부터 서답형 데이터 (1~M)
+//   - "총합계", "비율(%)" 마커로 끝
+// 까다로운 점:
+//   1) 인쇄 페이지 경계에 페이지 푸터(예: "1 / 3   산남고등학교")가 끼어듦
+//   2) 긴 성취기준 텍스트가 두 행에 걸쳐 잘리는 경우가 있음 (다음 행에 이어붙임 텍스트만)
+function parseNeisItemSheet(rows){
+  if(!rows || rows.length < 10) throw new Error('NEIS 문항정보표 행 수가 부족합니다.');
+
+  const norm = (v) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+  const isMark = (cell, kw) => norm(cell).indexOf(kw) >= 0;
+  const isPositiveInt = (v) => {
+    if(v == null || v === '') return false;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 && Math.abs(n - Math.round(n)) < 1e-6;
+  };
+  // 페이지 푸터 패턴: "N / M   학교명" — cell[0]이 비어있고 어딘가에 "/" 페이지번호 + 학교명
+  const isPageFooter = (row) => {
+    const joined = (row || []).map(norm).join(' ');
+    if(!joined) return false;
+    // "1 / 3 산남고등학교" 같은 패턴
+    if(/\d+\s*\/\s*\d+/.test(joined) && /(고등학교|중학교|학교)/.test(joined)) return true;
+    return false;
+  };
+  // 헤더 행 찾기 — "문항번호"와 "성취기준"이 같은 행에 있어야
+  let headerRow = -1;
+  for(let r = 0; r < Math.min(15, rows.length); r++){
+    const row = rows[r] || [];
+    const joined = row.map(norm).join('|');
+    if(joined.indexOf('문항번호') >= 0 && joined.indexOf('성취기준') >= 0){
+      headerRow = r; break;
+    }
+  }
+  if(headerRow < 0) throw new Error('NEIS 양식의 컬럼 헤더(문항번호/성취기준)를 찾지 못했습니다.');
+
+  // 컬럼 인덱스 매핑 (헤더 행 + 다음 1~2행에서 종합)
+  const colMap = { qno:-1, area:-1, standard:-1, hard:-1, mid:-1, easy:-1, points:-1, answer:-1 };
+  const scan = (r) => {
+    const row = rows[r] || [];
+    row.forEach((cell, c) => {
+      const v = norm(cell);
+      if(!v) return;
+      if(colMap.qno    < 0 && v.includes('문항번호')) colMap.qno = c;
+      if(colMap.area   < 0 && v.includes('내용영역')) colMap.area = c;
+      if(colMap.standard < 0 && v.includes('성취기준')) colMap.standard = c;
+      if(colMap.hard   < 0 && v === '어려움') colMap.hard = c;
+      if(colMap.mid    < 0 && v === '보통') colMap.mid = c;
+      if(colMap.easy   < 0 && v === '쉬움') colMap.easy = c;
+      if(colMap.points < 0 && v === '배점') colMap.points = c;
+      if(colMap.answer < 0 && v === '정답') colMap.answer = c;
+    });
+  };
+  scan(headerRow); scan(headerRow + 1);
+  if(colMap.qno < 0 || colMap.standard < 0) throw new Error('NEIS 양식의 필수 컬럼(문항번호/성취기준) 위치 식별 실패.');
+
+  // 데이터 수집
+  const select = []; // 선택형
+  const open = [];   // 서답형
+  // 기본 'select' — 선택형 마커("선택형 문항")가 헤더 위쪽에 있어 본 루프에서 안 잡히는 NEIS 양식 대비
+  let mode = 'select'; // 'select' | 'open'
+  let lastItem = null; // 직전 추가 문항 (성취기준 이어붙임용)
+
+  for(let r = headerRow + 1; r < rows.length; r++){
+    const row = rows[r] || [];
+    const c0 = norm(row[0]);
+    const joinedRow = row.map(norm).join('|');
+
+    // 마커 처리
+    if(/선택형\s*문항/.test(joinedRow) && !isPositiveInt(row[colMap.qno])){
+      mode = 'select'; lastItem = null; continue;
+    }
+    if(/서답형\s*문항/.test(joinedRow) && !isPositiveInt(row[colMap.qno])){
+      mode = 'open'; lastItem = null; continue;
+    }
+    // 종료 마커
+    if(/^총\s*합계|^비율\s*\(/.test(c0)) break;
+    // 페이지 푸터 노이즈
+    if(isPageFooter(row)){ continue; }
+
+    const qVal = row[colMap.qno];
+    if(isPositiveInt(qVal)){
+      // 새 문항
+      let intent = null;
+      if(colMap.hard >= 0 && norm(row[colMap.hard])) intent = '어려움';
+      else if(colMap.mid >= 0 && norm(row[colMap.mid])) intent = '보통';
+      else if(colMap.easy >= 0 && norm(row[colMap.easy])) intent = '쉬움';
+
+      const stdRaw = norm(row[colMap.standard]);
+      // 성취기준 코드 추출 — [12한지01-01] 같은 패턴
+      const codeMatch = stdRaw.match(/\[([^\]]+)\]/);
+      const stdCode = codeMatch ? codeMatch[1] : '';
+      const stdDesc = codeMatch ? stdRaw.replace(codeMatch[0], '').replace(/^\s*/, '') : stdRaw;
+
+      const item = {
+        qno: Math.round(Number(qVal)),
+        area: norm(row[colMap.area]),
+        standardRaw: stdRaw,
+        standardCode: stdCode,
+        standardDesc: stdDesc,
+        intent: intent,
+        points: colMap.points >= 0 ? (Number(row[colMap.points]) || 0) : 0,
+        answer: colMap.answer >= 0 ? norm(row[colMap.answer]) : '',
+        kind: mode === 'open' ? 'S' : 'Q',
+      };
+      if(mode === 'open') open.push(item);
+      else select.push(item);
+      lastItem = item;
+    } else if(lastItem){
+      // 데이터 행은 아니지만 성취기준 컬럼에 텍스트가 있으면 이전 문항에 이어붙임
+      const extra = norm(row[colMap.standard]);
+      if(extra && extra.length > 1){
+        lastItem.standardRaw = (lastItem.standardRaw + ' ' + extra).replace(/\s+/g, ' ').trim();
+        // 코드 재추출 (이미 있던 코드는 유지)
+        const m2 = lastItem.standardRaw.match(/\[([^\]]+)\]/);
+        if(m2){
+          lastItem.standardCode = m2[1];
+          lastItem.standardDesc = lastItem.standardRaw.replace(m2[0], '').replace(/^\s*/, '');
+        } else {
+          lastItem.standardDesc = lastItem.standardRaw;
+        }
+      }
+    }
+  }
+
+  if(select.length === 0 && open.length === 0){
+    throw new Error('NEIS 문항정보표에서 문항 데이터를 추출하지 못했습니다.');
+  }
+  return { selectItems: select, openItems: open };
+}
+
+// 학생답안 items 배열에 NEIS 데이터(intent/area/standard*)를 매핑
+// 단순 순서 매칭 가정: items[0..N-1] = NEIS 선택형 1..N, items[N..K-1] = NEIS 서답형 1..M
+// (학생답안 엑셀에서 선택형이 먼저, 서답형이 뒤에 오는 NEIS 표준 양식)
+// 매칭 실패 시 null 반환 (분석 비활성화)
+function mergeNeisIntoItems(items, neis){
+  if(!neis || !items) return { merged: false, reason: 'NEIS 또는 items 없음' };
+  const sel = neis.selectItems || [];
+  const open = neis.openItems || [];
+  const totalExpected = sel.length + open.length;
+  if(items.length !== totalExpected){
+    return {
+      merged: false,
+      reason: `문항 수 불일치 (학생답안: ${items.length}, NEIS: 선택형 ${sel.length} + 서답형 ${open.length} = ${totalExpected})`
+    };
+  }
+  // 정답 일치 검증 (선택형만; 서답형은 NEIS에서 '별도관리'라 skip)
+  let answerMismatch = 0;
+  const mismatchList = [];
+  for(let i = 0; i < items.length; i++){
+    const src = i < sel.length ? sel[i] : open[i - sel.length];
+    items[i].intent = src.intent;
+    items[i].area = src.area;
+    items[i].standardCode = src.standardCode;
+    items[i].standardDesc = src.standardDesc;
+    items[i].standardRaw = src.standardRaw;
+    items[i].neisKind = src.kind; // 'Q' or 'S'
+    items[i].neisQno = src.qno;
+    // 정답 비교 (선택형만)
+    if(src.kind === 'Q' && src.answer && /^\d+$/.test(src.answer)){
+      if(String(items[i].answer).trim() !== String(src.answer).trim()){
+        answerMismatch++;
+        mismatchList.push(`${items[i].qno}번: 학생답안=${items[i].answer} / NEIS=${src.answer}`);
+      }
+    }
+  }
+  return { merged: true, answerMismatch, mismatchList, selectN: sel.length, openN: open.length };
+}
+
+// ============ 의도 난이도 분석 (A) ============
+function analyzeIntent(items){
+  const data = items.filter(it => it.intent && it.p != null);
+  if(data.length === 0) return null;
+  const buckets = { '쉬움':[], '보통':[], '어려움':[] };
+  data.forEach(it => { if(buckets[it.intent]) buckets[it.intent].push(it); });
+
+  // 그룹별 통계
+  const stats = {};
+  ['쉬움','보통','어려움'].forEach(k => {
+    const arr = buckets[k];
+    if(arr.length === 0){ stats[k] = null; return; }
+    const ps = arr.map(i => i.p);
+    const mean = ps.reduce((s,v)=>s+v, 0) / ps.length;
+    const min = Math.min(...ps), max = Math.max(...ps);
+    stats[k] = { n: arr.length, mean, min, max, items: arr };
+  });
+
+  // Spearman 순위 상관 (의도 난이도 순위 vs 정답률 역순위)
+  // 의도: 쉬움=1, 보통=2, 어려움=3 (값이 클수록 어려움)
+  // 정답률 역수: 1-p (값이 클수록 어려움) — 정상이면 양의 상관
+  const intentRank = { '쉬움':1, '보통':2, '어려움':3 };
+  const spearman = (() => {
+    const n = data.length;
+    if(n < 3) return null;
+    // 의도 순위 (동순위 평균 처리)
+    const intentVals = data.map(it => intentRank[it.intent]);
+    const pVals = data.map(it => 1 - it.p);
+    const rank = (arr) => {
+      const indexed = arr.map((v, i) => ({v, i}));
+      indexed.sort((a,b) => a.v - b.v);
+      const ranks = new Array(arr.length);
+      let i = 0;
+      while(i < indexed.length){
+        let j = i;
+        while(j+1 < indexed.length && indexed[j+1].v === indexed[i].v) j++;
+        const avg = (i + j) / 2 + 1; // 1-based
+        for(let k = i; k <= j; k++) ranks[indexed[k].i] = avg;
+        i = j + 1;
+      }
+      return ranks;
+    };
+    const rA = rank(intentVals), rB = rank(pVals);
+    const mean = (a) => a.reduce((s,v)=>s+v,0)/a.length;
+    const mA = mean(rA), mB = mean(rB);
+    let num = 0, dA = 0, dB = 0;
+    for(let k = 0; k < n; k++){
+      const a = rA[k] - mA, b = rB[k] - mB;
+      num += a*b; dA += a*a; dB += b*b;
+    }
+    return dA && dB ? num / Math.sqrt(dA*dB) : null;
+  })();
+
+  // 불일치 문항 (의도-실제 어긋남)
+  // 어긋남 score: |intentRank(it) - actualRank(it)| 식으로 단순화
+  // 더 명확하게: 쉬움→실제 어려움 / 어려움→실제 쉬움
+  const mismatches = data.map(it => {
+    const expectP = { '쉬움':0.85, '보통':0.60, '어려움':0.40 }[it.intent];
+    const delta = it.p - expectP; // 양수면 의도보다 쉬웠음, 음수면 의도보다 어려웠음
+    return { ...it, delta, absDelta: Math.abs(delta) };
+  }).sort((a,b) => b.absDelta - a.absDelta);
+
+  // 의도 × 실제 5단계 매트릭스
+  const actualBucket = (p) => {
+    if(p >= 0.8) return '쉬움';
+    if(p >= 0.6) return '적절';
+    if(p >= 0.4) return '다소 어려움';
+    if(p >= 0.2) return '어려움';
+    return '매우 어려움';
+  };
+  const actuals = ['쉬움','적절','다소 어려움','어려움','매우 어려움'];
+  const matrix = {}; // matrix[intent][actual] = [items]
+  ['쉬움','보통','어려움'].forEach(i => {
+    matrix[i] = {};
+    actuals.forEach(a => matrix[i][a] = []);
+  });
+  data.forEach(it => { matrix[it.intent][actualBucket(it.p)].push(it); });
+
+  return { data, stats, spearman, mismatches, matrix, actuals };
+}
+
+// ============ 성취기준별 분석 (B) ============
+function analyzeStandards(items){
+  const data = items.filter(it => it.standardCode && it.p != null);
+  if(data.length === 0) return null;
+  const map = {}; // code -> {code, desc, items, ...}
+  data.forEach(it => {
+    const code = it.standardCode;
+    if(!map[code]){
+      map[code] = {
+        code,
+        desc: it.standardDesc || '',
+        items: [],
+        totalPoints: 0
+      };
+    }
+    map[code].items.push(it);
+    map[code].totalPoints += it.points || 0;
+  });
+  const groups = Object.values(map).map(g => {
+    const ps = g.items.map(i => i.p);
+    const mean = ps.reduce((s,v)=>s+v,0) / ps.length;
+    const min = Math.min(...ps);
+    const minItem = g.items.find(i => i.p === min);
+    // 가중 평균 (배점 가중)
+    const totalW = g.items.reduce((s,i)=>s + (i.points||0), 0);
+    const weightedMean = totalW > 0
+      ? g.items.reduce((s,i)=> s + i.p * (i.points||0), 0) / totalW
+      : mean;
+    // 의도 난이도 분포
+    const intentMix = {};
+    g.items.forEach(i => { if(i.intent) intentMix[i.intent] = (intentMix[i.intent]||0)+1; });
+    return {
+      ...g,
+      n: g.items.length,
+      mean,
+      weightedMean,
+      min,
+      minItem,
+      intentMix,
+      qnos: g.items.map(i => i.qno).sort((a,b)=>a-b),
+    };
+  }).sort((a,b) => a.code.localeCompare(b.code));
+  return groups;
 }
 
 function parseSheet(rows){
@@ -1696,7 +2084,16 @@ function calcItems(items, students){
     else if(p>=0.4 && p<=0.8 && d>=0.3){ verdict='우수 문항'; tag='t-good'; comment=''; }
     else { verdict='보통'; tag='t-mid'; comment=''; }
 
-    return {qno:it.qno, points:it.points, answer:it.answer, n:cnt, p, d, diff, verdict, tag, comment, dist, topWrong, tOk, bOk};
+    return {qno:it.qno, points:it.points, answer:it.answer, n:cnt, p, d, diff, verdict, tag, comment, dist, topWrong, tOk, bOk,
+      // NEIS 문항정보표 필드 (있을 때만; mergeNeisIntoItems가 items에 주입)
+      intent: it.intent ?? null,
+      area: it.area ?? null,
+      standardCode: it.standardCode ?? null,
+      standardDesc: it.standardDesc ?? null,
+      standardRaw: it.standardRaw ?? null,
+      neisKind: it.neisKind ?? null,
+      neisQno: it.neisQno ?? null,
+    };
   });
 }
 
@@ -1930,7 +2327,7 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
       + cls.classes.map(c=>{
           const small = c.n<5;
           const note = small ? ' <span style="color:#9ca3af;font-size:11px">(소규모)</span>' : '';
-          return `<tr><td class="qcell">${c.cls}반</td><td class="qcell">${c.n}</td><td class="qcell">${c.mean.toFixed(1)}${note}</td></tr>`;
+          return `<tr><td class="qcell">${escHTML(c.cls)}반</td><td class="qcell">${c.n}</td><td class="qcell">${c.mean.toFixed(1)}${note}</td></tr>`;
         }).join('')
       + `</tbody></table>`;
     if(cls.significantCount<cls.classes.length){
@@ -1960,7 +2357,7 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
   if(attract.length){
     const rows = attract.slice(0,8).map(i=>`<tr>
       <td class="qcell">${_qLinkHTML(i.qno, i.qno+'번')}</td>
-      <td class="qcell">정답 ${i.answer}</td>
+      <td class="qcell">정답 ${escHTML(i.answer)}</td>
       <td class="qcell">${i.topWrong.choice}번 (${(i.topWrong.rate*100).toFixed(1)}%)</td>
       <td>학생 다수가 ${i.topWrong.choice}번 선지를 선택. 해당 선지가 정답으로 보일 만한 부분 개념 또는 오개념을 활용한 보충 지도 필요.</td>
     </tr>`).join('');
@@ -2124,14 +2521,104 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
   }
   nextRec += '</div>';
 
-  const head = `<h3>${grade}학년 · ${subject||'과목'} · ${examName||'중간고사'} 결과 분석</h3>`;
+  // NEIS 문항정보표가 있으면 "출제 계획 대비 결과" 섹션 추가
+  let neisSection = '';
+  if(items.some(i => i.intent || i.standardCode)){
+    neisSection = buildNeisReviewSection(items);
+  }
+
+  const head = `<h3>${grade}학년 · ${escHTML(subject||'과목')} · ${escHTML(examName||'중간고사')} 결과 분석</h3>`;
   return head
     + `<h3>1. 평균 및 성취도 해석</h3>` + narrative + classTable
     + `<h3>2. 문항 분석 및 대책</h3>` + itemTable
     + (attractSection || '')
     + (riskSection || '')
-    + `<h3>5. 종합 의견 및 개선 방향</h3>` + closing
+    + neisSection
+    + `<h3>${neisSection ? '6' : '5'}. 종합 의견 및 개선 방향</h3>` + closing
     + nextRec;
+}
+
+// NEIS 데이터 기반 "출제 계획 대비 결과" 섹션
+function buildNeisReviewSection(items){
+  const intentRes = analyzeIntent(items);
+  const stdGroups = analyzeStandards(items);
+  if(!intentRes && !stdGroups) return '';
+
+  let html = `<h3>5. 출제 계획(NEIS 문항정보표) 대비 결과</h3>`;
+
+  // 5-1. 의도 일치도
+  if(intentRes){
+    const sp = intentRes.spearman;
+    let spText, spColor;
+    if(sp == null){ spText = '계산 불가 (의도 정보 있는 문항 수 부족)'; spColor = '#9ca3af'; }
+    else if(sp >= 0.6){ spText = `매우 잘 일치 (ρ=${sp.toFixed(2)})`; spColor = '#166534'; }
+    else if(sp >= 0.3){ spText = `대체로 일치 (ρ=${sp.toFixed(2)})`; spColor = '#0369a1'; }
+    else if(sp >= 0){ spText = `일치도 약함 (ρ=${sp.toFixed(2)})`; spColor = '#b45309'; }
+    else { spText = `반대 방향 (ρ=${sp.toFixed(2)}) — 의도 점검 필요`; spColor = '#991b1b'; }
+
+    html += `<p>출제자가 의도한 난이도(쉬움/보통/어려움)와 실제 정답률의 일치도는 <b style="color:${spColor}">${spText}</b>로 산출됨. `;
+    const grpDesc = ['쉬움','보통','어려움'].map(k => {
+      const s = intentRes.stats[k];
+      if(!s) return null;
+      const meanPct = (s.mean*100).toFixed(1);
+      const expectRange = { '쉬움':'70~95', '보통':'50~70', '어려움':'30~50' }[k];
+      const inRange = (
+        (k==='쉬움' && s.mean >= 0.7) ||
+        (k==='보통' && s.mean >= 0.5 && s.mean <= 0.75) ||
+        (k==='어려움' && s.mean >= 0.3 && s.mean <= 0.5)
+      );
+      return `의도 <b>${k}</b> ${s.n}문항 평균 ${meanPct}% (기대 ${expectRange}%, <b style="color:${inRange?'#166534':'#b45309'}">${inRange?'적정':'편차'}</b>)`;
+    }).filter(Boolean).join(' / ');
+    if(grpDesc) html += grpDesc + '.</p>';
+    else html += '</p>';
+
+    // 가장 어긋난 문항 TOP 3
+    const top = intentRes.mismatches.filter(m => m.absDelta > 0.15).slice(0, 3);
+    if(top.length > 0){
+      html += `<p><b>의도와 가장 어긋난 문항 TOP ${top.length}</b>:</p>`;
+      html += `<table><thead><tr><th>문항</th><th>의도</th><th>실제 정답률</th><th>해석</th></tr></thead><tbody>`;
+      top.forEach(it => {
+        let interp;
+        if(it.intent === '쉬움' && it.delta < -0.20) interp = '쉬움 의도였으나 어렵게 풀림 — 함정 또는 학생들의 오개념 영향 가능성';
+        else if(it.intent === '어려움' && it.delta > 0.30) interp = '어려움 의도였으나 너무 쉽게 풀림 — 변별 기능 미달';
+        else if(it.delta > 0) interp = `의도(${it.intent})보다 ${(it.delta*100).toFixed(0)}%p 쉽게 풀림`;
+        else interp = `의도(${it.intent})보다 ${(-it.delta*100).toFixed(0)}%p 어렵게 풀림`;
+        html += `<tr>
+          <td class="qcell">${_qLinkHTML(it.qno, it.qno+'번')}</td>
+          <td class="qcell" style="color:${INTENT_COLORS[it.intent]||'#1a1f2e'};font-weight:600">${escHTML(it.intent)}</td>
+          <td class="qcell">${(it.p*100).toFixed(1)}%</td>
+          <td>${escHTML(interp)}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+  }
+
+  // 5-2. 성취기준별 권고
+  if(stdGroups && stdGroups.length){
+    const weak = stdGroups.filter(g => g.mean < 0.5).sort((a,b) => a.mean - b.mean).slice(0, 4);
+    if(weak.length > 0){
+      html += `<p style="margin-top:14px"><b>보충 학습이 필요한 성취기준 (평균 정답률 50% 미만)</b> — 다음 학기 진단평가/보충자료 설계 시 우선 반영:</p>`;
+      html += `<ul style="margin:6px 0 10px;padding-left:22px">`;
+      weak.forEach(g => {
+        const worst = g.items.sort((a,b)=>a.p-b.p)[0];
+        html += `<li><b>${escHTML(g.code)}</b> — 평균 ${(g.mean*100).toFixed(1)}% (${g.n}문항, 가장 어려운 문항: ${worst.qno}번 ${(worst.p*100).toFixed(0)}%)<br>
+          <span style="color:#475569;font-size:13px">${escHTML(g.desc.slice(0, 120))}${g.desc.length>120?'…':''}</span></li>`;
+      });
+      html += `</ul>`;
+    }
+    const strong = stdGroups.filter(g => g.mean >= 0.8).sort((a,b) => b.mean - a.mean).slice(0, 3);
+    if(strong.length > 0){
+      html += `<p style="margin-top:8px"><b style="color:#166534">잘 형성된 성취기준 (평균 정답률 80% 이상)</b> — 다음 평가에서는 변별 문항을 추가해 상위권 변별 기능 보강 검토:</p>`;
+      html += `<ul style="margin:6px 0 0;padding-left:22px;color:#166534">`;
+      strong.forEach(g => {
+        html += `<li><b>${escHTML(g.code)}</b> — 평균 ${(g.mean*100).toFixed(1)}% (${g.n}문항)</li>`;
+      });
+      html += `</ul>`;
+    }
+  }
+
+  return html;
 }
 
 function animateCount(el, target, duration, decimals, suffix){
@@ -3430,7 +3917,7 @@ function openQPanel(key){
       <div class="qstat">
         <div class="k">배점</div>
         <div class="v" style="color:#1a1f2e">${fmtPoints(item.points)}<span style="font-size:11px;font-weight:600">점</span></div>
-        <div class="sub">정답 ${item.answer}</div>
+        <div class="sub">정답 ${escHTML(item.answer)}</div>
       </div>
       <div class="qstat">
         <div class="k">난이도</div>
@@ -3441,7 +3928,7 @@ function openQPanel(key){
     statsEl.style.display = 'grid';
     // 출제 검토 코멘트
     if(item.comment){
-      commentEl.innerHTML = `<b>검토 의견:</b> ${item.comment}`;
+      commentEl.innerHTML = `<b>검토 의견:</b> ${escHTML(item.comment)}`;
       commentEl.style.display = 'block';
     }else{
       commentEl.style.display = 'none';
@@ -3544,15 +4031,15 @@ function openCellModal(gradeLabel, qidx, qno){
     `${gradeLabel}등급 학생 × <span style="color:var(--pri-deep)">${qno}번 문항</span>`;
   document.getElementById('cellModalSummary').innerHTML =
     `총 ${total}명 · 정답 <b style="color:#10b981">${okN}명 (${pct(okN)})</b> · 오답 <b style="color:#dc2626">${badN}명 (${pct(badN)})</b>${blN>0?` · 무응답 <b style="color:#6b7280">${blN}명 (${pct(blN)})</b>`:''}` +
-    (item ? ` · 정답: <b>${item.answer}</b> · 배점: ${fmtPoints(item.points)}점` : '');
+    (item ? ` · 정답: <b>${escHTML(item.answer)}</b> · 배점: ${fmtPoints(item.points)}점` : '');
 
   const renderRow = (s, idx, extra='') => {
     const {ban, num} = splitCls(s.cls || '');
     const nm = anon ? `학생${String(idx+1).padStart(3,'0')}` : (s.name || '');
     return `<tr>
-      <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:center">${ban||'-'}</td>
-      <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:center">${num||'-'}</td>
-      <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa">${nm}</td>
+      <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:center">${escHTML(ban||'-')}</td>
+      <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:center">${escHTML(num||'-')}</td>
+      <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa">${escHTML(nm)}</td>
       <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:right;font-variant-numeric:tabular-nums">${s.total!=null?s.total:'-'}</td>
       <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:right">${s.grade!=null?(s.grade+'등급'):'-'}</td>
       ${extra}
@@ -3579,12 +4066,12 @@ function openCellModal(gradeLabel, qidx, qno){
     const trs = rows.map((s, idx) => {
       const {ban, num} = splitCls(s.cls || '');
       const nm = anon ? `학생${String(idx+1).padStart(3,'0')}` : (s.name || '');
-      const respCell = includeResp ? `<td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:center;font-weight:700;color:#dc2626">${s._resp||'-'}</td>` : '';
+      const respCell = includeResp ? `<td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:center;font-weight:700;color:#dc2626">${escHTML(s._resp||'-')}</td>` : '';
       const sIdx = s._idx;
       return `<tr${sIdx!=null?` data-stuidx="${sIdx}" style="cursor:pointer" title="클릭: 학생별 정오표 보기"`:''}>
-        <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:center">${ban||'-'}</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:center">${num||'-'}</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa">${nm}</td>
+        <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:center">${escHTML(ban||'-')}</td>
+        <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:center">${escHTML(num||'-')}</td>
+        <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa">${escHTML(nm)}</td>
         <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:right;font-variant-numeric:tabular-nums">${s.total!=null?s.total:'-'}</td>
         <td style="padding:5px 6px;border-bottom:1px solid #f1f4fa;text-align:right">${s.grade!=null?(s.grade+'등급'):'-'}</td>
         ${respCell}
@@ -3658,8 +4145,8 @@ function openStudentModal(student){
   document.getElementById('studentModalHeader').innerHTML = `
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px">
       <div>
-        <h2 style="margin:0;font-size:18px;letter-spacing:-.02em">${displayName}</h2>
-        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">${sid}${student.grade!=null?` · <b style="color:${headerColor}">${student.grade}등급</b>`:''}${student.rank!=null?` · 석차 ${student.rank}등 / ${totalN}명`:''}</div>
+        <h2 style="margin:0;font-size:18px;letter-spacing:-.02em">${escHTML(displayName)}</h2>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">${escHTML(sid)}${student.grade!=null?` · <b style="color:${headerColor}">${student.grade}등급</b>`:''}${student.rank!=null?` · 석차 ${student.rank}등 / ${totalN}명`:''}</div>
       </div>
       <div style="text-align:right">
         <div style="font-size:11px;color:var(--muted);margin-bottom:2px">총점</div>
@@ -3699,8 +4186,8 @@ function openStudentModal(student){
         <span class="q-link" data-qno="Q${rr.qno}" style="cursor:pointer">${rr.qno}</span>
       </td>
       <td style="padding:6px 8px;border-bottom:1px solid #f1f4fa;text-align:right">${fmtPoints(rr.points)}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #f1f4fa;text-align:center;font-weight:700;color:${isWrong?'#dc2626':isBlank?'#9ca3af':'#1a1f2e'}">${rr.ans}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #f1f4fa;text-align:center;color:#6b7280">${rr.correct||'-'}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #f1f4fa;text-align:center;font-weight:700;color:${isWrong?'#dc2626':isBlank?'#9ca3af':'#1a1f2e'}">${escHTML(rr.ans)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #f1f4fa;text-align:center;color:#6b7280">${escHTML(rr.correct||'-')}</td>
       <td style="padding:6px 8px;border-bottom:1px solid #f1f4fa;text-align:center;font-weight:700;color:${rr.color}">${rr.result}</td>
     </tr>`;
   }).join('');
@@ -3711,7 +4198,7 @@ function openStudentModal(student){
     const isBlank = rr.result === '무응답';
     const cls = isBlank ? 'ag-blank' : (isWrong ? 'ag-no' : 'ag-ok');
     const tipText = `${rr.qno}번 · ${fmtPoints(rr.points)}점 · ${isBlank?'무응답':isWrong?('오답 ('+rr.ans+'번 → 정답 '+rr.correct+')'):('정답 '+rr.correct)}`;
-    return `<span class="ag-cell ${cls} q-link" data-qno="Q${rr.qno}" title="${tipText} · 클릭하면 원안지">${rr.qno}</span>`;
+    return `<span class="ag-cell ${cls} q-link" data-qno="Q${rr.qno}" title="${escHTML(tipText)} · 클릭하면 원안지">${rr.qno}</span>`;
   }).join('');
 
   document.getElementById('studentModalBody').innerHTML = `
@@ -3896,11 +4383,11 @@ function renderItemTable(items, filter){
     const hasImg = !!qImages[key];
     const indicator = hasImg ? ' <span style="color:var(--pri);font-size:11px">📄</span>' : '';
     return `<tr data-qkey="${key}" title="${hasImg?'클릭: 원안지 보기':'원안지 PDF 업로드 시 클릭 가능'}">
-      <td>${i.qno}${indicator}</td><td>${fmtPoints(i.points)}</td><td>${i.answer}</td><td>${i.n}</td>
+      <td>${i.qno}${indicator}</td><td>${fmtPoints(i.points)}</td><td>${escHTML(i.answer)}</td><td>${i.n}</td>
       <td>${(i.p*100).toFixed(1)}</td><td>${i.d.toFixed(2)}</td>
       <td>${i.diff}</td>
       <td><span class="tag ${i.tag}">${i.verdict}</span></td>
-      <td style="text-align:left;color:#6b7280">${i.comment}</td>
+      <td style="text-align:left;color:#6b7280">${escHTML(i.comment)}</td>
     </tr>`;
   }).join('');
   tb.querySelectorAll('tr').forEach(tr=>{
@@ -3910,10 +4397,456 @@ function renderItemTable(items, filter){
 
 function anonOption(){ return $('anon').checked; }
 
+// ============ PDF / 인쇄 — 보고서 모드 ============
+// 사용 흐름: 헤더의 [PDF/인쇄] → openPrintOptions() → 옵션 선택 → runPrint()
+// → buildPrintReport()로 #printReport 채움 → window.print() → afterprint 정리
+
+function openPrintOptions(){
+  // 원안지 옵션 안내 (개수 + 추정 용량) 갱신
+  const note = $('prOptOriginalsNote');
+  const cb = $('prOptOriginals');
+  if(note && cb){
+    const keys = Object.keys(window.qImages || {});
+    let totalKB = 0;
+    keys.forEach(k => {
+      const d = window.qImages[k];
+      if(typeof d === 'string') totalKB += Math.round(d.length * 0.75 / 1024);
+    });
+    if(keys.length === 0){
+      note.textContent = '(업로드된 원안지 없음)';
+      cb.checked = false; cb.disabled = true;
+    } else {
+      const sizeStr = totalKB >= 1024 ? (totalKB/1024).toFixed(1)+'MB' : totalKB+'KB';
+      note.textContent = `(${keys.length}장 · 약 ${sizeStr} · 미리보기 느려질 수 있음)`;
+      cb.disabled = false;
+    }
+  }
+  const m = $('printOptModal'); if(m) m.classList.add('on');
+}
+
+function closePrintOptions(){
+  const m = $('printOptModal'); if(m) m.classList.remove('on');
+}
+
+// Chart 인스턴스를 임시로 고해상도 + 애니메이션 OFF 로 재렌더 → PNG 캡처 → 원복
+function chartToImage(chartKey, opts){
+  opts = opts || {};
+  const targetW = opts.width || 1100;
+  const ratio = opts.ratio || 0.42;
+  const c = charts && charts[chartKey];
+  if(!c || !c.canvas) return null;
+  const canvas = c.canvas;
+  const parent = canvas.parentNode;
+  const prevPW = parent.style.width;
+  const prevPH = parent.style.height;
+  const prevDPR = c.options.devicePixelRatio;
+  const prevAnim = c.options.animation;
+  const prevResponsive = c.options.responsive;
+  const prevMaintain = c.options.maintainAspectRatio;
+  try {
+    parent.style.width = targetW + 'px';
+    parent.style.height = Math.round(targetW * ratio) + 'px';
+    c.options.devicePixelRatio = 2;
+    c.options.animation = false;
+    c.options.responsive = false;
+    c.options.maintainAspectRatio = false;
+    c.resize(targetW, Math.round(targetW * ratio));
+    c.update('none');
+    return c.toBase64Image('image/png', 1);
+  } catch(e){
+    console.warn('chartToImage failed', chartKey, e);
+    return null;
+  } finally {
+    parent.style.width = prevPW;
+    parent.style.height = prevPH;
+    c.options.devicePixelRatio = prevDPR;
+    c.options.animation = prevAnim;
+    c.options.responsive = prevResponsive;
+    c.options.maintainAspectRatio = prevMaintain;
+    try{ c.resize(); c.update('none'); }catch(e){}
+  }
+}
+
+function buildPrintReport(opts){
+  const stu = (typeof _lastStudents !== 'undefined' && _lastStudents) ? _lastStudents : [];
+  const items = (typeof lastItems !== 'undefined' && lastItems) ? lastItems : [];
+  if(!stu.length || !items.length) return '';
+
+  const stats = window._lastStats || (typeof calcStats === 'function' ? calcStats(stu) : null);
+  if(!stats) return '';
+  const grade = parseInt(($('grade')||{}).value || '1');
+  const subject = ($('subject')||{}).value || '';
+  const examName = ($('examName')||{}).value || '';
+  const anon = !!($('anon')||{}).checked;
+  const gd = (typeof gradeDist === 'function') ? gradeDist(stu, grade) : [];
+  const alpha = (typeof calcCronbach === 'function') ? calcCronbach(items, stu) : null;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
+
+  // 차트 이미지 (분석 결과가 화면에 있어야 캡처 가능)
+  const imgHist    = chartToImage('hist',        {width:1100, ratio:0.45});
+  const imgGrade   = chartToImage('grade',       {width:1100, ratio:0.45});
+  const imgRank    = chartToImage('rank',        {width:1100, ratio:0.32});
+  const imgP       = chartToImage('p',           {width:1100, ratio:0.42});
+  const imgD       = chartToImage('d',           {width:1100, ratio:0.42});
+  const imgScatter = chartToImage('scatter',     {width:1100, ratio:0.55});
+  // NEIS 차트 (있을 때만)
+  const imgIntent   = (charts && charts.intent)   ? chartToImage('intent',   {width:1100, ratio:0.55}) : null;
+  const imgStandard = (charts && charts.standard) ? chartToImage('standard', {width:1100, ratio:0.55}) : null;
+  // NEIS 분석 결과 (없으면 null)
+  const neisIntent = (typeof analyzeIntent === 'function') ? analyzeIntent(items) : null;
+  const neisStds = (typeof analyzeStandards === 'function') ? analyzeStandards(items) : null;
+
+  const isReviewItem = (it) => /검토|역변별|매우 어려움|변별 부족/.test(it.verdict || '');
+  const isGoodItem   = (it) => /우수/.test(it.verdict || '');
+  const reviewItems = items.filter(isReviewItem);
+  const itemsByQ = items.slice().sort((a,b)=>a.qno-b.qno);
+
+  let html = '';
+
+  // ===== 표지 =====
+  html += `<section class="pr-page pr-cover">
+    <h1 class="pr-title">정기시험 문항 분석 보고서</h1>
+    <div class="pr-cover-sub">Exam-Lens · 자동 생성 분석 보고서</div>
+    <dl>
+      <dt>학 년</dt><dd>${grade}학년</dd>
+      <dt>과 목</dt><dd>${escHTML(subject || '-')}</dd>
+      <dt>시 험 명</dt><dd>${escHTML(examName || '-')}</dd>
+      <dt>응시 인원</dt><dd>${stats.n}명</dd>
+      <dt>평균 / 표준편차</dt><dd>${stats.mean.toFixed(1)}점 · σ ${stats.sd.toFixed(1)}점</dd>
+      <dt>최고 / 최저</dt><dd>${stats.max}점 / ${stats.min}점</dd>
+      ${alpha!=null?`<dt>신뢰도 α</dt><dd>${alpha.toFixed(3)}</dd>`:''}
+      <dt>발 행 일</dt><dd>${dateStr}</dd>
+      <dt>작 성</dt><dd>산남고 이성훈 · Exam-Lens</dd>
+    </dl>
+    <p class="pr-note" style="margin-top:16mm">본 보고서는 분석 시점의 결과를 자동 생성한 문서이며, 개별 학생 식별 정보는 익명 모드 설정에 따릅니다.${anon?' (현재 익명 모드 활성)':''}</p>
+  </section>`;
+
+  // ===== p.2 : 요약 + 점수/등급 분포 =====
+  html += `<section class="pr-page">
+    <h2 class="pr-h2">1. 평가 개요</h2>
+    <div class="pr-summary">
+      <div class="s"><div class="k">응시</div><div class="v">${stats.n}명</div></div>
+      <div class="s"><div class="k">평균</div><div class="v">${stats.mean.toFixed(1)}</div></div>
+      <div class="s"><div class="k">표준편차</div><div class="v">${stats.sd.toFixed(1)}</div></div>
+      <div class="s"><div class="k">중앙값</div><div class="v">${stats.median!=null?stats.median.toFixed(1):'-'}</div></div>
+      <div class="s"><div class="k">최고점</div><div class="v">${stats.max}</div></div>
+      <div class="s"><div class="k">최저점</div><div class="v">${stats.min}</div></div>
+      <div class="s"><div class="k">문항 수</div><div class="v">${items.length}</div></div>
+      <div class="s"><div class="k">신뢰도 α</div><div class="v">${alpha!=null?alpha.toFixed(2):'-'}</div></div>
+    </div>
+
+    <h2 class="pr-h2">2. 점수 · 등급 분포</h2>
+    <div class="pr-chart-grid">
+      ${imgHist  ? `<img src="${imgHist}"  alt="성취도 분포">` : ''}
+      ${imgGrade ? `<img src="${imgGrade}" alt="등급 분포">`   : ''}
+    </div>
+    <div class="pr-chart-grid full">
+      ${imgRank  ? `<img src="${imgRank}"  alt="석차순 점수 분포">` : ''}
+    </div>
+    ${gd.length ? `<table class="pr-table">
+      <thead><tr><th>등급</th><th>인원</th><th>비율(%)</th><th>최저점</th><th>최고점</th></tr></thead>
+      <tbody>${gd.map(g => `<tr><td>${g.grade}등급</td><td>${g.n}</td><td>${g.ratio.toFixed(1)}</td><td>${g.min!=null?g.min:'-'}</td><td>${g.max!=null?g.max:'-'}</td></tr>`).join('')}</tbody>
+    </table>` : ''}
+  </section>`;
+
+  // ===== p.3 : 문항별 정답률/변별도 + 검토 필요 문항 =====
+  html += `<section class="pr-page">
+    <h2 class="pr-h2">3. 문항별 정답률 / 변별도</h2>
+    <div class="pr-chart-grid">
+      ${imgP ? `<img src="${imgP}" alt="문항별 정답률">` : ''}
+      ${imgD ? `<img src="${imgD}" alt="문항별 변별도">` : ''}
+    </div>
+    <div class="pr-chart-grid full">
+      ${imgScatter ? `<img src="${imgScatter}" alt="정답률 vs 변별도 산점도">` : ''}
+    </div>`;
+
+  if(reviewItems.length){
+    html += `<h3 class="pr-h3">검토 필요 문항 (${reviewItems.length}개)</h3>
+      <table class="pr-table">
+        <thead><tr><th>문항</th><th>배점</th><th>정답</th><th>정답률(%)</th><th>변별도</th><th>판정</th><th class="l">검토 의견</th></tr></thead>
+        <tbody>${reviewItems.map(i => `<tr class="bad">
+          <td>${i.qno}</td>
+          <td>${fmtPoints(i.points)}</td>
+          <td>${escHTML(i.answer)}</td>
+          <td>${(i.p*100).toFixed(1)}</td>
+          <td>${i.d.toFixed(2)}</td>
+          <td>${escHTML(i.verdict||'')}</td>
+          <td class="l">${escHTML(i.comment||'')}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+  } else {
+    html += `<p class="pr-note">검토 필요 문항이 자동 탐지되지 않았습니다.</p>`;
+  }
+  html += `</section>`;
+
+  // ===== 전체 모드: 문항 분석표(전체) + 매트릭스/분포(가로) =====
+  if(opts.mode === 'full'){
+    html += `<section class="pr-page">
+      <h2 class="pr-h2">4. 문항 분석표 (전체 ${itemsByQ.length}문항)</h2>
+      <table class="pr-table">
+        <thead><tr><th>문항</th><th>배점</th><th>정답</th><th>응답</th><th>정답률(%)</th><th>변별도</th><th>난이도</th><th>판정</th><th class="l">검토 의견</th></tr></thead>
+        <tbody>${itemsByQ.map(i => {
+          const cls = isReviewItem(i) ? 'bad' : (isGoodItem(i) ? 'good' : '');
+          return `<tr class="${cls}">
+            <td>${i.qno}</td>
+            <td>${fmtPoints(i.points)}</td>
+            <td>${escHTML(i.answer)}</td>
+            <td>${i.n}</td>
+            <td>${(i.p*100).toFixed(1)}</td>
+            <td>${i.d.toFixed(2)}</td>
+            <td>${escHTML(i.diff||'')}</td>
+            <td>${escHTML(i.verdict||'')}</td>
+            <td class="l">${escHTML(i.comment||'')}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+      <p class="pr-note">행 배경 — <span style="background:#fef2f2;padding:1px 6px;border-radius:3px">분홍</span> 검토 필요 · <span style="background:#f0fdf4;padding:1px 6px;border-radius:3px">초록</span> 우수 문항</p>
+    </section>`;
+
+    // 매트릭스 / 분포표 — 화면 DOM의 표를 재활용 (가로 페이지)
+    const matrixHTML = ($('matrixTable')||{}).innerHTML || '';
+    if(matrixHTML){
+      html += `<section class="pr-page pr-landscape">
+        <h2 class="pr-h2">5. 성취도(A~E·I) × 문항 정답률 매트릭스</h2>
+        <p class="pr-note">상위 등급일수록 정답률이 높아야 정상. 빨간 테두리 셀은 상위 그룹보다 정답률이 더 높은 그룹의 셀(패턴 깨짐).</p>
+        <table class="pr-table">${matrixHTML}</table>
+      </section>`;
+    }
+    const distHTML = ($('distTable')||{}).innerHTML || '';
+    if(distHTML){
+      html += `<section class="pr-page pr-landscape">
+        <h2 class="pr-h2">6. 답지 반응 분포 (선지별 응답률)</h2>
+        <p class="pr-note">정답 선지는 ✓ 초록, 30% 이상 매력적 오답은 분홍. '복수답안' 컬럼은 알파벳 코드(A=1·2 / B=1·3 …) 응답.</p>
+        <table class="pr-table">${distHTML}</table>
+      </section>`;
+    }
+  }
+
+  // ===== 자동 총평 =====
+  if(opts.includeReview){
+    const reviewHTML = ($('review')||{}).innerHTML || '';
+    if(reviewHTML){
+      html += `<section class="pr-page">
+        <h2 class="pr-h2">출제 검토 자동 총평</h2>
+        <div class="pr-review">${reviewHTML}</div>
+      </section>`;
+    }
+  }
+
+  // ===== NEIS 문항정보표 대비 결과 =====
+  if(neisIntent || (neisStds && neisStds.length)){
+    let neisHtml = `<h2 class="pr-h2">출제 계획(NEIS 문항정보표) 대비 실제 결과</h2>`;
+
+    if(neisIntent){
+      const sp = neisIntent.spearman;
+      let spText, spColor;
+      if(sp == null){ spText = '계산 불가'; spColor = '#9ca3af'; }
+      else if(sp >= 0.6){ spText = `매우 잘 일치 (ρ=${sp.toFixed(2)})`; spColor = '#166534'; }
+      else if(sp >= 0.3){ spText = `대체로 일치 (ρ=${sp.toFixed(2)})`; spColor = '#0369a1'; }
+      else if(sp >= 0){ spText = `일치도 약함 (ρ=${sp.toFixed(2)})`; spColor = '#b45309'; }
+      else { spText = `반대 방향 (ρ=${sp.toFixed(2)})`; spColor = '#991b1b'; }
+
+      neisHtml += `<h3 class="pr-h3">A. 의도 난이도 vs 실제 정답률 — Spearman ρ = <span style="color:${spColor}">${sp!=null?sp.toFixed(3):'-'}</span> · ${spText}</h3>`;
+      if(imgIntent){
+        neisHtml += `<div class="pr-chart-grid full"><img src="${imgIntent}" alt="의도 vs 실제 산점도"></div>`;
+      }
+
+      // 의도 × 실제 매트릭스
+      const intents = ['쉬움','보통','어려움'];
+      const actuals = neisIntent.actuals;
+      neisHtml += `<table class="pr-table"><thead><tr><th></th>${actuals.map(a=>`<th>${escHTML(a)}</th>`).join('')}<th>소계</th></tr></thead><tbody>`;
+      intents.forEach(intent => {
+        let sum = 0;
+        let row = `<tr><td class="l"><b style="color:${INTENT_COLORS[intent]}">의도 ${intent}</b></td>`;
+        actuals.forEach(actual => {
+          const arr = neisIntent.matrix[intent][actual] || [];
+          const n = arr.length;
+          sum += n;
+          const diagOK =
+            (intent==='쉬움' && (actual==='쉬움' || actual==='적절')) ||
+            (intent==='보통' && (actual==='적절' || actual==='다소 어려움')) ||
+            (intent==='어려움' && (actual==='다소 어려움' || actual==='어려움' || actual==='매우 어려움'));
+          const bg = n===0 ? '#fafafa' : (diagOK ? '#dcfce7' : '#fee2e2');
+          row += `<td style="background:${bg};font-weight:${n>0?'700':'400'}">${n||0}</td>`;
+        });
+        row += `<td><b>${sum}</b></td></tr>`;
+        neisHtml += row;
+      });
+      neisHtml += `</tbody></table>`;
+
+      // 불일치 TOP
+      const top = neisIntent.mismatches.filter(m => m.absDelta > 0.15).slice(0, 5);
+      if(top.length){
+        neisHtml += `<h3 class="pr-h3">의도와 가장 어긋난 문항</h3>
+          <table class="pr-table">
+            <thead><tr><th>문항</th><th>의도</th><th>정답률</th><th>괴리</th><th class="l">해석</th></tr></thead>
+            <tbody>${top.map(it => {
+              let interp;
+              if(it.intent === '쉬움' && it.delta < -0.20) interp = '쉬움 의도였으나 어렵게 풀림 — 함정·오개념 검토';
+              else if(it.intent === '어려움' && it.delta > 0.30) interp = '어려움 의도였으나 너무 쉽게 풀림 — 변별 미달';
+              else if(it.delta > 0) interp = `의도(${it.intent})보다 ${(it.delta*100).toFixed(0)}%p 쉽게 풀림`;
+              else interp = `의도(${it.intent})보다 ${(-it.delta*100).toFixed(0)}%p 어렵게 풀림`;
+              return `<tr class="bad">
+                <td>${it.qno}</td>
+                <td style="color:${INTENT_COLORS[it.intent]||'#1a1f2e'};font-weight:700">${escHTML(it.intent||'-')}</td>
+                <td>${(it.p*100).toFixed(1)}%</td>
+                <td>${it.delta>=0?'+':''}${(it.delta*100).toFixed(1)}%p</td>
+                <td class="l">${escHTML(interp)}</td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>`;
+      }
+    }
+
+    if(neisStds && neisStds.length){
+      neisHtml += `<h3 class="pr-h3" style="margin-top:14px">B. 성취기준별 분석 (총 ${neisStds.length}개)</h3>`;
+      if(imgStandard){
+        neisHtml += `<div class="pr-chart-grid full"><img src="${imgStandard}" alt="성취기준별 정답률"></div>`;
+      }
+      // 표 — 풀 버전
+      neisHtml += `<table class="pr-table">
+        <thead><tr><th>성취기준</th><th class="l">내용</th><th>문항수</th><th class="l">문항번호</th><th>총배점</th><th>평균 정답률</th></tr></thead>
+        <tbody>${neisStds.map(g => {
+          const mean = g.mean;
+          const cls = mean < 0.5 ? 'bad' : (mean >= 0.8 ? 'good' : '');
+          return `<tr class="${cls}">
+            <td><b>${escHTML(g.code)}</b></td>
+            <td class="l" style="font-size:9px">${escHTML(g.desc.slice(0, 90))}${g.desc.length>90?'…':''}</td>
+            <td>${g.n}</td>
+            <td class="l">${g.qnos.join(', ')}</td>
+            <td>${g.totalPoints.toFixed(1)}</td>
+            <td><b>${(mean*100).toFixed(1)}%</b></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+
+      // 권고
+      const weak = neisStds.filter(g => g.mean < 0.5).sort((a,b)=>a.mean-b.mean).slice(0, 4);
+      if(weak.length){
+        neisHtml += `<h3 class="pr-h3">학습 권고 (보충 필요)</h3><ul style="margin:4px 0 8px;padding-left:18px;font-size:10px">`;
+        weak.forEach(g => {
+          const worst = g.items.slice().sort((a,b)=>a.p-b.p)[0];
+          neisHtml += `<li><b>${escHTML(g.code)}</b> · 평균 ${(g.mean*100).toFixed(1)}% (${g.n}문항, 최저 ${worst.qno}번 ${(worst.p*100).toFixed(0)}%) — ${escHTML(g.desc.slice(0, 80))}${g.desc.length>80?'…':''}</li>`;
+        });
+        neisHtml += `</ul>`;
+      }
+    }
+
+    html += `<section class="pr-page">${neisHtml}</section>`;
+  }
+
+  // ===== 학생별 점수표 =====
+  if(opts.includeStudents){
+    const rows = stu.map((s, idx) => {
+      const nm = anon ? `학생${String(idx+1).padStart(3,'0')}` : (s.name || '');
+      return `<tr>
+        <td>${escHTML(s.cls||'')}</td>
+        <td class="l">${escHTML(nm)}</td>
+        <td>${s.sel != null ? s.sel : '-'}</td>
+        <td>${s.desc != null ? s.desc : '-'}</td>
+        <td>${s.total != null ? s.total : '-'}</td>
+        <td>${s.rank != null ? s.rank : '-'}</td>
+        <td>${s.grade != null ? s.grade+'등급' : '-'}</td>
+      </tr>`;
+    }).join('');
+    html += `<section class="pr-page">
+      <h2 class="pr-h2">학생별 점수표 (${stu.length}명${anon?' · 익명 표기':''})</h2>
+      <table class="pr-table">
+        <thead><tr><th>반/번호</th><th class="l">이름</th><th>선택형</th><th>서답형</th><th>총점</th><th>석차</th><th>등급</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </section>`;
+  }
+
+  // ===== 원안지 이미지 =====
+  if(opts.includeOriginals){
+    const qKeys = (typeof qImageOrder !== 'undefined' && qImageOrder && qImageOrder.length)
+      ? qImageOrder
+      : Object.keys(window.qImages || {});
+    if(qKeys.length){
+      let cur = '';
+      qKeys.forEach((k, i) => {
+        const dataUrl = window.qImages ? window.qImages[k] : null;
+        if(!dataUrl) return;
+        if(i % 2 === 0){
+          if(cur) html += `<section class="pr-page">${cur}</section>`;
+          cur = `<h2 class="pr-h2">원안지 — ${escHTML(k)}</h2><img class="pr-orig-img" src="${dataUrl}" alt="${escHTML(k)}">`;
+        } else {
+          cur += `<h3 class="pr-h3">원안지 — ${escHTML(k)}</h3><img class="pr-orig-img" src="${dataUrl}" alt="${escHTML(k)}">`;
+        }
+      });
+      if(cur) html += `<section class="pr-page">${cur}</section>`;
+    }
+  }
+
+  // ===== 푸터 =====
+  html += `<div class="pr-footer">Exam-Lens · 산남고 이성훈 · 출력 ${now.toLocaleString('ko-KR')}</div>`;
+
+  return html;
+}
+
+function runPrint(){
+  const stu = (typeof _lastStudents !== 'undefined' && _lastStudents) ? _lastStudents : [];
+  const items = (typeof lastItems !== 'undefined' && lastItems) ? lastItems : [];
+  if(!stu.length || !items.length){
+    closePrintOptions();
+    if(typeof showToast === 'function') showToast('✗ 분석 결과가 없어 인쇄할 수 없습니다');
+    return;
+  }
+  const mode = (document.querySelector('input[name="prMode"]:checked')||{}).value || 'full';
+  const optsCb = $('prOptOriginals');
+  const opts = {
+    mode,
+    includeReview:    !!($('prOptReview')   ||{}).checked,
+    includeStudents:  !!($('prOptStudents') ||{}).checked,
+    includeOriginals: !!(optsCb && optsCb.checked && !optsCb.disabled),
+  };
+  closePrintOptions();
+  if(typeof showToast === 'function') showToast('보고서 생성 중…');
+
+  // 모달 닫힘 + 차트 안정화 후 캡처
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const host = $('printReport');
+    let cleaned = false;
+    const cleanup = () => {
+      if(cleaned) return; cleaned = true;
+      document.body.classList.remove('printing-report');
+      if(host) host.innerHTML = '';
+      window.removeEventListener('afterprint', cleanup);
+    };
+    try {
+      const html = buildPrintReport(opts);
+      if(!html){
+        if(typeof showToast === 'function') showToast('✗ 보고서 생성 실패 — 분석 데이터 부족');
+        return;
+      }
+      host.innerHTML = html;
+      document.body.classList.add('printing-report');
+      window.addEventListener('afterprint', cleanup);
+      // 이미지 디코딩 + 레이아웃 완료까지 약간 대기 후 인쇄
+      setTimeout(()=>{
+        try{ window.print(); }
+        catch(e){ console.error('window.print failed', e); cleanup(); }
+      }, 80);
+    } catch(e){
+      console.error('runPrint failed', e);
+      if(typeof showToast === 'function') showToast('✗ 인쇄 준비 실패: ' + (e.message||e));
+      cleanup();
+    }
+  }));
+}
+
 // 현재 분석 결과를 HTML 보고서로 저장 (차트는 원본 데이터로 다시 그려짐)
 function saveHtml(){
   const result = document.getElementById('result');
   const hasResult = result && !result.classList.contains('hidden');
+
+  // 인쇄 보고서 컨테이너는 저장본에 잔존하지 않도록 보장
+  // (정상 흐름에선 afterprint cleanup이 처리하지만, 인쇄 취소·라이프사이클 이슈 대비)
+  const pr = document.getElementById('printReport');
+  if(pr) pr.innerHTML = '';
+  document.body.classList.remove('printing-report');
 
   // 모달·패널·백드롭 깨끗이 닫기 (저장된 파일에 켜진 상태로 박제되는 것 방지)
   document.querySelectorAll('.qmodal.on').forEach(m=>m.classList.remove('on'));
@@ -4324,24 +5257,25 @@ function renderDistribution(items, students){
       else if(n===0){ style += 'color:#cbd5e1;'; }
       else { style += 'color:#374151;'; }
       if(clickable) style += 'cursor:pointer;text-decoration:underline dotted transparent;';
-      const dataAttr = clickable ? ` data-idx="${opts.dataIdx}" data-choice="${opts.choice}" data-label="${opts.label||''}"` : '';
+      const dataAttr = clickable ? ` data-idx="${opts.dataIdx}" data-choice="${escHTML(opts.choice)}" data-label="${escHTML(opts.label||'')}"` : '';
       const prefix = opts.correct ? '✓ ' : '';
       return `<td style="${style}" class="${clickable?'dist-cell':''}"${dataAttr}>${prefix}${txt}</td>`;
     };
 
     html += `<tr><td style="text-align:center;font-weight:600">${_qLinkHTML(it.qno)}</td>`;
-    html += `<td style="text-align:center">${it.answer}</td>`;
+    html += `<td style="text-align:center">${escHTML(it.answer)}</td>`;
     html += `<td style="text-align:right;font-weight:600">${(p*100).toFixed(1)}%</td>`;
     const correctChoices = String(it.answer).split(',').map(x=>x.trim());
     choices.forEach(c=>{
       const isCorrectChoice = correctChoices.includes(String(c));
-      const n = isCorrectChoice ? ok : (distMap[c]||0);
+      const canMapCorrect = isCorrectChoice && correctChoices.length === 1;
+      const n = canMapCorrect ? ok : (distMap[c]||0);
       const rate = cnt? n/cnt : 0;
       html += cell(n, cnt, {
         correct: isCorrectChoice,
         attractive: !isCorrectChoice && rate>=0.3,
         dataIdx: idx,
-        choice: isCorrectChoice ? '.' : c,
+        choice: canMapCorrect ? '.' : c,
         label: `${it.qno}번 — ${isCorrectChoice?'정답('+c+'번)':c+'번 선지'}`
       });
     });
@@ -4366,6 +5300,312 @@ function renderDistribution(items, students){
   });
 }
 
+// ============ NEIS 분석 렌더링 (A: 의도-실제 / B: 성취기준) ============
+
+// 의도 난이도 색상
+const INTENT_COLORS = { '쉬움':'#10b981', '보통':'#f59e0b', '어려움':'#dc2626' };
+
+function renderIntentAnalysis(items){
+  // 결과 카드 표시/숨김
+  const card = $('navIntentCard');
+  const analysis = analyzeIntent(items);
+  if(!analysis){
+    if(card) card.style.display = 'none';
+    return null;
+  }
+  if(card) card.style.display = '';
+
+  // 요약 카드
+  const sp = analysis.spearman;
+  let spLabel = '-', spInterp = '';
+  if(sp != null){
+    spLabel = sp.toFixed(3);
+    if(sp >= 0.6) spInterp = '의도와 결과가 <b style="color:#166534">매우 잘 일치</b>';
+    else if(sp >= 0.3) spInterp = '의도와 결과가 <b style="color:#0369a1">대체로 일치</b>';
+    else if(sp >= 0) spInterp = '의도와 결과의 일치도가 <b style="color:#92400e">약함</b>';
+    else spInterp = '의도와 결과가 <b style="color:#991b1b">반대 방향</b> (역상관) — 출제 의도 재점검 권고';
+  }
+  const grpRows = ['쉬움','보통','어려움'].map(k => {
+    const s = analysis.stats[k];
+    if(!s) return `<div style="display:flex;justify-content:space-between;padding:3px 0;color:#9ca3af"><span>${k}</span><span>해당 문항 없음</span></div>`;
+    const expectP = { '쉬움':'70~95%', '보통':'50~70%', '어려움':'30~50%' }[k];
+    const meanPct = (s.mean*100).toFixed(1);
+    const inRange = (
+      (k==='쉬움' && s.mean>=0.7) ||
+      (k==='보통' && s.mean>=0.5 && s.mean<=0.75) ||
+      (k==='어려움' && s.mean>=0.3 && s.mean<=0.5)
+    );
+    const color = inRange ? '#166534' : '#b45309';
+    return `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12.5px">
+      <span><b style="color:${INTENT_COLORS[k]}">●</b> 의도 <b>${k}</b> (${s.n}문항, 기대 ${expectP})</span>
+      <span style="color:${color};font-weight:600">평균 ${meanPct}%</span>
+    </div>`;
+  }).join('');
+
+  $('intentSummary').innerHTML = `
+    <div style="font-size:12px;color:#1e40af;font-weight:700;margin-bottom:6px;letter-spacing:.02em">출제 의도 일치도</div>
+    <div style="font-size:22px;font-weight:800;color:#1a1f2e;line-height:1.1">Spearman ρ = ${spLabel}</div>
+    <div style="font-size:12.5px;color:#475569;margin-top:4px;line-height:1.55">${spInterp}</div>
+    <hr style="margin:10px 0;border:none;border-top:1px solid rgba(37,99,235,.15)">
+    ${grpRows}
+  `;
+
+  // 불일치 TOP 표
+  const top = analysis.mismatches.slice(0, 8);
+  const tb = $('intentMismatchTable');
+  let html = '<thead><tr><th>문항</th><th>의도</th><th>실제 정답률</th><th>괴리</th><th class="l">해석</th></tr></thead><tbody>';
+  if(top.length === 0){
+    html += `<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:14px">분석할 문항이 없습니다.</td></tr>`;
+  } else {
+    top.forEach(it => {
+      const delta = it.delta;
+      let interp = '의도대로';
+      let badge = '#9ca3af';
+      if(it.intent === '쉬움' && delta < -0.20){ interp = '쉬움 의도였으나 어렵게 풀림 — 함정/오개념 의심'; badge = '#dc2626'; }
+      else if(it.intent === '어려움' && delta > 0.30){ interp = '어려움 의도였으나 너무 쉽게 풀림 — 변별 약함'; badge = '#f97316'; }
+      else if(it.intent === '보통' && Math.abs(delta) > 0.20){
+        interp = delta > 0 ? '보통 의도보다 쉽게 풀림' : '보통 의도보다 어렵게 풀림';
+        badge = '#f59e0b';
+      } else if(Math.abs(delta) > 0.15){
+        interp = delta > 0 ? '의도보다 쉽게 풀림' : '의도보다 어렵게 풀림';
+        badge = '#0ea5e9';
+      }
+      html += `<tr>
+        <td style="text-align:center;font-weight:600">${_qLinkHTML(it.qno, it.qno+'번')}</td>
+        <td style="text-align:center;color:${INTENT_COLORS[it.intent]||'#9ca3af'};font-weight:600">${escHTML(it.intent||'-')}</td>
+        <td style="text-align:right">${(it.p*100).toFixed(1)}%</td>
+        <td style="text-align:right;color:${badge};font-weight:600">${delta>=0?'+':''}${(delta*100).toFixed(1)}%p</td>
+        <td style="font-size:11.5px;color:#475569">${escHTML(interp)}</td>
+      </tr>`;
+    });
+  }
+  html += '</tbody>';
+  tb.innerHTML = html;
+  tb.dataset.sortable = '';
+
+  // 의도 × 실제 매트릭스
+  const intents = ['쉬움','보통','어려움'];
+  const actuals = analysis.actuals;
+  let mHtml = '<thead><tr><th></th>';
+  actuals.forEach(a => mHtml += `<th style="font-size:11px">${a}</th>`);
+  mHtml += '<th style="font-size:11px;background:#f8faff">소계</th></tr></thead><tbody>';
+  intents.forEach((intent, ri) => {
+    mHtml += `<tr><th style="text-align:left;background:#f8faff;color:${INTENT_COLORS[intent]};font-weight:700">의도 ${intent}</th>`;
+    let rowSum = 0;
+    actuals.forEach((actual, ci) => {
+      const arr = analysis.matrix[intent][actual] || [];
+      const n = arr.length;
+      rowSum += n;
+      // 대각선 일치성 — 쉬움-쉬움, 보통-적절, 어려움-어려움/매우 어려움 부근이 정상
+      const diagOK =
+        (intent==='쉬움' && (actual==='쉬움' || actual==='적절')) ||
+        (intent==='보통' && (actual==='적절' || actual==='다소 어려움')) ||
+        (intent==='어려움' && (actual==='다소 어려움' || actual==='어려움' || actual==='매우 어려움'));
+      let bg = n===0 ? '#fafafa' : (diagOK ? '#dcfce7' : '#fee2e2');
+      let col = n===0 ? '#cbd5e1' : '#1a1f2e';
+      const titleAttr = n>0 ? ` title="${arr.map(i=>i.qno+'번 ('+(i.p*100).toFixed(0)+'%)').join(', ')}"` : '';
+      mHtml += `<td style="text-align:center;background:${bg};color:${col};font-weight:${n>0?'700':'400'};padding:6px 4px"${titleAttr}>${n||0}</td>`;
+    });
+    mHtml += `<td style="text-align:center;background:#f8faff;font-weight:700">${rowSum}</td></tr>`;
+  });
+  mHtml += '</tbody>';
+  $('intentMatrixTable').innerHTML = mHtml;
+
+  return analysis;
+}
+
+function renderStandardAnalysis(items){
+  const card = $('navStandardCard');
+  const groups = analyzeStandards(items);
+  if(!groups || groups.length === 0){
+    if(card) card.style.display = 'none';
+    return null;
+  }
+  if(card) card.style.display = '';
+
+  // 표
+  let html = '<thead><tr><th>성취기준</th><th class="l">내용</th><th>문항수</th><th class="l">문항</th><th>총배점</th><th>평균 정답률</th><th>가중평균</th><th>가장 어려웠던 문항</th></tr></thead><tbody>';
+  groups.forEach(g => {
+    const meanPct = (g.mean*100).toFixed(1);
+    const wMeanPct = (g.weightedMean*100).toFixed(1);
+    const meanColor = g.mean >= 0.7 ? '#166534' : g.mean >= 0.5 ? '#0369a1' : g.mean >= 0.3 ? '#b45309' : '#991b1b';
+    const minPct = (g.min*100).toFixed(1);
+    const minStr = g.minItem ? `${_qLinkHTML(g.minItem.qno, g.minItem.qno+'번')} (${minPct}%)` : '-';
+    html += `<tr>
+      <td style="text-align:center;font-weight:600;font-family:'JetBrains Mono',monospace;font-size:11px">${escHTML(g.code)}</td>
+      <td class="l" style="font-size:11.5px;color:#475569;max-width:380px">${escHTML(g.desc.slice(0,80))}${g.desc.length>80?'…':''}</td>
+      <td style="text-align:center">${g.n}</td>
+      <td class="l" style="font-size:11px;color:#6b7280">${g.qnos.join(', ')}</td>
+      <td style="text-align:right">${g.totalPoints.toFixed(1)}</td>
+      <td style="text-align:right;color:${meanColor};font-weight:700">${meanPct}%</td>
+      <td style="text-align:right;color:#475569">${wMeanPct}%</td>
+      <td style="text-align:center">${minStr}</td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  $('standardTable').innerHTML = html;
+  $('standardTable').dataset.sortable = '';
+
+  // 학습 권고 자동 생성
+  const weak = groups.filter(g => g.mean < 0.5).sort((a,b) => a.mean - b.mean);
+  const strong = groups.filter(g => g.mean >= 0.8).sort((a,b) => b.mean - a.mean);
+  const adviceEl = $('standardAdvice');
+  if(weak.length > 0 || strong.length > 0){
+    let advice = '';
+    if(weak.length > 0){
+      advice += `<b>📉 보충 학습이 필요한 성취기준 (평균 정답률 50% 미만)</b><ul style="margin:6px 0 8px;padding-left:20px">`;
+      weak.slice(0, 4).forEach(g => {
+        const sample = g.items.sort((a,b)=>a.p-b.p)[0];
+        advice += `<li><code style="background:#fef3c7;padding:1px 5px;border-radius:3px;font-size:11px">${escHTML(g.code)}</code> — 평균 ${(g.mean*100).toFixed(1)}% (${g.n}문항, 가장 어려운 문항: ${sample.qno}번 ${(sample.p*100).toFixed(0)}%)<br>
+          <span style="font-size:11.5px;color:#78350f">${escHTML(g.desc.slice(0, 100))}${g.desc.length>100?'…':''}</span></li>`;
+      });
+      advice += `</ul>`;
+    }
+    if(strong.length > 0){
+      advice += `<b style="color:#166534">📈 잘 형성된 성취기준 (평균 정답률 80% 이상)</b><ul style="margin:6px 0 0;padding-left:20px;color:#166534">`;
+      strong.slice(0, 3).forEach(g => {
+        advice += `<li><code style="background:#dcfce7;padding:1px 5px;border-radius:3px;font-size:11px;color:#166534">${escHTML(g.code)}</code> — 평균 ${(g.mean*100).toFixed(1)}% (${g.n}문항)</li>`;
+      });
+      advice += `</ul>`;
+    }
+    advice += `<div style="font-size:11.5px;color:#6b7280;margin-top:8px;padding-top:8px;border-top:1px solid #fde68a">자동 권고 — 출제 협의 시 추가 컨텍스트(단원 학습 시기, 학생 출결, 보충 자료 제공 여부)를 함께 고려할 것.</div>`;
+    adviceEl.innerHTML = advice;
+    adviceEl.style.display = 'block';
+  } else {
+    adviceEl.style.display = 'none';
+  }
+
+  return groups;
+}
+
+// NEIS 분석 차트 그리기 (drawCharts와 별도로 호출)
+function drawNeisCharts(items){
+  const intentAnalysis = analyzeIntent(items);
+  const stdGroups = analyzeStandards(items);
+
+  // 의도-실제 산점도 + 그룹 평균선
+  destroyChart('intent');
+  if(intentAnalysis){
+    const intents = ['쉬움','보통','어려움'];
+    const datasets = intents.map(intent => {
+      const arr = intentAnalysis.stats[intent] ? intentAnalysis.stats[intent].items : [];
+      // 지터 추가 (x축 그룹별로 좌우 작은 노이즈)
+      return {
+        label: `의도 ${intent} (${arr.length}문항)`,
+        data: arr.map(it => ({ x: intent, y: it.p * 100, qno: it.qno })),
+        backgroundColor: INTENT_COLORS[intent],
+        borderColor: INTENT_COLORS[intent],
+        pointRadius: 7, pointHoverRadius: 9,
+      };
+    });
+    // 기대 정답률 박스 (배경)
+    charts.intent = new Chart($('intentChart'), {
+      type: 'scatter',
+      data: { datasets },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins: {
+          title: { display:true, text:'의도 난이도 × 실제 정답률 (점=문항, 색=의도 난이도)', color:'#1a1f2e', font:{size:13.5,weight:'600'}, padding:{bottom:10} },
+          legend: { display:true, position:'bottom', labels:{ boxWidth:14, padding:12, font:{size:11.5} } },
+          tooltip: {
+            backgroundColor:'rgba(26,31,46,.92)', titleColor:'#fff', bodyColor:'#e5e7eb',
+            callbacks: {
+              label: (c) => `${c.raw.qno}번 — 정답률 ${c.raw.y.toFixed(1)}% (의도: ${c.raw.x})`
+            }
+          }
+        },
+        scales: {
+          x: { type:'category', labels: intents,
+               title:{display:true,text:'출제 의도',color:'#475569'},
+               grid:{display:false} },
+          y: { min:0, max:100,
+               title:{display:true,text:'실제 정답률 (%)',color:'#475569'},
+               ticks:{callback:(v)=>v+'%'}, grid:{color:'rgba(229,232,240,.6)'} }
+        }
+      },
+      plugins: [{
+        id: 'expectedBands',
+        beforeDraw(chart){
+          const {ctx, chartArea, scales} = chart;
+          if(!chartArea || !scales.y || !scales.x) return;
+          const xS = scales.x, yS = scales.y;
+          const bands = [
+            {x:'쉬움', lo:70, hi:95, color:'rgba(16,185,129,.10)'},
+            {x:'보통', lo:50, hi:70, color:'rgba(245,158,11,.10)'},
+            {x:'어려움', lo:30, hi:50, color:'rgba(220,38,38,.10)'},
+          ];
+          ctx.save();
+          bands.forEach(b => {
+            const xPx = xS.getPixelForValue(b.x);
+            const half = (chartArea.width / xS.ticks.length) * 0.42;
+            const yTop = yS.getPixelForValue(b.hi);
+            const yBot = yS.getPixelForValue(b.lo);
+            ctx.fillStyle = b.color;
+            ctx.fillRect(xPx - half, yTop, half*2, yBot - yTop);
+          });
+          // 그룹별 평균선
+          intents.forEach(intent => {
+            const s = intentAnalysis.stats[intent];
+            if(!s) return;
+            const xPx = xS.getPixelForValue(intent);
+            const half = (chartArea.width / xS.ticks.length) * 0.42;
+            const yPx = yS.getPixelForValue(s.mean*100);
+            ctx.strokeStyle = INTENT_COLORS[intent];
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(xPx - half, yPx);
+            ctx.lineTo(xPx + half, yPx);
+            ctx.stroke();
+          });
+          ctx.restore();
+        }
+      }]
+    });
+  }
+
+  // 성취기준별 가로 막대
+  destroyChart('standard');
+  if(stdGroups && stdGroups.length > 0){
+    const labels = stdGroups.map(g => g.code);
+    const data = stdGroups.map(g => +(g.mean*100).toFixed(1));
+    const colors = stdGroups.map(g => g.mean >= 0.7 ? '#10b981' : g.mean >= 0.5 ? '#f59e0b' : g.mean >= 0.3 ? '#f97316' : '#dc2626');
+    // 동적 높이 — 성취기준 수에 맞게
+    const targetH = Math.max(280, stdGroups.length * 36 + 80);
+    const canvas = $('standardChart');
+    if(canvas && canvas.parentNode) canvas.parentNode.style.height = targetH + 'px';
+    charts.standard = new Chart($('standardChart'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label:'평균 정답률(%)', data, backgroundColor: colors, borderRadius:5, borderSkipped:false }] },
+      options: {
+        indexAxis: 'y',
+        responsive:true, maintainAspectRatio:false,
+        plugins: {
+          title: { display:true, text:'성취기준별 평균 정답률 (색: 초록≥70 / 호박≥50 / 주황≥30 / 빨강<30)', color:'#1a1f2e', font:{size:13.5,weight:'600'}, padding:{bottom:10} },
+          legend: { display:false },
+          tooltip: {
+            backgroundColor:'rgba(26,31,46,.92)', titleColor:'#fff', bodyColor:'#e5e7eb',
+            callbacks: {
+              label: (c) => {
+                const g = stdGroups[c.dataIndex];
+                return [
+                  `평균: ${c.raw}%`,
+                  `문항: ${g.qnos.join(', ')}`,
+                  `총배점: ${g.totalPoints.toFixed(1)}점`
+                ];
+              },
+              afterLabel: (c) => stdGroups[c.dataIndex].desc.slice(0, 80)
+            }
+          }
+        },
+        scales: {
+          x: { min:0, max:100, ticks:{callback:(v)=>v+'%'}, grid:{color:'rgba(229,232,240,.6)'} },
+          y: { ticks:{font:{size:11,family:'JetBrains Mono,monospace'}}, grid:{display:false} }
+        }
+      }
+    });
+  }
+}
+
 // 특정 문항에 특정 선지로 응답한 학생 목록 모달
 function showResponseStudents(students, itemIdx, choice, title){
   const filterFn = (s)=>{
@@ -4382,7 +5622,7 @@ function showResponseStudents(students, itemIdx, choice, title){
   if(choice && choice.length===1 && MULTI_CODE_MAP[choice]){
     extraNote = ` <span style="color:#6b7280;font-weight:400;font-size:12px">(${choice} = ${MULTI_CODE_MAP[choice]}번 복합)</span>`;
   }
-  $('gModalTitle').innerHTML = `<span style="display:inline-block;width:14px;height:14px;background:#5b6cff;border-radius:3px;vertical-align:middle;margin-right:8px"></span>${title} · ${arr.length}명${extraNote}`;
+  $('gModalTitle').innerHTML = `<span style="display:inline-block;width:14px;height:14px;background:#5b6cff;border-radius:3px;vertical-align:middle;margin-right:8px"></span>${escHTML(title)} · ${arr.length}명${extraNote}`;
   const tb = $('gModalTable').querySelector('tbody');
   if(arr.length===0){
     tb.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:#9ca3af">해당 학생이 없습니다.</td></tr>`;
@@ -4391,9 +5631,9 @@ function showResponseStudents(students, itemIdx, choice, title){
       const {ban, num} = splitCls(s.cls);
       const idx = s._idx ?? i;
       return `<tr data-stuidx="${idx}" style="cursor:pointer" title="클릭: 학생별 정오표 보기">
-        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${ban}</td>
-        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${num}</td>
-        <td style="padding:6px;border-bottom:1px solid #f3f4f6">${anon?`학생${String(i+1).padStart(3,'0')}`:s.name}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${escHTML(ban)}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${escHTML(num)}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6">${anon?`학생${String(i+1).padStart(3,'0')}`:escHTML(s.name)}</td>
         <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600">${s.total??'-'}</td>
         <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right">${s.rank!=null?`${s.rank}등 / ${totalN}명`:'-'}</td>
         <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right">${s.grade??'-'}등급</td>
@@ -4454,7 +5694,7 @@ function showStudentsBy(students, filterFn, title, anon, color){
   const arr = students.filter(s=>s.total!=null && filterFn(s.total))
                       .sort((a,b)=>(b.total??-1)-(a.total??-1));
   const badge = color ? `<span style="display:inline-block;width:14px;height:14px;background:${color};border-radius:3px;vertical-align:middle;margin-right:8px"></span>` : '';
-  $('gModalTitle').innerHTML = `${badge}${title} · ${arr.length}명`;
+  $('gModalTitle').innerHTML = `${badge}${escHTML(title)} · ${arr.length}명`;
   const tb = $('gModalTable').querySelector('tbody');
   if(arr.length===0){
     tb.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:#9ca3af">해당 학생이 없습니다.</td></tr>`;
@@ -4463,9 +5703,9 @@ function showStudentsBy(students, filterFn, title, anon, color){
       const {ban, num} = splitCls(s.cls);
       const idx = s._idx ?? i;
       return `<tr data-stuidx="${idx}" style="cursor:pointer" title="클릭: 학생별 정오표 보기">
-        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${ban}</td>
-        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${num}</td>
-        <td style="padding:6px;border-bottom:1px solid #f3f4f6">${anon?`학생${String(i+1).padStart(3,'0')}`:s.name}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${escHTML(ban)}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:center">${escHTML(num)}</td>
+        <td style="padding:6px;border-bottom:1px solid #f3f4f6">${anon?`학생${String(i+1).padStart(3,'0')}`:escHTML(s.name)}</td>
         <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600">${s.total??'-'}</td>
         <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right">${s.rank!=null?`${s.rank}등 / ${totalN}명`:'-'}</td>
         <td style="padding:6px;border-bottom:1px solid #f3f4f6;text-align:right">${s.grade??'-'}등급</td>
@@ -4488,9 +5728,9 @@ function showGradeStudents(students, grade, anon, maxG){
     tb.innerHTML = arr.map((s,i)=>{
       const {ban, num} = splitCls(s.cls);
       return `<tr>
-        <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:center">${ban}</td>
-        <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:center">${num}</td>
-        <td style="padding:5px;border-bottom:1px solid #f3f4f6">${anon?`학생${String(i+1).padStart(3,'0')}`:s.name}</td>
+        <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:center">${escHTML(ban)}</td>
+        <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:center">${escHTML(num)}</td>
+        <td style="padding:5px;border-bottom:1px solid #f3f4f6">${anon?`학생${String(i+1).padStart(3,'0')}`:escHTML(s.name)}</td>
         <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:right">${s.total??'-'}</td>
         <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:right">${s.rank!=null?`${s.rank}등 / ${totalN}명`:'-'}</td>
         <td style="padding:5px;border-bottom:1px solid #f3f4f6;text-align:right">${s.grade??'-'}등급</td>
@@ -4512,8 +5752,8 @@ function renderStudents(students, anon){
     const {ban, num} = splitCls(s.cls);
     const idx = s._idx ?? i;
     return `<tr data-stuidx="${idx}" style="cursor:pointer" title="클릭: 학생별 정오표 보기">
-      <td>${ban}</td><td>${num}</td>
-      <td>${anon?`학생${String(i+1).padStart(3,'0')}`:s.name}</td>
+      <td>${escHTML(ban)}</td><td>${escHTML(num)}</td>
+      <td>${anon?`학생${String(i+1).padStart(3,'0')}`:escHTML(s.name)}</td>
       <td>${s.sel??'-'}</td><td>${s.desc??'-'}</td>
       <td>${s.total??'-'}</td>
       <td>${s.rank??'-'}</td>
@@ -4815,6 +6055,12 @@ function drawCharts(items, hist, gd, students, grade, anon){
 
 async function run(){
   clearErr();
+  const deps = missingLibs();
+  if(deps.length){
+    showErr(`${deps.join(', ')} 로드에 실패했습니다. 인터넷 연결 또는 CDN 접속 차단 여부를 확인한 뒤 새로고침해주세요.`);
+    showToast('✗ 필수 라이브러리 로드 실패');
+    return;
+  }
   const files = selectedFiles.length ? selectedFiles : Array.from($('file').files);
   if(files.length===0){ showErr('엑셀 파일을 선택해주세요.'); return; }
   // 분석 중 상태 — 버튼 비활성화 + 스피너
@@ -4854,7 +6100,40 @@ async function run(){
         }
       }
       parsed.students.forEach(s=>{ s._src = f.name; students.push(s); });
-      fileLog.push(`${f.name} (${parsed.students.length}명)`);
+      fileLog.push(`${escHTML(f.name)} (${parsed.students.length}명)`);
+    }
+
+    // NEIS 문항정보표 파싱 + items 병합 (선택사항)
+    window._lastNeis = null;
+    window._lastNeisMerge = null;
+    const neisFileInput = $('neisFile');
+    const neisFile = neisFileInput && neisFileInput.files && neisFileInput.files[0];
+    if(neisFile){
+      try {
+        const nbuf = await neisFile.arrayBuffer();
+        const nwb = XLSX.read(nbuf, {type:'array'});
+        const nws = nwb.Sheets[nwb.SheetNames[0]];
+        const nrows = XLSX.utils.sheet_to_json(nws, {header:1, defval:''});
+        const neis = parseNeisItemSheet(nrows);
+        window._lastNeis = neis;
+        const mergeRes = mergeNeisIntoItems(items, neis);
+        window._lastNeisMerge = mergeRes;
+        const nstat = $('neisStatus');
+        if(nstat){
+          if(mergeRes.merged){
+            const warn = mergeRes.answerMismatch > 0
+              ? ` <span style="color:#b45309">⚠ 정답 ${mergeRes.answerMismatch}개 불일치 (NEIS 갱신 권장)</span>`
+              : '';
+            nstat.innerHTML = `<span style="color:#166534;font-weight:600">✓ NEIS 문항정보표 적용 — 선택형 ${mergeRes.selectN} + 서답형 ${mergeRes.openN} 매칭</span>${warn}`;
+          } else {
+            nstat.innerHTML = `<span style="color:#b91c1c">✗ NEIS 매칭 실패: ${escHTML(mergeRes.reason)} — 의도/성취기준 분석 건너뜀</span>`;
+          }
+        }
+      } catch(e){
+        console.warn('NEIS 파싱 실패:', e);
+        const nstat = $('neisStatus');
+        if(nstat) nstat.innerHTML = `<span style="color:#b91c1c">✗ NEIS 파싱 실패: ${escHTML(e.message||String(e))}</span>`;
+      }
     }
 
     $('fileList').innerHTML = `<div style="background:#dcfce7;color:#166534;padding:8px 12px;border-radius:9px;font-size:12.5px;margin-top:6px;font-weight:500">✓ 병합 완료: ${fileLog.join(', ')} · 총 <b>${students.length}명</b></div>`;
@@ -4893,6 +6172,17 @@ async function run(){
     renderPointRate(itemRes);
     renderMatrix(items, students);
     renderDistribution(items, students);
+    // NEIS 문항정보표 분석 (파일 있을 때만, 카드/nav 토글 처리)
+    try {
+      const intentRes = renderIntentAnalysis(itemRes);
+      const stdRes = renderStandardAnalysis(itemRes);
+      try{ drawNeisCharts(itemRes); }catch(e){ console.warn('drawNeisCharts', e); }
+      // nav 버튼 토글
+      const hasNeis = !!(intentRes || stdRes);
+      document.querySelectorAll('.neis-only').forEach(el => {
+        el.style.display = hasNeis ? '' : 'none';
+      });
+    } catch(e){ console.warn('NEIS 분석 렌더링 실패', e); }
     $('review').innerHTML = buildReview(stats, itemRes, gd, grade, subject, examName, students, alpha);
 
     // 분할점수 시뮬레이터 + 학기 환산 분석
@@ -4977,12 +6267,12 @@ function renderFileList(){
   selectedFiles.forEach((f,i)=>{
     html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 11px;background:#fff;border:1px solid var(--line);border-radius:9px;font-size:12.5px">
       <span style="font-size:14px">📄</span>
-      <span style="flex:1;color:var(--ink-2);font-weight:500;word-break:break-all">${f.name} <span style="color:var(--muted-2);font-weight:400">(${(f.size/1024).toFixed(0)} KB)</span></span>
+      <span style="flex:1;color:var(--ink-2);font-weight:500;word-break:break-all">${escHTML(f.name)} <span style="color:var(--muted-2);font-weight:400">(${(f.size/1024).toFixed(0)} KB)</span></span>
       <button class="ghost remove-file" data-idx="${i}" style="padding:3px 10px;font-size:11px;font-weight:600;border-radius:7px;color:#991b1b;border-color:#fecaca;box-shadow:none">제거</button>
     </div>`;
   });
   html += `<div style="font-size:12px;color:var(--muted);margin-top:4px">총 <b style="color:var(--pri-deep)">${selectedFiles.length}개</b> 파일 선택됨 · [파일 선택]을 다시 누르면 추가 업로드됩니다</div>`;
-  if(window._examInfoMsg) html += `<div style="font-size:12px;color:var(--pri-deep);margin-top:2px">자동 인식: ${window._examInfoMsg}</div>`;
+  if(window._examInfoMsg) html += `<div style="font-size:12px;color:var(--pri-deep);margin-top:2px">자동 인식: ${escHTML(window._examInfoMsg)}</div>`;
   html += '</div>';
   box.innerHTML = html;
   box.querySelectorAll('.remove-file').forEach(btn=>{
