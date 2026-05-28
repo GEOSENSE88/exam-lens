@@ -6,16 +6,35 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>정기시험 문항 분석기</title>
+<!-- ============ CDN 라이브러리 로드 (다중 폴백) ============
+     일부 학교/회사 네트워크에서 cdnjs/jsdelivr 가 차단되는 경우가 있어
+     primary 가 실패하면 다음 CDN 으로 순차 시도. document.write 는 동기적이라
+     순서가 보장되고, window.XLSX 등 글로벌 확인으로 중복 로드도 회피.        -->
+<!-- XLSX -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>window.XLSX || document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
+<script>window.XLSX || document.write('<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>window.Chart || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>');</script>
+<script>window.Chart || document.write('<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');</script>
+<!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>window.pdfjsLib || document.write('<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"><\/script>');</script>
+<script>window.pdfjsLib || document.write('<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"><\/script>');</script>
 <script>
+  // pdf.worker 경로: 실제로 로드 성공한 pdf.min.js 의 같은 origin 으로 자동 매칭
   if (window.pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var _pdfScripts = Array.from(document.scripts).filter(function(s){ return /\/pdf\.min\.js(\?|$)/.test(s.src); });
+    var _last = _pdfScripts[_pdfScripts.length - 1];
+    var _workerSrc = _last && _last.src ? _last.src.replace(/pdf\.min\.js(\?.*)?$/, 'pdf.worker.min.js$1')
+                                        : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = _workerSrc;
   }
 </script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
