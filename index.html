@@ -6201,7 +6201,9 @@ function drawCharts(items, hist, gd, students, grade, anon){
       },
       scales:{
         x:{grid:{display:false}, ticks:{font:{size:10.5}, maxRotation:0, autoSkip:false}},
-        y:{beginAtZero:true, ticks:{precision:0}, grid:baseGrid}
+        y:{beginAtZero:true, ticks:{precision:0}, grid:baseGrid,
+           // valueLabel 플러그인이 막대 위에 'N문항' 라벨을 그리므로 최대값 + 35% 헤드룸
+           suggestedMax: Math.ceil(Math.max(...cCounts, 1) * 1.35)}
       }
     }
   });
