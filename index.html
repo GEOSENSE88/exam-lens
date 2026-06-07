@@ -941,9 +941,10 @@
           <th>응답수<span class="tip" data-tip="이 문항에 응답한 학생 수.&#10;무응답·결시는 제외됩니다.">?</span></th>
           <th>정답률(%)<span class="tip" data-tip="정답률(p)&#10;·응답자 중 정답을 맞힌 학생의 비율 (0~100%).&#10;·90↑ 변별 부족 / 75~90 쉬움 / 60~75 적정 / 40~60 약간 어려움 / 20~40 어려움 / 20↓ 매우 어려움(킬러)">?</span></th>
           <th>변별도<span class="tip" data-tip="변별도(D / Discrimination Index)&#10;·상위권 학생이 하위권보다 잘 맞히는 정도 (-1 ~ +1).&#10;·계산: 상위 27% 정답률 − 하위 27% 정답률.&#10;·0.3↑ 우수 / 0.1~0.3 보통 / 0~0.1 변별 부족 / 음수면 역변별(상위권이 더 틀림 → 정답 처리 의심)">?</span></th>
-          <th>난이도<br><span style="font-weight:400;font-size:10px;color:var(--muted)">출제 · 실제</span><span class="tip" data-tip="3단계 분류 — NEIS 문항정보표의 출제(의도) 난이도와 정답률 기반 실제 난이도를 비교&#10;·출제: NEIS 값(쉬움/보통/어려움)&#10;·실제: 쉬움(p≥0.7) / 보통(0.4↑) / 어려움(0.4↓)&#10;·두 값이 다르면 ⚠ 표시 — 출제 의도와 결과 차이 큰 문항">?</span></th>
-          <th>성취도별 정답률<br><span style="font-weight:400;font-size:10px;color:var(--muted)">분포 · 타겟 수준</span><span class="tip" data-tip="성취도별(A~E·I) 정답률을 미니 막대로 표시.&#10;·타겟 성취수준 = 정답률 65% 이상이 유지되는 가장 낮은 등급&#10;·예: A=100·B=67·C=60 → 타겟 B (B/C를 변별하는 문항)&#10;·해당 등급을 식별하는 데 효과적인 문항 = 변별 작용이 일어나는 경계 등급">?</span></th>
-          <th>판정<span class="tip" data-tip="정답률·변별도 종합 판정&#10;·우수 문항: 정답률 적정 + 변별도 0.3↑&#10;·고난도 변별: 정답률 낮으나 변별도 양호&#10;·매우 쉬움: 정답률 90↑&#10;·검토 필요: 변별도 낮음·역변별·매우 어려움 등">?</span></th>
+          <th>출제 난이도<span class="tip" data-tip="NEIS 문항정보표에 적힌 출제(의도) 난이도 — 쉬움/보통/어려움.&#10;·문항정보표 미업로드 시 '미입력'">?</span></th>
+          <th>실제 난이도<span class="tip" data-tip="정답률 기반 3단계 분류 — 쉬움(p≥0.7) / 보통(0.4↑) / 어려움(0.4↓).&#10;·출제 난이도와 다르면 ⚠, 같으면 ✓ 표시">?</span></th>
+          <th>성취도별 정답률<span class="tip" data-tip="성취도별(A~E·I) 정답률을 미니 막대로 표시.&#10;·등급이 높을수록 정답률이 높아야 정상">?</span></th>
+          <th>타겟 수준<span class="tip" data-tip="타겟 성취수준 = 정답률 65% 이상이 유지되는 가장 낮은 등급.&#10;·예: A=100·B=67·C=60 → 타겟 B (B/C를 변별하는 문항)&#10;·해당 등급을 식별하는 데 효과적인 문항 = 변별 경계 등급">?</span></th>
           <th>검토 의견</th>
         </tr></thead><tbody></tbody></table>
       </div>
@@ -4519,32 +4520,39 @@ function renderItemTable(items, filter, students){
     const hasImg = !!qImages[key];
     const indicator = hasImg ? ' <span style="color:var(--pri);font-size:11px">📄</span>' : '';
 
-    // 난이도 셀 — 출제(의도, NEIS) / 실제(3단계) 를 라벨로 구분해 2행 표시
+    // 난이도 — 출제(의도, NEIS) / 실제(3단계) 를 각각 별도 컬럼으로
     const actual3 = _diff3(i.p);
     const intent = i.intent || null;
     const aColor = _DIFF3_COLOR[actual3] || '#475569';
     const iColor = intent ? (_DIFF3_COLOR[intent] || '#475569') : '#cbd5e1';
     const mismatch = intent && intent !== actual3;
-    const _labSty = 'font-size:9px;color:#94a3b8;font-weight:700;flex:0 0 26px;text-align:right;letter-spacing:-.02em';
-    const _rowSty = 'display:flex;align-items:center;gap:5px;line-height:1.35';
-    let diffCellHTML;
-    if(intent){
-      const warn = mismatch
-        ? `<span title="출제 의도와 실제 결과가 다름" style="color:#dc2626;font-weight:800;font-size:11px">⚠</span>`
-        : `<span title="출제 의도 = 실제" style="color:#16a34a;font-weight:800;font-size:11px">✓</span>`;
-      diffCellHTML = `<div style="display:inline-flex;flex-direction:column;gap:2px;text-align:left">
-        <div style="${_rowSty}"><span style="${_labSty}">출제</span><span style="color:${iColor};font-weight:700;font-size:12px">${intent}</span></div>
-        <div style="${_rowSty}"><span style="${_labSty}">실제</span><span style="color:${aColor};font-weight:700;font-size:12px">${actual3}</span>${warn}</div>
-      </div>`;
-    }else{
-      diffCellHTML = `<div style="display:inline-flex;flex-direction:column;gap:2px;text-align:left">
-        <div style="${_rowSty}"><span style="${_labSty}">출제</span><span style="color:#cbd5e1;font-size:10.5px">미입력</span></div>
-        <div style="${_rowSty}"><span style="${_labSty}">실제</span><span style="color:${aColor};font-weight:700;font-size:12px">${actual3}</span></div>
-      </div>`;
-    }
+    const intentCellHTML = intent
+      ? `<span style="color:${iColor};font-weight:700;font-size:12.5px">${intent}</span>`
+      : `<span style="color:#cbd5e1;font-size:11px">미입력</span>`;
+    const cmp = intent
+      ? (mismatch
+          ? ` <span title="출제 의도와 실제 결과가 다름" style="color:#dc2626;font-weight:800;font-size:11px">⚠</span>`
+          : ` <span title="출제 의도 = 실제" style="color:#16a34a;font-weight:800;font-size:11px">✓</span>`)
+      : '';
+    const actualCellHTML = `<span style="color:${aColor};font-weight:700;font-size:12.5px">${actual3}</span>${cmp}`;
 
-    // 성취수준 분포(타겟) — 미니바 6개 (A~I) + 타겟 배지
-    let levelCellHTML = '<span style="color:#cbd5e1">-</span>';
+    // 정답률 — 컬러 숫자 + 미니 진행바
+    const pColor = _pColorForRate(i.p);
+    const pPct = Math.round(i.p*100);
+    const rateCellHTML = `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
+      <span style="font-weight:800;font-size:13.5px;color:${pColor};letter-spacing:-.01em">${(i.p*100).toFixed(1)}</span>
+      <div style="width:54px;height:5px;background:#eef2f7;border-radius:3px;overflow:hidden">
+        <div style="width:${pPct}%;height:100%;background:${pColor};border-radius:3px"></div>
+      </div>
+    </div>`;
+
+    // 변별도 — 컬러 알약(배경 틴트)
+    const dColor = _dColorForDisc(i.d);
+    const dCellHTML = `<span style="display:inline-block;font-weight:800;font-size:12.5px;color:${dColor};background:${dColor}1f;padding:3px 10px;border-radius:9px;font-variant-numeric:tabular-nums">${i.d.toFixed(2)}</span>`;
+
+    // 성취도별 정답률 분포(미니바) — 별도 컬럼
+    let barsCellHTML = '<span style="color:#cbd5e1">-</span>';
+    let targetCellHTML = '<span style="color:#cbd5e1">-</span>';
     if(mtxRows){
       const qi = qnoToIdx[i.qno];
       const rates = mtxRows.map(r => r.rates[qi]);
@@ -4553,37 +4561,31 @@ function renderItemTable(items, filter, students){
       const labels = ['A','B','C','D','E','I'];
       const bars = rates.map((r, li) => {
         if(r == null || ns[li] === 0){
-          return `<div title="${labels[li]} 응시자 없음" style="flex:1;min-width:0;height:18px;background:#f3f4f6;border-radius:2px;display:flex;align-items:flex-end;justify-content:center;font-size:8px;color:#cbd5e1">-</div>`;
+          return `<div title="${labels[li]} 응시자 없음" style="flex:1;min-width:0;height:20px;background:#f3f4f6;border-radius:2px;display:flex;align-items:flex-end;justify-content:center;font-size:8px;color:#cbd5e1">-</div>`;
         }
-        const h = Math.max(2, Math.round(r * 18));
+        const h = Math.max(2, Math.round(r * 20));
         const bg = rateColor(r);
         const isTarget = labels[li] === target;
         const ringStyle = isTarget ? 'box-shadow:inset 0 0 0 2px #1a1f2e;' : '';
-        return `<div title="${labels[li]}(${ns[li]}명) ${(r*100).toFixed(0)}%" style="flex:1;min-width:0;height:18px;background:#eef2f7;border-radius:2px;position:relative;${ringStyle}display:flex;align-items:flex-end;justify-content:center">
+        return `<div title="${labels[li]}(${ns[li]}명) ${(r*100).toFixed(0)}%" style="flex:1;min-width:0;height:20px;background:#eef2f7;border-radius:2px;position:relative;${ringStyle}display:flex;align-items:flex-end;justify-content:center">
           <div style="position:absolute;left:0;right:0;bottom:0;height:${h}px;background:${bg};border-radius:2px"></div>
           <span style="position:relative;font-size:7.5px;color:#fff;font-weight:700;text-shadow:0 0 2px rgba(0,0,0,.5);line-height:1;padding-bottom:1px">${labels[li]}</span>
         </div>`;
       }).join('');
+      barsCellHTML = `<div style="display:flex;gap:2px;width:96px;margin:0 auto">${bars}</div>`;
       const tColor = target ? _LEVEL_COLOR[target] : '#94a3b8';
-      const tBadge = target
-        ? `<span style="display:inline-block;background:${tColor};color:#fff;font-weight:800;font-size:10.5px;padding:1px 7px;border-radius:8px;letter-spacing:.02em">${target}</span>`
-        : `<span style="display:inline-block;background:#f3f4f6;color:#6b7280;font-weight:700;font-size:10px;padding:1px 6px;border-radius:8px">전 등급 &lt;65%</span>`;
-      // 위: 성취도별 정답률 분포 / 아래: 타겟 수준 — 점선으로 구분
-      levelCellHTML = `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:0">
-        <div style="font-size:8.5px;color:#94a3b8;font-weight:600;letter-spacing:-.02em;margin-bottom:2px">성취도별 정답률</div>
-        <div style="display:flex;gap:2px;width:92px">${bars}</div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:4px;width:92px;border-top:1px dashed #d1d5db;margin-top:4px;padding-top:4px">
-          <span style="font-size:8.5px;color:#94a3b8;font-weight:600;letter-spacing:-.02em">타겟</span>${tBadge}
-        </div>
-      </div>`;
+      targetCellHTML = target
+        ? `<span style="display:inline-block;background:${tColor};color:#fff;font-weight:800;font-size:12px;padding:3px 11px;border-radius:9px;letter-spacing:.02em">${target}</span>`
+        : `<span style="display:inline-block;background:#f3f4f6;color:#6b7280;font-weight:700;font-size:10px;padding:2px 7px;border-radius:8px">전 등급&lt;65%</span>`;
     }
 
     return `<tr data-qkey="${key}" title="${hasImg?'클릭: 원안지 보기':'원안지 PDF 업로드 시 클릭 가능'}">
       <td>${i.qno}${indicator}</td><td>${fmtPoints(i.points)}</td><td>${escHTML(i.answer)}</td><td>${i.n}</td>
-      <td>${(i.p*100).toFixed(1)}</td><td>${i.d.toFixed(2)}</td>
-      <td>${diffCellHTML}</td>
-      <td>${levelCellHTML}</td>
-      <td><span class="tag ${i.tag}">${i.verdict}</span></td>
+      <td>${rateCellHTML}</td><td>${dCellHTML}</td>
+      <td>${intentCellHTML}</td>
+      <td>${actualCellHTML}</td>
+      <td>${barsCellHTML}</td>
+      <td>${targetCellHTML}</td>
       <td style="text-align:left;color:#6b7280">${escHTML(i.comment)}</td>
     </tr>`;
   }).join('');
@@ -5832,22 +5834,30 @@ function drawNeisCharts(items){
   destroyChart('standard');
   if(stdGroups && stdGroups.length > 0){
     const labels = stdGroups.map(g => g.code);
-    const data = stdGroups.map(g => +(g.mean*100).toFixed(1));
-    const colors = stdGroups.map(g => g.mean >= 0.7 ? '#10b981' : g.mean >= 0.5 ? '#f59e0b' : g.mean >= 0.3 ? '#f97316' : '#dc2626');
-    // 동적 높이 — 성취기준 수에 맞게
-    const targetH = Math.max(280, stdGroups.length * 36 + 80);
+    // 막대 = 문항 최저~최고 정답률 범위 (floating bar) · 막대색 = 평균 기준 밴드
+    const rangeData = stdGroups.map(g => [+(g.min*100).toFixed(1), +(g.max*100).toFixed(1)]);
+    const barColors = stdGroups.map(g => g.mean >= 0.7 ? '#10b981' : g.mean >= 0.5 ? '#f59e0b' : g.mean >= 0.3 ? '#f97316' : '#dc2626');
+    // 동적 높이 — 성취기준 수에 맞게 (평균 라벨 공간 확보 위해 행 간격 여유)
+    const targetH = Math.max(320, stdGroups.length * 54 + 90);
     const canvas = $('standardChart');
     if(canvas && canvas.parentNode) canvas.parentNode.style.height = targetH + 'px';
+    const STD_FONT = (window.Chart && Chart.defaults && Chart.defaults.font && Chart.defaults.font.family) || 'sans-serif';
     charts.standard = new Chart($('standardChart'), {
       type: 'bar',
-      data: { labels, datasets: [{ label:'평균 정답률(%)', data, backgroundColor: colors, borderRadius:5, borderSkipped:false, barPercentage:0.62 }] },
+      data: { labels, datasets: [{
+        label:'정답률 범위(최저~최고)',
+        data: rangeData,
+        backgroundColor: barColors.map(c=>c+'cc'),
+        borderColor: barColors, borderWidth:1.5,
+        borderRadius:4, borderSkipped:false, barPercentage:0.5
+      }]},
       options: {
         indexAxis: 'y',
         responsive:true, maintainAspectRatio:false,
-        layout: { padding: { top: 4, right: 14 } },
+        layout: { padding: { top: 8, right: 20, left: 6 } },
         plugins: {
-          title: { display:true, text:'성취기준별 평균 정답률 (막대=평균 · 선=문항 최저~최고 범위)', color:'#1a1f2e', font:{size:13.5,weight:'600'}, padding:{bottom:4} },
-          subtitle: { display:true, text:'● 빨강=문항 최저 / ● 초록=문항 최고 · 막대색: 초록≥70 / 호박≥50 / 주황≥30 / 빨강<30', color:'#94a3b8', font:{size:10.5}, padding:{bottom:10} },
+          title: { display:true, text:'성취기준별 정답률 (막대=문항 최저~최고 범위 · ◆=평균)', color:'#1a1f2e', font:{size:13.5,weight:'600'}, padding:{bottom:4} },
+          subtitle: { display:true, text:'막대색은 평균 기준 — 초록≥70 / 호박≥50 / 주황≥30 / 빨강<30', color:'#94a3b8', font:{size:10.5}, padding:{bottom:10} },
           legend: { display:false },
           tooltip: {
             backgroundColor:'rgba(26,31,46,.92)', titleColor:'#fff', bodyColor:'#e5e7eb',
@@ -5855,10 +5865,10 @@ function drawNeisCharts(items){
               label: (c) => {
                 const g = stdGroups[c.dataIndex];
                 return [
-                  `평균: ${c.raw}%`,
-                  `최저: ${(g.min*100).toFixed(0)}% (${g.minItem?g.minItem.qno+'번':'-'}) / 최고: ${(g.max*100).toFixed(0)}% (${g.maxItem?g.maxItem.qno+'번':'-'})`,
-                  `문항: ${g.qnos.join(', ')}`,
-                  `총배점: ${g.totalPoints.toFixed(1)}점`
+                  `평균: ${(g.mean*100).toFixed(1)}%`,
+                  `최저: ${(g.min*100).toFixed(0)}% (${g.minItem?g.minItem.qno+'번':'-'})`,
+                  `최고: ${(g.max*100).toFixed(0)}% (${g.maxItem?g.maxItem.qno+'번':'-'})`,
+                  `문항: ${g.qnos.join(', ')} · 총배점 ${g.totalPoints.toFixed(1)}점`
                 ];
               },
               afterLabel: (c) => stdGroups[c.dataIndex].desc.slice(0, 80)
@@ -5867,57 +5877,49 @@ function drawNeisCharts(items){
         },
         scales: {
           x: { min:0, max:100, ticks:{callback:(v)=>v+'%'}, grid:{color:'rgba(229,232,240,.6)'} },
-          y: { ticks:{font:{size:11,family:'JetBrains Mono,monospace'}}, grid:{display:false} }
+          y: { ticks:{font:{size:11.5}}, grid:{display:false} }
         }
       },
       plugins: [{
-        id: 'stdMinMaxWhiskers',
+        id: 'stdMeanMarker',
         afterDatasetsDraw(chart){
           const xS = chart.scales.x;
           const meta = chart.getDatasetMeta(0);
           if(!xS || !meta || !meta.data) return;
           const ctx = chart.ctx;
+          const area = chart.chartArea;
           ctx.save();
+          ctx.font = '700 9.5px ' + STD_FONT;
           stdGroups.forEach((g, i) => {
             const bar = meta.data[i];
             if(!bar) return;
             const yC = bar.y;
-            const thick = bar.height || 16;
-            const cap = Math.min(7, thick * 0.34);
+            const half = (bar.height || 18) / 2;
             const xMin = xS.getPixelForValue(g.min*100);
             const xMax = xS.getPixelForValue(g.max*100);
-            // 범위 선
-            ctx.strokeStyle = 'rgba(26,31,46,.6)';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(xMin, yC); ctx.lineTo(xMax, yC); ctx.stroke();
-            // 양끝 캡
-            ctx.beginPath();
-            ctx.moveTo(xMin, yC-cap); ctx.lineTo(xMin, yC+cap);
-            ctx.moveTo(xMax, yC-cap); ctx.lineTo(xMax, yC+cap);
-            ctx.stroke();
-            // 최저(빨강)/최고(초록) 점
-            const dot = (x, col) => {
-              ctx.beginPath(); ctx.arc(x, yC, 3.2, 0, Math.PI*2);
-              ctx.fillStyle = col; ctx.fill();
-              ctx.lineWidth = 1.2; ctx.strokeStyle = '#fff'; ctx.stroke();
-            };
-            dot(xMin, '#dc2626');
-            dot(xMax, '#16a34a');
-            // 값 라벨 (선 위, 가장자리 클램프)
-            ctx.font = '700 9px Inter, system-ui, sans-serif';
-            ctx.textBaseline = 'bottom';
-            const yLab = yC - cap - 2;
-            const minTxt = Math.round(g.min*100)+'';
-            const maxTxt = Math.round(g.max*100)+'';
-            ctx.fillStyle = '#b91c1c';
-            ctx.textAlign = (xMin < 18) ? 'left' : 'right';
-            ctx.fillText(minTxt, (xMin < 18 ? xMin+4 : xMin-4), yLab);
-            if(xMax - xMin > 14){ // 최저·최고가 거의 같으면 최고 라벨 생략(겹침 방지)
-              ctx.fillStyle = '#15803d';
-              ctx.textAlign = (xMax > chart.chartArea.right - 18) ? 'right' : 'left';
-              ctx.fillText(maxTxt, (xMax > chart.chartArea.right - 18 ? xMax-4 : xMax+4), yLab);
-            }
+            const xMean = xS.getPixelForValue(g.mean*100);
+            // 평균 마커 — 막대를 가로지르는 흰 선
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(xMean, yC-half+1); ctx.lineTo(xMean, yC+half-1); ctx.stroke();
+            ctx.strokeStyle = 'rgba(26,31,46,.5)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(xMean, yC-half+1); ctx.lineTo(xMean, yC+half-1); ctx.stroke();
+            // 평균 다이아몬드
+            ctx.save(); ctx.translate(xMean, yC); ctx.rotate(Math.PI/4);
+            ctx.fillStyle = '#1a1f2e'; ctx.fillRect(-3.4,-3.4,6.8,6.8);
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(-3.4,-3.4,6.8,6.8);
+            ctx.restore();
+            // 최저 값 (막대 왼쪽 바깥)
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#b91c1c'; ctx.textAlign = 'right';
+            if(xMin - 6 > area.left) ctx.fillText(Math.round(g.min*100)+'', xMin-5, yC);
+            else { ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.fillText(Math.round(g.min*100)+'', xMin+5, yC); }
+            // 최고 값 (막대 오른쪽 바깥)
+            ctx.fillStyle = '#15803d'; ctx.textAlign = 'left';
+            if(xMax + 6 < area.right) ctx.fillText(Math.round(g.max*100)+'', xMax+5, yC);
+            else { ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.fillText(Math.round(g.max*100)+'', xMax-5, yC); }
+            // 평균 값 (막대 위, 다이아몬드 위)
+            ctx.fillStyle = '#1a1f2e'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+            ctx.fillText('평균 '+Math.round(g.mean*100), xMean, yC-half-2);
           });
           ctx.restore();
         }
@@ -5940,7 +5942,7 @@ function drawNeisCharts(items){
       if(ratio <= 0.5) return '#94a3b8';   // 너무 적음
       return '#5b6cff';                     // 정상 범위
     });
-    const targetH = Math.max(280, stdGroups.length * 36 + 80);
+    const targetH = Math.max(320, stdGroups.length * 54 + 90);
     const canvas2 = $('standardCountChart');
     if(canvas2 && canvas2.parentNode) canvas2.parentNode.style.height = targetH + 'px';
     charts.standardCount = new Chart($('standardCountChart'), {
@@ -5971,7 +5973,7 @@ function drawNeisCharts(items){
         },
         scales: {
           x: { min:0, ticks:{stepSize:1, precision:0}, grid:{color:'rgba(229,232,240,.6)'} },
-          y: { ticks:{font:{size:11,family:'JetBrains Mono,monospace'}}, grid:{display:false} }
+          y: { ticks:{font:{size:11.5}}, grid:{display:false} }
         }
       }
     });
