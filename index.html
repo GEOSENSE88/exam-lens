@@ -1659,10 +1659,17 @@ const valueLabel = {
         ctx.font = `600 11px ${(window.Chart && Chart.defaults && Chart.defaults.font && Chart.defaults.font.family) || 'sans-serif'}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
+        // 흰색 외곽선(헤일로) — 적층 막대 위 등 어두운 배경에서도 글씨가 잘 보이도록
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = '#fff';
+        ctx.lineJoin = 'round';
+        ctx.miterLimit = 2;
         const out = opts.formatter ? opts.formatter(v, {dsi, i, chart}) : String(v);
         const lines = Array.isArray(out) ? out : [out];
         lines.forEach((line, idx)=>{
-          ctx.fillText(line, el.x, el.y - 4 - (lines.length-1-idx)*lineH);
+          const ly = el.y - 4 - (lines.length-1-idx)*lineH;
+          ctx.strokeText(line, el.x, ly);
+          ctx.fillText(line, el.x, ly);
         });
         ctx.restore();
       });
