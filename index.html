@@ -1794,7 +1794,8 @@ function renderCutsChart(cuts, students){
   const fixedCuts = {A:90,B:80,C:70,D:60,E:40};
   const fixedCounts = applyCuts(students, fixedCuts);
   const labels = ['A','B','C','D','E','I'];
-  const colors = ['#dc2626','#f97316','#eab308','#16a34a','#2563eb','#7c3aed'];
+  // 성취도 A~E·I 공통 색상 (A=초록 상위 → I=진빨강 하위) — _LEVEL_COLOR 단일 출처
+  const colors = labels.map(l => _LEVEL_COLOR[l]);
   const totalN = students.filter(s=>s.total!=null).length;
 
   charts.cuts = new Chart($('cutsChart'), {
@@ -1811,20 +1812,15 @@ function renderCutsChart(cuts, students){
       responsive:true, maintainAspectRatio:false,
       animation:{duration:700, easing:'easeOutQuart'},
       plugins:{
-        title:{display:true, text:'성취도 분포 비교 (회색=고정 / 무지개=시뮬레이션 — 빨주노초파보)', color:'#1a1f2e', font:{size:13,weight:'600'}, padding:{bottom:6}},
+        title:{display:true, text:'성취도 분포 비교 (회색=고정 / 색=시뮬레이션 — A 초록 → I 빨강)', color:'#1a1f2e', font:{size:13,weight:'600'}, padding:{bottom:6}},
         legend:{
           position:'bottom',
           labels:{
             boxWidth:14, boxHeight:14, padding:10, font:{size:11},
-            // 시뮬레이션 dataset 의 backgroundColor 가 배열이라 기본 범례는 첫 색(빨강) 만 노출 → 직접 6색 + 고정 회색으로 구성
+            // 시뮬레이션 dataset 의 backgroundColor 가 배열이라 기본 범례는 첫 색만 노출 → 직접 6색 + 고정 회색으로 구성
             generateLabels: () => [
               {text:'고정 (90/80/70/60/40)', fillStyle:'rgba(148,163,184,.6)', strokeStyle:'transparent', lineWidth:0},
-              {text:'시뮬 A', fillStyle:'#dc2626', strokeStyle:'transparent', lineWidth:0},
-              {text:'시뮬 B', fillStyle:'#f97316', strokeStyle:'transparent', lineWidth:0},
-              {text:'시뮬 C', fillStyle:'#eab308', strokeStyle:'transparent', lineWidth:0},
-              {text:'시뮬 D', fillStyle:'#16a34a', strokeStyle:'transparent', lineWidth:0},
-              {text:'시뮬 E', fillStyle:'#2563eb', strokeStyle:'transparent', lineWidth:0},
-              {text:'시뮬 I', fillStyle:'#7c3aed', strokeStyle:'transparent', lineWidth:0},
+              ...labels.map(l => ({text:'시뮬 '+l, fillStyle:_LEVEL_COLOR[l], strokeStyle:'transparent', lineWidth:0}))
             ]
           }
         },
@@ -1952,7 +1948,7 @@ function renderFinalScoreAnalysis(stats){
     [40, 50, 60, 70, 80, 90].forEach(otherMean=>{
       const semesterMean = examMean*myRatio/100 + otherMean*otherExamRatio/100 + perfMean;
       const ach = semesterMean>=90?'A':semesterMean>=80?'B':semesterMean>=70?'C':semesterMean>=60?'D':semesterMean>=40?'E':'I';
-      const achColor = ach==='A'?'#dc2626':ach==='B'?'#f97316':ach==='C'?'#eab308':ach==='D'?'#16a34a':ach==='E'?'#2563eb':'#7c3aed';
+      const achColor = _LEVEL_COLOR[ach] || '#7f1d1d';
       html += `<tr>
         <td style="padding:7px;text-align:center;border-bottom:1px solid var(--line-2)">${otherMean}점</td>
         <td style="padding:7px;text-align:right;border-bottom:1px solid var(--line-2);color:#6b7280">${(examMean*myRatio/100).toFixed(2)}</td>
@@ -6177,9 +6173,9 @@ function drawCharts(items, hist, gd, students, grade, anon){
   const baseTitle = {color:'#1a1f2e', font:{size:13.5,weight:'600'}, padding:{bottom:10}};
   const baseGrid = {color:'rgba(229,232,240,.6)', drawTicks:false};
   // A → E 빨강 → 파랑, I(미도달)는 보라(E 위에 적층)
-  // 성취도 A~E 색상 — 무지개(상위 빨강 → 하위 파랑) + 인접 단계 대비 강화. I(40 미만)는 보라.
-  const HIST_COLORS = ['#dc2626','#f97316','#facc15','#10b981','#0ea5e9'];
-  const I_COLOR = '#7c3aed';
+  // 성취도 A~E·I 공통 색상 (A=초록 상위 → E=빨강 → I=진빨강 하위) — _LEVEL_COLOR 단일 출처
+  const HIST_COLORS = ['A','B','C','D','E'].map(l => _LEVEL_COLOR[l]);
+  const I_COLOR = _LEVEL_COLOR.I;
 
   if(hist.isCommon){
     // ===== 공통과목 모드: A·B·C·D·E·I 6막대 분리 표시 =====
