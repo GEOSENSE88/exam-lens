@@ -941,8 +941,8 @@
           <th>응답수<span class="tip" data-tip="이 문항에 응답한 학생 수.&#10;무응답·결시는 제외됩니다.">?</span></th>
           <th>정답률(%)<span class="tip" data-tip="정답률(p)&#10;·응답자 중 정답을 맞힌 학생의 비율 (0~100%).&#10;·90↑ 변별 부족 / 75~90 쉬움 / 60~75 적정 / 40~60 약간 어려움 / 20~40 어려움 / 20↓ 매우 어려움(킬러)">?</span></th>
           <th>변별도<span class="tip" data-tip="변별도(D / Discrimination Index)&#10;·상위권 학생이 하위권보다 잘 맞히는 정도 (-1 ~ +1).&#10;·계산: 상위 27% 정답률 − 하위 27% 정답률.&#10;·0.3↑ 우수 / 0.1~0.3 보통 / 0~0.1 변별 부족 / 음수면 역변별(상위권이 더 틀림 → 정답 처리 의심)">?</span></th>
-          <th>난이도(실제·의도)<span class="tip" data-tip="3단계 분류 — 정답률 기반 실제 난이도와 NEIS 문항정보표의 의도 난이도를 비교&#10;·실제: 쉬움(p≥0.7) / 보통(0.4↑) / 어려움(0.4↓)&#10;·의도: NEIS 값(쉬움/보통/어려움)&#10;·두 값이 다르면 ⚠ 표시 — 의도-결과 차이 큰 문항">?</span></th>
-          <th>성취수준 분포(타겟)<span class="tip" data-tip="성취도별(A~E·I) 정답률을 미니 막대로 표시.&#10;·타겟 성취수준 = 정답률 65% 이상이 유지되는 가장 낮은 등급&#10;·예: A=100·B=67·C=60 → 타겟 B (B/C를 변별하는 문항)&#10;·해당 등급을 식별하는 데 효과적인 문항 = 변별 작용이 일어나는 경계 등급">?</span></th>
+          <th>난이도<br><span style="font-weight:400;font-size:10px;color:var(--muted)">출제 · 실제</span><span class="tip" data-tip="3단계 분류 — NEIS 문항정보표의 출제(의도) 난이도와 정답률 기반 실제 난이도를 비교&#10;·출제: NEIS 값(쉬움/보통/어려움)&#10;·실제: 쉬움(p≥0.7) / 보통(0.4↑) / 어려움(0.4↓)&#10;·두 값이 다르면 ⚠ 표시 — 출제 의도와 결과 차이 큰 문항">?</span></th>
+          <th>성취도별 정답률<br><span style="font-weight:400;font-size:10px;color:var(--muted)">분포 · 타겟 수준</span><span class="tip" data-tip="성취도별(A~E·I) 정답률을 미니 막대로 표시.&#10;·타겟 성취수준 = 정답률 65% 이상이 유지되는 가장 낮은 등급&#10;·예: A=100·B=67·C=60 → 타겟 B (B/C를 변별하는 문항)&#10;·해당 등급을 식별하는 데 효과적인 문항 = 변별 작용이 일어나는 경계 등급">?</span></th>
           <th>판정<span class="tip" data-tip="정답률·변별도 종합 판정&#10;·우수 문항: 정답률 적정 + 변별도 0.3↑&#10;·고난도 변별: 정답률 낮으나 변별도 양호&#10;·매우 쉬움: 정답률 90↑&#10;·검토 필요: 변별도 낮음·역변별·매우 어려움 등">?</span></th>
           <th>검토 의견</th>
         </tr></thead><tbody></tbody></table>
@@ -4518,27 +4518,28 @@ function renderItemTable(items, filter, students){
     const hasImg = !!qImages[key];
     const indicator = hasImg ? ' <span style="color:var(--pri);font-size:11px">📄</span>' : '';
 
-    // 난이도 셀 — 실제(3단계) + 의도(NEIS) 나란히
+    // 난이도 셀 — 출제(의도, NEIS) / 실제(3단계) 를 라벨로 구분해 2행 표시
     const actual3 = _diff3(i.p);
     const intent = i.intent || null;
     const aColor = _DIFF3_COLOR[actual3] || '#475569';
     const iColor = intent ? (_DIFF3_COLOR[intent] || '#475569') : '#cbd5e1';
     const mismatch = intent && intent !== actual3;
+    const _labSty = 'font-size:9px;color:#94a3b8;font-weight:700;flex:0 0 26px;text-align:right;letter-spacing:-.02em';
+    const _rowSty = 'display:flex;align-items:center;gap:5px;line-height:1.35';
     let diffCellHTML;
     if(intent){
       const warn = mismatch
-        ? `<span title="실제 난이도와 의도 난이도가 다름" style="color:#dc2626;font-weight:800;margin-left:3px">⚠</span>`
-        : `<span title="실제 = 의도" style="color:#16a34a;font-weight:800;margin-left:3px">✓</span>`;
-      diffCellHTML = `<div style="display:flex;align-items:center;gap:4px;justify-content:center;font-size:11.5px;line-height:1.25">
-        <span style="color:${aColor};font-weight:700">${actual3}</span>
-        <span style="color:#94a3b8">·</span>
-        <span style="color:${iColor};font-weight:600">${intent}</span>
-        ${warn}
-      </div>
-      <div style="font-size:9.5px;color:#94a3b8;text-align:center;margin-top:1px;letter-spacing:-.01em">실제 · 의도</div>`;
+        ? `<span title="출제 의도와 실제 결과가 다름" style="color:#dc2626;font-weight:800;font-size:11px">⚠</span>`
+        : `<span title="출제 의도 = 실제" style="color:#16a34a;font-weight:800;font-size:11px">✓</span>`;
+      diffCellHTML = `<div style="display:inline-flex;flex-direction:column;gap:2px;text-align:left">
+        <div style="${_rowSty}"><span style="${_labSty}">출제</span><span style="color:${iColor};font-weight:700;font-size:12px">${intent}</span></div>
+        <div style="${_rowSty}"><span style="${_labSty}">실제</span><span style="color:${aColor};font-weight:700;font-size:12px">${actual3}</span>${warn}</div>
+      </div>`;
     }else{
-      diffCellHTML = `<span style="color:${aColor};font-weight:700">${actual3}</span>
-      <div style="font-size:9.5px;color:#94a3b8;text-align:center;margin-top:1px;letter-spacing:-.01em">의도 미입력</div>`;
+      diffCellHTML = `<div style="display:inline-flex;flex-direction:column;gap:2px;text-align:left">
+        <div style="${_rowSty}"><span style="${_labSty}">출제</span><span style="color:#cbd5e1;font-size:10.5px">미입력</span></div>
+        <div style="${_rowSty}"><span style="${_labSty}">실제</span><span style="color:${aColor};font-weight:700;font-size:12px">${actual3}</span></div>
+      </div>`;
     }
 
     // 성취수준 분포(타겟) — 미니바 6개 (A~I) + 타겟 배지
@@ -4564,10 +4565,16 @@ function renderItemTable(items, filter, students){
       }).join('');
       const tColor = target ? _LEVEL_COLOR[target] : '#94a3b8';
       const tBadge = target
-        ? `<span style="display:inline-block;background:${tColor};color:#fff;font-weight:800;font-size:10.5px;padding:1px 7px;border-radius:8px;letter-spacing:.02em">타겟 ${target}</span>`
-        : `<span style="display:inline-block;background:#f3f4f6;color:#6b7280;font-weight:700;font-size:10.5px;padding:1px 7px;border-radius:8px">전 등급 &lt;65%</span>`;
-      levelCellHTML = `<div style="display:flex;gap:2px;width:88px;margin:0 auto 2px">${bars}</div>
-        <div style="text-align:center">${tBadge}</div>`;
+        ? `<span style="display:inline-block;background:${tColor};color:#fff;font-weight:800;font-size:10.5px;padding:1px 7px;border-radius:8px;letter-spacing:.02em">${target}</span>`
+        : `<span style="display:inline-block;background:#f3f4f6;color:#6b7280;font-weight:700;font-size:10px;padding:1px 6px;border-radius:8px">전 등급 &lt;65%</span>`;
+      // 위: 성취도별 정답률 분포 / 아래: 타겟 수준 — 점선으로 구분
+      levelCellHTML = `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:0">
+        <div style="font-size:8.5px;color:#94a3b8;font-weight:600;letter-spacing:-.02em;margin-bottom:2px">성취도별 정답률</div>
+        <div style="display:flex;gap:2px;width:92px">${bars}</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px;width:92px;border-top:1px dashed #d1d5db;margin-top:4px;padding-top:4px">
+          <span style="font-size:8.5px;color:#94a3b8;font-weight:600;letter-spacing:-.02em">타겟</span>${tBadge}
+        </div>
+      </div>`;
     }
 
     return `<tr data-qkey="${key}" title="${hasImg?'클릭: 원안지 보기':'원안지 PDF 업로드 시 클릭 가능'}">
