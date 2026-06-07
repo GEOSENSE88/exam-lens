@@ -662,9 +662,14 @@
   #printReport .pr-summary .s { border:1px solid #d6dbe7; border-radius:6px; padding:7px 9px; background:#f8faff; }
   #printReport .pr-summary .s .k { font-size:9px; color:#5b6cff; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
   #printReport .pr-summary .s .v { font-size:15px; font-weight:700; color:#1a1f2e; margin-top:2px; }
-  #printReport .pr-chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:6px 0 10px; }
+  #printReport .pr-chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:6px 0 10px; align-items:start; }
   #printReport .pr-chart-grid.full { grid-template-columns:1fr; }
-  #printReport .pr-chart-grid img { width:100%; height:auto; border:1px solid #e0e5f0; border-radius:6px; display:block; }
+  /* width:100% + height:auto = 종횡비 보존. max-height + object-fit:contain = 과확대 방지(왜곡 없음) */
+  #printReport .pr-chart-grid img { width:100%; height:auto; max-height:72mm; object-fit:contain; object-position:center; border:1px solid #e0e5f0; border-radius:6px; display:block; background:#fff; }
+  #printReport .pr-chart-grid.full img { max-height:108mm; }
+  /* 세로로 긴 차트(성취기준·의도 산점도 등): 가운데 정렬 + 비율 그대로, 높이만 제한 */
+  #printReport .pr-chart-center { display:flex; justify-content:center; margin:6px 0 10px; }
+  #printReport .pr-chart-center img { max-width:100%; max-height:118mm; width:auto; height:auto; border:1px solid #e0e5f0; border-radius:6px; display:block; background:#fff; }
   #printReport table.pr-table { width:100%; border-collapse:collapse; font-size:10px; margin:6px 0 10px; }
   #printReport table.pr-table th { background:#f4f6ff; padding:5px 6px; border-bottom:1.5px solid #5b6cff; text-align:center; color:#1a1f2e; font-weight:700; }
   #printReport table.pr-table td { padding:4px 6px; border-bottom:1px solid #eef1f7; text-align:center; }
@@ -1124,7 +1129,7 @@
             </label>
             <label style="display:flex;align-items:flex-start;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:12.5px">
               <input type="radio" name="prMode" value="full" checked style="margin-top:3px">
-              <span><b>전체 보고서</b><br><span style="color:var(--muted);font-size:11.5px">요약 + 문항 분석표(전체) + 매트릭스(가로) + 답지 분포(가로)</span></span>
+              <span><b>전체 보고서</b><br><span style="color:var(--muted);font-size:11.5px">요약 + 배점·성취기준 분석 + 문항 분석표(전체·가로) + 매트릭스(가로) + 답지 분포(가로)</span></span>
             </label>
           </div>
           <div>
@@ -4635,14 +4640,27 @@ function closePrintOptions(){
 }
 
 // Chart 인스턴스를 임시로 고해상도 + 애니메이션 OFF 로 재렌더 → PNG 캡처 → 원복
+// ★ 화면에 렌더된 현재 종횡비를 그대로 보존해 캡처 → PDF 에서 비율 깨짐/확대 방지.
+//   (가로 막대처럼 세로로 긴 차트도 자기 비율대로 캡처됨)
 function chartToImage(chartKey, opts){
   opts = opts || {};
-  const targetW = opts.width || 1100;
-  const ratio = opts.ratio || 0.42;
+  const targetW = opts.width || 1000;
   const c = charts && charts[chartKey];
   if(!c || !c.canvas) return null;
   const canvas = c.canvas;
   const parent = canvas.parentNode;
+
+  // 현재 화면 렌더 크기에서 종횡비 산출 (왜곡 방지의 핵심)
+  const curW = canvas.clientWidth || (parent && parent.clientWidth) || canvas.width || 600;
+  const curH = canvas.clientHeight || (parent && parent.clientHeight) || canvas.height || 300;
+  let aspect = (curW > 0) ? (curH / curW) : (opts.ratio || 0.45);
+  if(!isFinite(aspect) || aspect <= 0) aspect = opts.ratio || 0.45;
+  // 종횡비 클램프 — 지나치게 납작하거나 길쭉한 캡처 방지
+  const minR = opts.minRatio || 0.24;
+  const maxR = opts.maxRatio || 1.15;
+  aspect = Math.max(minR, Math.min(maxR, aspect));
+  const targetH = Math.round(targetW * aspect);
+
   const prevPW = parent.style.width;
   const prevPH = parent.style.height;
   const prevDPR = c.options.devicePixelRatio;
@@ -4651,12 +4669,12 @@ function chartToImage(chartKey, opts){
   const prevMaintain = c.options.maintainAspectRatio;
   try {
     parent.style.width = targetW + 'px';
-    parent.style.height = Math.round(targetW * ratio) + 'px';
+    parent.style.height = targetH + 'px';
     c.options.devicePixelRatio = 2;
     c.options.animation = false;
     c.options.responsive = false;
     c.options.maintainAspectRatio = false;
-    c.resize(targetW, Math.round(targetW * ratio));
+    c.resize(targetW, targetH);
     c.update('none');
     return c.toBase64Image('image/png', 1);
   } catch(e){
@@ -4695,10 +4713,12 @@ function buildPrintReport(opts){
   const imgRank    = chartToImage('rank',        {width:1100, ratio:0.32});
   const imgP       = chartToImage('p',           {width:1100, ratio:0.42});
   const imgD       = chartToImage('d',           {width:1100, ratio:0.42});
-  const imgScatter = chartToImage('scatter',     {width:1100, ratio:0.55});
+  const imgScatter = chartToImage('scatter',     {width:1100});
+  const imgPpr     = (charts && charts.ppr)       ? chartToImage('ppr',      {width:1100}) : null;
   // NEIS 차트 (있을 때만)
-  const imgIntent   = (charts && charts.intent)   ? chartToImage('intent',   {width:1100, ratio:0.55}) : null;
-  const imgStandard = (charts && charts.standard) ? chartToImage('standard', {width:1100, ratio:0.55}) : null;
+  const imgIntent       = (charts && charts.intent)        ? chartToImage('intent',        {width:1000}) : null;
+  const imgStandard     = (charts && charts.standard)      ? chartToImage('standard',      {width:1000}) : null;
+  const imgStandardCount= (charts && charts.standardCount) ? chartToImage('standardCount', {width:1000}) : null;
   // NEIS 분석 결과 (없으면 null)
   const neisIntent = (typeof analyzeIntent === 'function') ? analyzeIntent(items) : null;
   const neisStds = (typeof analyzeStandards === 'function') ? analyzeStandards(items) : null;
@@ -4707,6 +4727,20 @@ function buildPrintReport(opts){
   const isGoodItem   = (it) => /우수/.test(it.verdict || '');
   const reviewItems = items.filter(isReviewItem);
   const itemsByQ = items.slice().sort((a,b)=>a.qno-b.qno);
+
+  // 문항별 판별 성취수준 (성취도 A~E·I 매트릭스 기준) — 전체 분석표용
+  const targetByQno = {};
+  try {
+    const _mtx = (typeof achievementMatrix === 'function') ? achievementMatrix(items, stu) : null;
+    if(_mtx){
+      items.forEach((it, qi) => {
+        const rates = _mtx.map(g => g.rates[qi]);
+        const ns = _mtx.map(g => g.n);
+        targetByQno[it.qno] = (typeof _targetLevelOf === 'function') ? _targetLevelOf(rates, ns) : null;
+      });
+    }
+  } catch(e){ /* 매트릭스 산출 실패 시 판별수준 생략 */ }
+  const _diff3p = (typeof _diff3 === 'function') ? _diff3 : (p)=> p>=0.7?'쉬움':p>=0.4?'보통':'어려움';
 
   let html = '';
 
@@ -4765,7 +4799,9 @@ function buildPrintReport(opts){
     </div>
     <div class="pr-chart-grid full">
       ${imgScatter ? `<img src="${imgScatter}" alt="정답률 vs 변별도 산점도">` : ''}
-    </div>`;
+    </div>
+    ${imgPpr ? `<h3 class="pr-h3">배점 ↔ 정답률 적정성 (배점이 난이도와 맞는지)</h3>
+    <div class="pr-chart-grid full"><img src="${imgPpr}" alt="배점-정답률 산점도"></div>` : ''}`;
 
   if(reviewItems.length){
     html += `<h3 class="pr-h3">검토 필요 문항 (${reviewItems.length}개)</h3>
@@ -4788,12 +4824,22 @@ function buildPrintReport(opts){
 
   // ===== 전체 모드: 문항 분석표(전체) + 매트릭스/분포(가로) =====
   if(opts.mode === 'full'){
-    html += `<section class="pr-page">
+    const hasIntent = items.some(i => i.intent);
+    const hasTarget = Object.values(targetByQno).some(v => v);
+    html += `<section class="pr-page pr-landscape">
       <h2 class="pr-h2">4. 문항 분석표 (전체 ${itemsByQ.length}문항)</h2>
       <table class="pr-table">
-        <thead><tr><th>문항</th><th>배점</th><th>정답</th><th>응답</th><th>정답률(%)</th><th>변별도</th><th>난이도</th><th>판정</th><th class="l">검토 의견</th></tr></thead>
+        <thead><tr>
+          <th>문항</th><th>배점</th><th>정답</th><th>응답</th><th>정답률(%)</th><th>변별도</th>
+          ${hasIntent?'<th>출제 난이도</th>':''}<th>실제 난이도</th>${hasTarget?'<th>판별 수준</th>':''}
+          <th>판정</th><th class="l">검토 의견</th>
+        </tr></thead>
         <tbody>${itemsByQ.map(i => {
           const cls = isReviewItem(i) ? 'bad' : (isGoodItem(i) ? 'good' : '');
+          const actual3 = _diff3p(i.p);
+          const intentTd = hasIntent ? `<td>${i.intent ? escHTML(i.intent) : '-'}</td>` : '';
+          const tgt = targetByQno[i.qno];
+          const tgtTd = hasTarget ? `<td><b>${tgt || '-'}</b></td>` : '';
           return `<tr class="${cls}">
             <td>${i.qno}</td>
             <td>${fmtPoints(i.points)}</td>
@@ -4801,13 +4847,15 @@ function buildPrintReport(opts){
             <td>${i.n}</td>
             <td>${(i.p*100).toFixed(1)}</td>
             <td>${i.d.toFixed(2)}</td>
-            <td>${escHTML(i.diff||'')}</td>
+            ${intentTd}
+            <td>${actual3}${(i.intent && i.intent!==actual3)?' <b style="color:#dc2626">⚠</b>':''}</td>
+            ${tgtTd}
             <td>${escHTML(i.verdict||'')}</td>
             <td class="l">${escHTML(i.comment||'')}</td>
           </tr>`;
         }).join('')}</tbody>
       </table>
-      <p class="pr-note">행 배경 — <span style="background:#fef2f2;padding:1px 6px;border-radius:3px">분홍</span> 검토 필요 · <span style="background:#f0fdf4;padding:1px 6px;border-radius:3px">초록</span> 우수 문항</p>
+      <p class="pr-note">행 배경 — <span style="background:#fef2f2;padding:1px 6px;border-radius:3px">분홍</span> 검토 필요 · <span style="background:#f0fdf4;padding:1px 6px;border-radius:3px">초록</span> 우수 문항${hasTarget?' · <b>판별 수준</b> = 정답률 65% 이상이 유지되는 가장 낮은 성취도 등급(변별 경계)':''}${hasIntent?' · 실제 난이도 옆 ⚠ = 출제 의도와 불일치':''}</p>
     </section>`;
 
     // 매트릭스 / 분포표 — 화면 DOM의 표를 재활용 (가로 페이지)
@@ -4855,7 +4903,7 @@ function buildPrintReport(opts){
 
       neisHtml += `<h3 class="pr-h3">A. 의도 난이도 vs 실제 정답률 — Spearman ρ = <span style="color:${spColor}">${sp!=null?sp.toFixed(3):'-'}</span> · ${spText}</h3>`;
       if(imgIntent){
-        neisHtml += `<div class="pr-chart-grid full"><img src="${imgIntent}" alt="의도 vs 실제 산점도"></div>`;
+        neisHtml += `<div class="pr-chart-center"><img src="${imgIntent}" alt="의도 vs 실제 산점도"></div>`;
       }
 
       // 의도 × 실제 매트릭스
@@ -4907,8 +4955,11 @@ function buildPrintReport(opts){
 
     if(neisStds && neisStds.length){
       neisHtml += `<h3 class="pr-h3" style="margin-top:14px">B. 성취기준별 분석 (총 ${neisStds.length}개)</h3>`;
-      if(imgStandard){
-        neisHtml += `<div class="pr-chart-grid full"><img src="${imgStandard}" alt="성취기준별 정답률"></div>`;
+      if(imgStandard || imgStandardCount){
+        neisHtml += `<div class="pr-chart-grid">
+          ${imgStandard ? `<img src="${imgStandard}" alt="성취기준별 정답률 범위(최저~최고·평균)">` : ''}
+          ${imgStandardCount ? `<img src="${imgStandardCount}" alt="성취기준별 문항 수">` : ''}
+        </div>`;
       }
       // 표 — 풀 버전
       neisHtml += `<table class="pr-table">
