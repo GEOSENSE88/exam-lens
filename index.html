@@ -337,7 +337,7 @@
   @media(prefers-reduced-motion:reduce){
     *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
   }
-  @media(max-width:800px){.charts{grid-template-columns:1fr}.chart-box.full{grid-column:auto} .ppr-grid, .cuts-grid{grid-template-columns:1fr !important}}
+  @media(max-width:800px){.charts{grid-template-columns:1fr}.chart-box.full{grid-column:auto} .ppr-grid, .cuts-grid, .intent-grid, .std-grid{grid-template-columns:1fr !important}}
   .cuts-mode.active{background:var(--pri-50)!important;border-color:var(--pri)!important;color:var(--pri-deep)!important}
 
   /* ============ 문항 이미지 사이드 패널 ============ */
@@ -982,13 +982,14 @@
     <section class="card neis-only" id="navIntentCard" style="display:none">
       <h2 id="navIntent">출제 의도(NEIS 난이도) vs 실제 정답률<span class="tip" data-tip="문항정보표에 적힌 의도 난이도(쉬움/보통/어려움)와 실제 정답률의 일치 정도를 분석.&#10;·정상: 쉬움 70~95% / 보통 50~70% / 어려움 30~50%&#10;·박스의 검은 가로선: 그룹별 평균 정답률&#10;·산점도 점 색상: 의도 난이도&#10;·우측 표: 의도와 가장 어긋난 문항(쉬움인데 어렵게 풀렸거나, 어려움인데 너무 쉽게 풀린 경우)">?</span></h2>
       <p style="color:var(--muted);margin:0 0 12px;font-size:13px">출제 계획서(NEIS 문항정보표)의 난이도와 실제 학생 응답 결과를 비교 · <b>Spearman 순위 상관</b>으로 출제 의도의 일치도를 단일 지표로 제시</p>
-      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start" class="intent-grid">
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:stretch" class="intent-grid">
         <div class="chart-box" style="height:340px"><canvas id="intentChart"></canvas></div>
-        <div>
-          <div id="intentSummary" style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border:1.5px solid rgba(37,99,235,.12);border-radius:14px;padding:14px 16px;margin-bottom:10px"></div>
-          <div class="table-wrap" style="max-height:300px">
-            <table id="intentMismatchTable"></table>
-          </div>
+        <div id="intentSummary" style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border:1.5px solid rgba(37,99,235,.12);border-radius:14px;padding:14px 16px"></div>
+      </div>
+      <div style="margin-top:14px">
+        <h3 style="font-size:13px;font-weight:700;color:var(--ink-2);margin:0 0 8px">출제 의도와 가장 어긋난 문항 <span style="font-weight:400;color:var(--muted);font-size:11.5px">— 의도 대비 정답률 괴리 큰 순</span></h3>
+        <div class="table-wrap" style="max-height:none">
+          <table id="intentMismatchTable"></table>
         </div>
       </div>
       <div style="margin-top:14px">
@@ -1523,6 +1524,8 @@ function analyzeStandards(items){
     const mean = ps.reduce((s,v)=>s+v,0) / ps.length;
     const min = Math.min(...ps);
     const minItem = g.items.find(i => i.p === min);
+    const max = Math.max(...ps);
+    const maxItem = g.items.find(i => i.p === max);
     // 가중 평균 (배점 가중)
     const totalW = g.items.reduce((s,i)=>s + (i.points||0), 0);
     const weightedMean = totalW > 0
@@ -1538,6 +1541,8 @@ function analyzeStandards(items){
       weightedMean,
       min,
       minItem,
+      max,
+      maxItem,
       intentMix,
       qnos: g.items.map(i => i.qno).sort((a,b)=>a-b),
     };
@@ -5567,9 +5572,10 @@ function renderIntentAnalysis(items){
     else if(sp >= 0) spInterp = '의도와 결과의 일치도가 <b style="color:#92400e">약함</b>';
     else spInterp = '의도와 결과가 <b style="color:#991b1b">반대 방향</b> (역상관) — 출제 의도 재점검 권고';
   }
+  let outCnt = 0;
   const grpRows = ['쉬움','보통','어려움'].map(k => {
     const s = analysis.stats[k];
-    if(!s) return `<div style="display:flex;justify-content:space-between;padding:3px 0;color:#9ca3af"><span>${k}</span><span>해당 문항 없음</span></div>`;
+    if(!s) return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12.5px;color:#9ca3af"><span><b>●</b> 의도 ${k}</span><span>해당 문항 없음</span></div>`;
     const expectP = { '쉬움':'70~95%', '보통':'50~70%', '어려움':'30~50%' }[k];
     const meanPct = (s.mean*100).toFixed(1);
     const inRange = (
@@ -5577,19 +5583,40 @@ function renderIntentAnalysis(items){
       (k==='보통' && s.mean>=0.5 && s.mean<=0.75) ||
       (k==='어려움' && s.mean>=0.3 && s.mean<=0.5)
     );
+    if(!inRange) outCnt++;
     const color = inRange ? '#166534' : '#b45309';
-    return `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12.5px">
-      <span><b style="color:${INTENT_COLORS[k]}">●</b> 의도 <b>${k}</b> (${s.n}문항, 기대 ${expectP})</span>
-      <span style="color:${color};font-weight:600">평균 ${meanPct}%</span>
+    const flag = inRange ? '' : ' <span title="기대 범위 밖" style="color:#b45309">⚠</span>';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12.5px;border-bottom:1px dashed rgba(37,99,235,.12)">
+      <span><b style="color:${INTENT_COLORS[k]}">●</b> 의도 <b>${k}</b> <span style="color:#64748b;font-size:11px">(${s.n}문항·기대 ${expectP})</span></span>
+      <span style="color:${color};font-weight:700">${meanPct}%${flag}</span>
     </div>`;
   }).join('');
 
+  // Spearman 게이지 (-1 역상관 → +1 일치)
+  const spColor = sp==null?'#6b7280' : sp>=0.6?'#16a34a' : sp>=0.3?'#0369a1' : sp>=0?'#f59e0b' : '#dc2626';
+  const spPos = sp==null?50 : ((Math.max(-1,Math.min(1,sp))+1)/2)*100;
+  const gaugeHTML = sp==null ? '' : `
+    <div style="margin:10px 0 2px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:4px">
+        <span>역상관(-1)</span><span>무관(0)</span><span>일치(+1)</span>
+      </div>
+      <div style="position:relative;height:10px;border-radius:5px;background:linear-gradient(to right,#dc2626 0%,#f59e0b 50%,#16a34a 100%)">
+        <div style="position:absolute;top:-4px;left:${spPos}%;transform:translateX(-50%);width:18px;height:18px;background:#fff;border:3px solid ${spColor};border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.18)"></div>
+      </div>
+    </div>`;
+  const outNote = outCnt===0
+    ? `<div style="margin-top:8px;font-size:11.5px;color:#166534;background:#f0fdf4;border-radius:8px;padding:7px 10px;line-height:1.5">✓ 세 의도 그룹 모두 기대 정답률 범위 안 — 난이도 예측이 정확</div>`
+    : `<div style="margin-top:8px;font-size:11.5px;color:#92400e;background:#fffbeb;border-radius:8px;padding:7px 10px;line-height:1.5">⚠ ${outCnt}개 의도 그룹이 기대 범위를 벗어남 — 아래 표에서 괴리 큰 문항 확인</div>`;
+
   $('intentSummary').innerHTML = `
-    <div style="font-size:12px;color:#1e40af;font-weight:700;margin-bottom:6px;letter-spacing:.02em">출제 의도 일치도</div>
-    <div style="font-size:22px;font-weight:800;color:#1a1f2e;line-height:1.1">Spearman ρ = ${spLabel}</div>
+    <div style="font-size:12px;color:#1e40af;font-weight:700;margin-bottom:4px;letter-spacing:.02em">출제 의도 일치도</div>
+    <div style="font-size:25px;font-weight:800;color:${spColor};line-height:1.1;letter-spacing:-.02em">Spearman ρ = ${spLabel}</div>
     <div style="font-size:12.5px;color:#475569;margin-top:4px;line-height:1.55">${spInterp}</div>
-    <hr style="margin:10px 0;border:none;border-top:1px solid rgba(37,99,235,.15)">
+    ${gaugeHTML}
+    <hr style="margin:10px 0 6px;border:none;border-top:1px solid rgba(37,99,235,.15)">
+    <div style="font-size:11px;color:#1e40af;font-weight:700;margin-bottom:2px;letter-spacing:.01em">의도별 평균 정답률 (기대 대비)</div>
     ${grpRows}
+    ${outNote}
   `;
 
   // 불일치 TOP 표
@@ -5817,12 +5844,14 @@ function drawNeisCharts(items){
     if(canvas && canvas.parentNode) canvas.parentNode.style.height = targetH + 'px';
     charts.standard = new Chart($('standardChart'), {
       type: 'bar',
-      data: { labels, datasets: [{ label:'평균 정답률(%)', data, backgroundColor: colors, borderRadius:5, borderSkipped:false }] },
+      data: { labels, datasets: [{ label:'평균 정답률(%)', data, backgroundColor: colors, borderRadius:5, borderSkipped:false, barPercentage:0.62 }] },
       options: {
         indexAxis: 'y',
         responsive:true, maintainAspectRatio:false,
+        layout: { padding: { top: 4, right: 14 } },
         plugins: {
-          title: { display:true, text:'성취기준별 평균 정답률 (색: 초록≥70 / 호박≥50 / 주황≥30 / 빨강<30)', color:'#1a1f2e', font:{size:13.5,weight:'600'}, padding:{bottom:10} },
+          title: { display:true, text:'성취기준별 평균 정답률 (막대=평균 · 선=문항 최저~최고 범위)', color:'#1a1f2e', font:{size:13.5,weight:'600'}, padding:{bottom:4} },
+          subtitle: { display:true, text:'● 빨강=문항 최저 / ● 초록=문항 최고 · 막대색: 초록≥70 / 호박≥50 / 주황≥30 / 빨강<30', color:'#94a3b8', font:{size:10.5}, padding:{bottom:10} },
           legend: { display:false },
           tooltip: {
             backgroundColor:'rgba(26,31,46,.92)', titleColor:'#fff', bodyColor:'#e5e7eb',
@@ -5831,6 +5860,7 @@ function drawNeisCharts(items){
                 const g = stdGroups[c.dataIndex];
                 return [
                   `평균: ${c.raw}%`,
+                  `최저: ${(g.min*100).toFixed(0)}% (${g.minItem?g.minItem.qno+'번':'-'}) / 최고: ${(g.max*100).toFixed(0)}% (${g.maxItem?g.maxItem.qno+'번':'-'})`,
                   `문항: ${g.qnos.join(', ')}`,
                   `총배점: ${g.totalPoints.toFixed(1)}점`
                 ];
@@ -5843,7 +5873,59 @@ function drawNeisCharts(items){
           x: { min:0, max:100, ticks:{callback:(v)=>v+'%'}, grid:{color:'rgba(229,232,240,.6)'} },
           y: { ticks:{font:{size:11,family:'JetBrains Mono,monospace'}}, grid:{display:false} }
         }
-      }
+      },
+      plugins: [{
+        id: 'stdMinMaxWhiskers',
+        afterDatasetsDraw(chart){
+          const xS = chart.scales.x;
+          const meta = chart.getDatasetMeta(0);
+          if(!xS || !meta || !meta.data) return;
+          const ctx = chart.ctx;
+          ctx.save();
+          stdGroups.forEach((g, i) => {
+            const bar = meta.data[i];
+            if(!bar) return;
+            const yC = bar.y;
+            const thick = bar.height || 16;
+            const cap = Math.min(7, thick * 0.34);
+            const xMin = xS.getPixelForValue(g.min*100);
+            const xMax = xS.getPixelForValue(g.max*100);
+            // 범위 선
+            ctx.strokeStyle = 'rgba(26,31,46,.6)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(xMin, yC); ctx.lineTo(xMax, yC); ctx.stroke();
+            // 양끝 캡
+            ctx.beginPath();
+            ctx.moveTo(xMin, yC-cap); ctx.lineTo(xMin, yC+cap);
+            ctx.moveTo(xMax, yC-cap); ctx.lineTo(xMax, yC+cap);
+            ctx.stroke();
+            // 최저(빨강)/최고(초록) 점
+            const dot = (x, col) => {
+              ctx.beginPath(); ctx.arc(x, yC, 3.2, 0, Math.PI*2);
+              ctx.fillStyle = col; ctx.fill();
+              ctx.lineWidth = 1.2; ctx.strokeStyle = '#fff'; ctx.stroke();
+            };
+            dot(xMin, '#dc2626');
+            dot(xMax, '#16a34a');
+            // 값 라벨 (선 위, 가장자리 클램프)
+            ctx.font = '700 9px Inter, system-ui, sans-serif';
+            ctx.textBaseline = 'bottom';
+            const yLab = yC - cap - 2;
+            const minTxt = Math.round(g.min*100)+'';
+            const maxTxt = Math.round(g.max*100)+'';
+            ctx.fillStyle = '#b91c1c';
+            ctx.textAlign = (xMin < 18) ? 'left' : 'right';
+            ctx.fillText(minTxt, (xMin < 18 ? xMin+4 : xMin-4), yLab);
+            if(xMax - xMin > 14){ // 최저·최고가 거의 같으면 최고 라벨 생략(겹침 방지)
+              ctx.fillStyle = '#15803d';
+              ctx.textAlign = (xMax > chart.chartArea.right - 18) ? 'right' : 'left';
+              ctx.fillText(maxTxt, (xMax > chart.chartArea.right - 18 ? xMax-4 : xMax+4), yLab);
+            }
+          });
+          ctx.restore();
+        }
+      }]
     });
   }
 
