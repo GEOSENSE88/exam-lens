@@ -758,12 +758,8 @@
     <div style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border-left:4px solid var(--pri);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--ink-2);border-radius:10px;font-weight:500">
       📥 <b style="color:var(--pri-deep)">다운로드 경로</b>: NEIS → 성적 → 지필평가조회 → 교과목별학생답정오표 → <b>[XLS data]</b> 저장
     </div>
+    <!-- 공통 설정 -->
     <div class="row">
-      <div style="flex:2">
-        <label>교과목별학생답정오표 (.xlsx, .xls) — 학급별 여러 파일 선택 가능</label>
-        <input type="file" id="file" accept=".xlsx,.xls" multiple>
-        <div id="fileList" style="margin-top:6px;font-size:12px;color:var(--muted)"></div>
-      </div>
       <div>
         <label>학년</label>
         <select id="grade">
@@ -772,23 +768,58 @@
           <option value="3">3학년 (9등급제)</option>
         </select>
       </div>
-      <div>
+      <div style="flex:2">
         <label>과목명</label>
         <input type="text" id="subject" placeholder="예: 통합사회">
       </div>
-      <div>
-        <label>시험명</label>
+    </div>
+
+    <!-- 3분할 업로드 (중간 / 기말 / 수행) -->
+    <div class="upload-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px">
+      <!-- 중간고사 -->
+      <div class="upcard" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 13px">
+        <div style="font-weight:700;font-size:13.5px;color:var(--pri-deep);margin-bottom:8px">📕 중간고사</div>
+        <label>교과목별학생답정오표 (.xlsx) · 다중</label>
+        <input type="file" id="file" accept=".xlsx,.xls" multiple>
+        <div id="fileList" style="margin-top:6px;font-size:12px;color:var(--muted)"></div>
+        <label style="margin-top:8px">시험명</label>
         <input type="text" id="examName" placeholder="예: 1학기 중간고사">
+        <label style="margin-top:8px">📋 NEIS 문항정보표 (선택)</label>
+        <input type="file" id="neisFile" accept=".xlsx,.xls">
+        <div id="neisStatus" style="margin-top:6px;font-size:11.5px;color:var(--muted)">문항정보표를 올리면 의도·성취기준 분석이 추가됩니다(선택형만).</div>
+        <label style="margin-top:8px">원안지 PDF (선택)</label>
+        <input type="file" id="pdfFile" accept=".pdf">
+        <div id="pdfStatus" style="margin-top:6px;font-size:11.5px;color:var(--muted)">업로드 시 문항별 이미지를 만들어 표 클릭에 연결합니다.</div>
+      </div>
+      <!-- 기말고사 -->
+      <div class="upcard" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 13px">
+        <div style="font-weight:700;font-size:13.5px;color:#1e40af;margin-bottom:8px">📘 기말고사</div>
+        <label>교과목별학생답정오표 (.xlsx) · 다중</label>
+        <input type="file" id="fileFinal" accept=".xlsx,.xls" multiple>
+        <div id="fileListFinal" style="margin-top:6px;font-size:12px;color:var(--muted)"></div>
+        <label style="margin-top:8px">시험명</label>
+        <input type="text" id="examNameFinal" placeholder="예: 1학기 기말고사">
+        <label style="margin-top:8px">📋 NEIS 문항정보표 (선택)</label>
+        <input type="file" id="neisFileFinal" accept=".xlsx,.xls">
+        <div id="neisStatusFinal" style="margin-top:6px;font-size:11.5px;color:var(--muted)">문항정보표를 올리면 의도·성취기준 분석이 추가됩니다(선택형만).</div>
+        <label style="margin-top:8px">원안지 PDF (선택)</label>
+        <input type="file" id="pdfFileFinal" accept=".pdf">
+        <div id="pdfStatusFinal" style="margin-top:6px;font-size:11.5px;color:var(--muted)">업로드 시 문항별 이미지를 만들어 표 클릭에 연결합니다.</div>
+      </div>
+      <!-- 수행평가 -->
+      <div class="upcard" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 13px">
+        <div style="font-weight:700;font-size:13.5px;color:#047857;margin-bottom:8px">📗 수행평가</div>
+        <label>강의실별 일람표(전체영역) (.xlsx) · 다중</label>
+        <input type="file" id="filePerform" accept=".xlsx,.xls" multiple>
+        <div id="fileListPerform" style="margin-top:6px;font-size:12px;color:var(--muted)"></div>
+        <div id="performStatus" style="margin-top:6px;font-size:11.5px;color:var(--muted)">NEIS → 수행평가조회/통계 → 강의실별일람표조회(전체영역) → [XLS data]. 강의실별로 여러 파일을 올리면 합계가 학기말 환산에 반영됩니다.</div>
       </div>
     </div>
-    <div class="row" style="margin-top:10px">
-      <div style="flex:2">
-        <label>원안지 PDF (선택사항)</label>
-        <input type="file" id="pdfFile" accept=".pdf">
-        <div id="pdfStatus" style="margin-top:6px;font-size:12px;color:var(--muted)">업로드하면 자동으로 문항별 이미지를 만들어, 분석표의 행을 클릭할 때 해당 문항을 보여줍니다.</div>
-      </div>
-      <div style="flex:0 0 240px">
-        <label>PDF 처리 방식</label>
+
+    <!-- PDF 처리 방식 (중간·기말 공통) -->
+    <div class="row" style="margin-top:12px">
+      <div style="flex:0 0 280px">
+        <label>PDF 처리 방식 (중간·기말 공통)</label>
         <select id="pdfMode">
           <option value="auto">자동 (텍스트 좌표 우선) ★권장</option>
           <option value="text">텍스트 좌표 기반 강제</option>
@@ -815,33 +846,22 @@
     </div>
     <div id="pdfMappingInfo" style="margin-top:8px;display:none;font-size:11.5px;background:#f0f7ff;border:1px solid #cfe2ff;border-radius:8px;padding:8px 12px;color:#1e40af"></div>
 
-    <div class="row" style="margin-top:10px">
-      <div style="flex:1">
-        <label>📋 NEIS 문항정보표 (선택사항) — <span style="color:var(--muted);font-weight:400">의도 난이도 · 성취기준 · 내용영역 분석용</span></label>
-        <input type="file" id="neisFile" accept=".xlsx,.xls">
-        <div id="neisStatus" style="margin-top:6px;font-size:12px;color:var(--muted)">NEIS에서 다운받은 문항정보표 엑셀을 업로드하면 출제 의도 대비 결과 분석과 성취기준별 분석이 추가됩니다. <b>분석 대상은 선택형 문항만</b> (서답형은 정답이 별도관리되어 제외).</div>
-      </div>
-    </div>
-
     <div class="opts">
       <label><input type="checkbox" id="anon"> 학생 이름 익명 처리</label>
       <span style="color:var(--muted);font-size:12px">· 동점자는 중간석차백분율(NEIS 표준)로 등급 부여</span>
     </div>
 
     <div style="margin-top:14px;padding:12px 14px;background:#f8faff;border:1px solid var(--line);border-radius:12px">
-      <div style="font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">📋 학기말 환산 비율 (선택사항 · 학기 환산 분석용)</div>
+      <div style="font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">📋 학기말 환산 비율 <span style="color:var(--muted);font-weight:400">· 학기말 분석 탭 산출 기준 (학기말점수 = 중간×비율 + 기말×비율 + 수행점수)</span></div>
       <div class="row" style="gap:10px">
         <div><label>중간 비율(%)</label><input type="number" id="midRatio" value="30" min="0" max="100" step="1"></div>
         <div><label>기말 비율(%)</label><input type="number" id="finalRatio" value="30" min="0" max="100" step="1"></div>
         <div><label>수행 비율(%)</label><input type="number" id="performRatio" value="40" min="0" max="100" step="1"></div>
-        <div><label>수행평가 평균 <span style="color:var(--muted);font-weight:400">(만점=수행 비율, 권장 90%)</span></label><input type="number" id="performMean" value="36" min="0" max="100" step="0.1"></div>
-        <div><label>이번 평가 종류</label>
-          <select id="examType">
-            <option value="mid">중간고사</option>
-            <option value="final">기말고사</option>
-          </select>
-        </div>
+        <div><label>지필 만점 <span style="color:var(--muted);font-weight:400">(중간·기말 원점수 만점)</span></label><input type="number" id="paperMax" value="100" min="1" max="200" step="1"></div>
+        <div><label>수행평가 평균 <span style="color:var(--muted);font-weight:400">(파일 없을 때만 사용·만점=수행비율)</span></label><input type="number" id="performMean" value="36" min="0" max="100" step="0.1"></div>
       </div>
+      <!-- examType: 학기말 탭 도입 후 미사용. renderFinalScoreAnalysis 하위호환용 hidden 유지 -->
+      <input type="hidden" id="examType" value="mid">
     </div>
     <div style="margin-top:14px">
       <button id="run">분석 시작</button>
@@ -854,15 +874,19 @@
   <div id="result" class="hidden">
 
     <!-- 결과 영역 빠른 이동 -->
+    <!-- 시험 탭 (중간 / 기말 / 학기말) -->
+    <div id="examTabs" class="no-print" style="display:none;gap:8px;margin:0 0 12px;flex-wrap:wrap"></div>
+
     <nav id="resultNav" class="no-print">
       <button class="nav-link" data-target="navSummary">📊 요약</button>
       <button class="nav-link" data-target="navDist">🎯 점수·등급 분포</button>
-      <button class="nav-link" data-target="navSim">⚖ 시뮬·환산</button>
-      <button class="nav-link" data-target="navItem">📝 문항 분석</button>
-      <button class="nav-link" data-target="navMatrix">🧮 매트릭스</button>
-      <button class="nav-link neis-only" data-target="navIntent" style="display:none">🎯 의도 vs 실제</button>
-      <button class="nav-link neis-only" data-target="navStandard" style="display:none">📚 성취기준별</button>
-      <button class="nav-link" data-target="navReview">🔎 자동 총평</button>
+      <button class="nav-link item-nav" data-target="navSim">⚖ 시뮬·환산</button>
+      <button class="nav-link item-nav" data-target="navItem">📝 문항 분석</button>
+      <button class="nav-link item-nav" data-target="navMatrix">🧮 매트릭스</button>
+      <button class="nav-link item-nav neis-only" data-target="navIntent" style="display:none">🎯 의도 vs 실제</button>
+      <button class="nav-link item-nav neis-only" data-target="navStandard" style="display:none">📚 성취기준별</button>
+      <button class="nav-link item-nav" data-target="navReview">🔎 자동 총평</button>
+      <button class="nav-link finalterm-only" data-target="navFinalTerm" style="display:none">🎓 학기말 종합</button>
       <button class="nav-link" data-target="navStudents">👥 학생별</button>
     </nav>
 
@@ -886,7 +910,7 @@
       </div>
     </section>
 
-    <section class="card" id="navSim">
+    <section class="card item-section" id="navSim">
       <h2>성취도 분할점수 시뮬레이터<span class="tip" data-tip="성취평가제 분할점수(컷)를 바꿔가며 A~E·I 분포가 어떻게 달라지는지 시뮬레이션.&#10;·고정: 90/80/70/60/40 표준&#10;·정규분포 추천: 데이터 분포 기반 자동 산출(A 10·B 25·C 30·D 25·E 10%)&#10;·상위권 확대: A 비율을 15%로 확대&#10;·E컷은 성취평가제 표준에 따라 40 권장">?</span></h2>
       <p style="color:var(--muted);margin:0 0 12px;font-size:13px">분할점수를 바꿔 성취도(A~E·I) 분포가 어떻게 달라지는지 실시간으로 확인 · 정규분포 추천도 자동 계산</p>
       <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
@@ -913,13 +937,13 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card item-section">
       <h2>학기말 환산 점수 분석<span class="tip" data-tip="학기말 점수 = 중간×비율 + 기말×비율 + 수행평가&#10;·이번 평가가 학기 환산 평균에 얼마나 기여하는지 계산&#10;·다른 시험(중간 또는 기말) 평균에 따라 학기 환산 평균이 어떻게 변하는지 시나리오 표로 제공&#10;·적정 학기 평균(70/75/80점) 목표 시 다른 시험 필요 평균을 역산해 출제 방향 권고">?</span></h2>
       <p style="color:var(--muted);margin:0 0 12px;font-size:13px">위 [학기말 환산 비율] 입력 기준 · 이번 평가가 학기말 점수에 얼마나 기여하는지, 적정 평균을 위한 기말 평균 권고 산출</p>
       <div id="finalScoreAnalysis"></div>
     </section>
 
-    <section class="card">
+    <section class="card item-section">
       <h2 id="navItem">문항별 정답률 / 변별도<span class="tip" data-tip="·정답률(p): 응답자 중 정답을 맞힌 비율&#10;·변별도(D): 상위 27% − 하위 27% 정답률 차이&#10;·산점도에서 우측·중상단(정답률 적정 + 변별도 0.3↑)이 우수 영역.&#10;·차트 막대/점을 클릭하면 해당 문항 원안지가 표시됩니다.">?</span></h2>
       <div class="charts">
         <div class="chart-box"><canvas id="pChart"></canvas></div>
@@ -929,7 +953,7 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card item-section">
       <h2>문항 분석표</h2>
       <div class="filters no-print">
         <button class="ghost" data-f="all">전체</button>
@@ -955,7 +979,7 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card item-section">
       <h2>배점-정답률 적정성 분석<span class="tip" data-tip="배점과 난이도(정답률)가 잘 맞는지 진단.&#10;·정상: 어려운 문항(낮은 정답률)일수록 배점이 높아야 함 → 음의 상관(Pearson r ≤ -0.3 적정)&#10;·이상치: ‘고배점-쉬움’ 또는 ‘저배점-어려움’ 문항은 배점 재설계 필요&#10;·산점도에서 좌상단(고배점·낮은 정답률)이 적정 영역">?</span></h2>
       <p style="color:var(--muted);margin:0 0 12px;font-size:13px">출제자가 부여한 배점(난이도 의도)과 실제 정답률의 일치 여부 점검 · 이상적으로는 <b>음의 상관</b>(배점↑ → 정답률↓) · 산점도 점 클릭 시 문항번호 표시</p>
       <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px" class="ppr-grid">
@@ -967,7 +991,7 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card item-section">
       <h2 id="navMatrix">성취도(A~E·I) × 문항 정답률 매트릭스<span class="tip" data-tip="각 등급(A~E·I)의 문항별 정답률을 매트릭스로 보여줍니다.&#10;·셀 색: 초록=높음 → 빨강=낮음&#10;·빨간 테두리: 패턴 깨짐 (상위 그룹보다 정답률이 더 높음)&#10;·셀을 클릭하면 정답자/오답자 명단이 팝업으로 표시됩니다.">?</span></h2>
       <p style="color:var(--muted);margin:0 0 8px;font-size:13px">상위 등급일수록 정답률이 높아야 정상. 셀 색: 초록=높음 → 빨강=낮음 · 패턴 깨짐은 <b>3그룹</b>(상위 A·B / 중위 C·D / 하위 E·I) 가중 정답률을 기준으로 비교 — <b style="color:#dc2626">빨간 테두리</b>는 상위 그룹보다 정답률이 더 높은 그룹의 셀 · <b style="color:#1a1f2e">★ 검은 테두리</b>는 해당 문항의 <b>판별 성취수준</b>(정답률 65% 이상이 유지되는 가장 낮은 등급 = 변별 경계)</p>
       <div id="matrixInvInfo" style="display:none;margin:0 0 10px;padding:8px 12px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;font-size:12.5px;color:#991b1b;line-height:1.55"></div>
@@ -976,7 +1000,7 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card item-section">
       <h2>답지 반응 분포 (선지별 응답률)</h2>
       <p style="color:var(--muted);margin:0 0 12px;font-size:13px">셀 클릭 시 해당 응답 학생 명단 · 정답 선지 ✓ 초록 · 0% 선지는 매력도 부족 신호 · 30% 이상 매력적 오답은 빨강 · '복수답안' 컬럼은 알파벳 코드 (A=1,2 / B=1,3 …)</p>
       <div class="table-wrap" style="max-height:none">
@@ -1026,7 +1050,7 @@
       <div id="standardAdvice" style="margin-top:12px;padding:12px 14px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:8px;font-size:12.5px;color:#92400e;line-height:1.65;display:none"></div>
     </section>
 
-    <section class="card">
+    <section class="card item-section">
       <h2 id="navReview">출제 검토 자동 총평<span class="tip" data-tip="시험 결과를 종합하여 자연어로 작성된 검토 보고서.&#10;·평균·표준편차·등급분포·매력적 오답·변별도 위험 문항 등을 자동 분석.&#10;·출제 협의록·동료 장학에 활용 가능">?</span></h2>
       <div class="review" id="review"></div>
     </section>
@@ -1100,6 +1124,11 @@
         <div id="studentModalBody"></div>
       </div>
     </div>
+
+    <section class="card finalterm-section" id="navFinalTerm" style="display:none">
+      <h2>🎓 학기말 종합 분석<span class="tip" data-tip="중간·기말·수행평가를 [학기말 환산 비율]로 합산한 학기말 점수로&#10;성취도(A~E·I)·등급·석차를 산출합니다.&#10;문항 분석은 제외하고 평가 결과(등급·성취도) 산출에 집중합니다.&#10;※ 병결·인정결로 인정점수가 부여된 학생은 실제 성적처리와 다를 수 있습니다.">?</span></h2>
+      <div id="finalTermBody"></div>
+    </section>
 
     <section class="card" id="navStudents">
       <details>
@@ -1616,6 +1645,82 @@ function parseSheet(rows){
   }
   if(students.length===0) throw new Error('학생 데이터가 없습니다.');
   return {items, students};
+}
+
+// ---- NEIS 수행평가 강의실별 일람표(전체영역) 파서 ----
+// 양식: 1~5행 머리말, 헤더행 = [반/번호, 학번, 성명, <영역1>(만점 20.00,20.00%), ..., 합 계, 비고]
+// 학생행 이후 하단에 응시생수/총점/평균/학과… 합계행이 붙음(제외 대상).
+// 영역 수는 가변. 조인 키 = 학번(긴 숫자열).
+function parsePerformSheet(rows){
+  if(!rows || rows.length < 2) throw new Error('수행평가 파일 행이 부족합니다.');
+  const S = v => String(v==null?'':v).trim();
+  const flat = s => S(s).replace(/\s/g,'');
+
+  // 1) 헤더행 탐지: '성명/이름' + '합계/총점' 동시 포함
+  let hi = -1;
+  for(let i=0;i<Math.min(rows.length,15);i++){
+    const j = (rows[i]||[]).map(flat).join('');
+    if((j.includes('성명')||j.includes('이름')) && (j.includes('합계')||j.includes('총점'))){ hi=i; break; }
+  }
+  if(hi<0){
+    // 합계 라벨이 없는 경우(영역 1개 등): 성명/이름만으로 탐지
+    for(let i=0;i<Math.min(rows.length,15);i++){
+      const j = (rows[i]||[]).map(flat).join('');
+      if(j.includes('성명')||j.includes('이름')){ hi=i; break; }
+    }
+  }
+  if(hi<0) throw new Error('수행평가 헤더행(성명/합계)을 찾지 못했습니다. 강의실별일람표(전체영역) 양식인지 확인하세요.');
+  const head = rows[hi]||[];
+  const findCol = keys => { for(let c=0;c<head.length;c++){ const t=flat(head[c]); if(t && keys.some(k=>t.includes(k))) return c; } return -1; };
+  const cName = findCol(['성명','이름']);
+  let cSum = findCol(['합계','총점']);
+  const cEtc = findCol(['비고']);
+  if(cName<0) throw new Error('수행평가 성명 컬럼을 찾지 못했습니다.');
+
+  // 2) 학번 컬럼: 성명 앞쪽에서 6자리 이상 숫자가 들어있는 열
+  const idLike = v => /^\d{6,}$/.test(S(v).replace(/\.0$/,'').replace(/\s/g,''));
+  let cId = -1;
+  for(let c=0;c<Math.max(cName,1);c++){
+    for(let r=hi+1;r<Math.min(rows.length,hi+8);r++){
+      if(idLike((rows[r]||[])[c])){ cId=c; break; }
+    }
+    if(cId>=0) break;
+  }
+
+  // 3) 영역 컬럼 범위: 성명+1 ~ (합계-1). 합계 없으면 비고 직전 또는 끝까지.
+  let areaEnd = cSum>=0 ? cSum : (cEtc>=0 ? cEtc : head.length);
+  const areaCols = [];
+  for(let c=cName+1;c<areaEnd;c++){
+    const label = flat(head[c]);
+    // 빈 헤더 또는 비고/합계 라벨은 영역에서 제외
+    if(!label || label.includes('비고')||label.includes('합계')||label.includes('총점')) continue;
+    areaCols.push(c);
+  }
+  const areas = areaCols.map(c=>{
+    const raw = S(head[c]);
+    const name = raw.replace(/\(.*?\)/g,'').trim() || `영역${areaCols.indexOf(c)+1}`;
+    const m = raw.match(/만점\s*([\d.]+)\s*,\s*([\d.]+)\s*%/);
+    return { col:c, name, max: m?parseFloat(m[1]):null, ratio: m?parseFloat(m[2]):null };
+  });
+
+  // 4) 학생행 파싱: 학번(긴 숫자) + 성명 존재. 하단 합계/평균 행은 자동 제외.
+  const students = [];
+  for(let r=hi+1;r<rows.length;r++){
+    const row = rows[r]; if(!row) continue;
+    const idCell = cId>=0 ? row[cId] : null;
+    const sid = S(idCell).replace(/\.0$/,'').replace(/\s/g,'');
+    const name = S(row[cName]);
+    if(cId>=0){ if(!idLike(idCell)) continue; }       // 학번 없는 행(합계/평균 등) 제외
+    else { if(!name || /응시|총\s*점|평\s*균|학과|합\s*계|석차|반평균/.test(name)) continue; }
+    const areaScores = areas.map(a=>num(row[a.col]));
+    let total = cSum>=0 ? num(row[cSum]) : null;
+    if(total===null) total = areaScores.reduce((s,v)=> s + (v||0), 0);
+    students.push({ sid, no:sid, cls:S(row[0]), name, areaScores, total });
+  }
+  if(students.length===0) throw new Error('수행평가 학생 데이터를 찾지 못했습니다.');
+  const totalMax = areas.every(a=>a.max!=null) ? areas.reduce((s,a)=>s+a.max,0) : null;
+  const totalRatio = areas.every(a=>a.ratio!=null) ? areas.reduce((s,a)=>s+a.ratio,0) : null;
+  return { areas, students, totalMax, totalRatio, headerRow:hi };
 }
 
 // ---- 등급별 색상 (1등급=빨강 → 마지막등급=보라) ----
@@ -3875,58 +3980,43 @@ function mapCropsToQuestions(crops, items){
   return {map, order, slotMap};
 }
 // 마지막으로 처리한 PDF 파일/결과 (모드 변경 시 재처리용)
-let _lastPdfFile = null;
-let _lastPdfResult = null;
-
 let _pdfSeq = 0;
-async function onPdfFileChange(file){
-  const status = document.getElementById('pdfStatus');
+// 원안지 PDF 처리 — 중간/기말(which) 별로 pdfStage[which]에 크롭을 보관.
+// 실제 문항번호 매핑은 [분석 시작] 시 computeExam에서 수행.
+async function onPdfFileChange(file, which){
+  which = which || 'mid';
+  const status = document.getElementById(which==='final' ? 'pdfStatusFinal' : 'pdfStatus');
   const mappingBox = document.getElementById('pdfMappingInfo');
-  // 진행 중인 패널이 있으면 먼저 닫아 잔여 DOM 정리
   try{ closeQPanel(); }catch(e){}
   if(!file){
     if(status) status.textContent='';
-    qImages={}; qSlotMap={}; qSlotPages={}; qImageOrder=[];
-    _lastPdfFile = null; _lastPdfResult = null;
+    pdfStage[which] = null;
     if(mappingBox) mappingBox.style.display = 'none';
     return;
   }
-  _lastPdfFile = file;
+  pdfStage[which] = { file, crops:null, slotPages:{}, mode:null };
   if(status) status.style.color = '#374151';
   const mySeq = ++_pdfSeq;
   try{
     const mode = (document.getElementById('pdfMode')?.value) || 'auto';
     const result = await processOriginalPDF(file, status, mode);
-    // 빠른 모드 전환 시 오래된 결과로 덮어쓰지 않도록 보호
     if(mySeq !== _pdfSeq) return;
-    _lastPdfResult = result;
     const crops = result.crops;
-    qSlotPages = result.slotPages || {};
-    if(lastItems.length){
-      const {map, order, slotMap} = mapCropsToQuestions(crops, lastItems);
-      qImages = map; qImageOrder = order; qSlotMap = slotMap;
-    }else{
-      qImages = {}; qImageOrder = []; qSlotMap = {};
-      crops.forEach((c, idx)=>{
-        const key = (idx < 100) ? ('Q' + (idx+1)) : ('X' + idx);
-        qImages[key] = c.dataURL;
-        if(c.slot != null) qSlotMap[key] = c.slot;
-        qImageOrder.push(key);
-      });
+    pdfStage[which] = { file, crops, slotPages: result.slotPages || {}, mode: result.mode || mode };
+    const slotCount = Object.keys(result.slotPages||{}).length;
+    if(status){
+      status.style.color = '#10b981';
+      status.textContent = `✓ ${crops.length}개 문항 추출 · 원본 ${slotCount}p (${mode}) · [분석 시작] 후 표 클릭에 연결`;
     }
-    const slotCount = Object.keys(qSlotPages).length;
-    status.style.color = '#10b981';
-    status.textContent = `✓ ${crops.length}개 문항 자동 추출 · 원본 페이지 ${slotCount}개 (모드: ${mode}). 분석표 행을 클릭하세요.`;
-    // 매핑 정보 박스 표시
     if(mappingBox){
       const usedMode = result.mode || mode;
       const isTextBased = usedMode === 'text-based';
       const groupByPage = {};
-      crops.forEach(c => {
+      crops.forEach((c, idx) => {
         const pageNum = isTextBased ? c.page : c.slot;
         if(!groupByPage[pageNum]) groupByPage[pageNum] = [];
-        const k = c.key || qImageOrder[c.idx];
-        if(k) groupByPage[pageNum].push({key:k, w:c.cropW, h:c.cropH});
+        const k = c.key || ('Q'+(idx+1));
+        groupByPage[pageNum].push({key:k, w:c.cropW, h:c.cropH});
       });
       const lines = Object.keys(groupByPage).map(Number).sort((a,b)=>a-b).map(p => {
         const items = groupByPage[p];
@@ -3935,40 +4025,16 @@ async function onPdfFileChange(file){
       });
       const modeLabel = isTextBased ? '✨ 텍스트 좌표 기반' : `픽셀 기반(${usedMode})`;
       mappingBox.innerHTML = `
-        <div style="font-weight:600;margin-bottom:4px">🗂 검출 결과 · ${modeLabel} · 총 ${crops.length}개</div>
+        <div style="font-weight:600;margin-bottom:4px">🗂 ${which==='final'?'기말':'중간'} 검출 결과 · ${modeLabel} · 총 ${crops.length}개</div>
         <div style="line-height:1.7">${lines.join('<br>')}</div>
-        <div style="margin-top:6px;color:var(--muted);font-size:11px">매핑이 어긋나면 위 [PDF 처리 방식]을 다른 모드로 바꿔보세요. 괄호 안 숫자 = 크롭 가로×세로(px)</div>
+        <div style="margin-top:6px;color:var(--muted);font-size:11px">매핑이 어긋나면 [PDF 처리 방식]을 다른 모드로 바꿔보세요. 괄호 안 숫자 = 크롭 가로×세로(px)</div>
       `;
       mappingBox.style.display = 'block';
     }
-    if(lastItems.length){
-      renderItemTable(lastItems, lastFilter, _lastStudents);
-      // PDF 매핑이 새로 생겼으므로 다른 표/리뷰도 다시 그려서 q-link 인디케이터 갱신
-      const stu = _lastStudents;
-      if(stu){
-        try{ renderMatrix(lastItems, stu); }catch(e){}
-        try{ renderDistribution(lastItems, stu); }catch(e){}
-        try{ renderPointRate(lastItems); }catch(e){}
-        try{
-          const stats = window._lastStats;
-          if(stats){
-            const grade = +$('grade').value;
-            const subject = $('subject').value.trim();
-            const examName = $('examName').value.trim();
-            const gd = gradeDist(stu, grade);
-            const alpha = calcCronbach(lastItems, stu);
-            $('review').innerHTML = buildReview(stats, lastItems, gd, grade, subject, examName, stu, alpha);
-          }
-        }catch(e){}
-      }
-    }
   }catch(e){
-    if(mySeq !== _pdfSeq) return; // 오래된 실패 알림 무시
+    if(mySeq !== _pdfSeq) return;
     console.error(e);
-    if(status){
-      status.style.color = '#ef4444';
-      status.textContent = '실패: ' + e.message;
-    }
+    if(status){ status.style.color = '#ef4444'; status.textContent = '실패: ' + e.message; }
   }
 }
 // =====================================================================
@@ -4691,7 +4757,81 @@ function chartToImage(chartKey, opts){
   }
 }
 
+// 학기말 종합 인쇄 보고서 (문항분석 제외 · 등급/성취도 중심)
+function buildFinalTermReport(opts){
+  const ft = buildFinalTermStudents();
+  const complete = ft.rows.filter(r=>r.complete);
+  const incomplete = ft.rows.filter(r=>!r.complete);
+  if(!complete.length) return '';
+  const grade = parseInt(($('grade')||{}).value || '1');
+  const subject = ($('subject')||{}).value || '';
+  const anon = !!($('anon')||{}).checked;
+  const stats = window._lastStats || (typeof calcStats==='function'?calcStats(complete):null);
+  if(!stats) return '';
+  const gd = gradeDist(complete, grade);
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
+  const _LV = (typeof _LEVEL_COLOR!=='undefined')?_LEVEL_COLOR:{};
+  const imgHist  = chartToImage('hist',  {width:1100, ratio:0.45});
+  const imgGrade = chartToImage('grade', {width:1100, ratio:0.45});
+  const imgRank  = chartToImage('rank',  {width:1100, ratio:0.32});
+  // 성취도 집계
+  const achCount = {A:0,B:0,C:0,D:0,E:0,I:0};
+  complete.forEach(r=>{ achCount[achLevelOf(r.total)]++; });
+  const maxG = grade===3?9:5;
+  let html='';
+  html += `<section class="pr-page pr-cover">
+    <h1 class="pr-title">학기말 종합 평가 결과 보고서</h1>
+    <div class="pr-cover-sub">Exam-Lens · 중간·기말·수행 환산 종합</div>
+    <dl>
+      <dt>학 년</dt><dd>${grade}학년</dd>
+      <dt>과 목</dt><dd>${escHTML(subject||'-')}</dd>
+      <dt>반영 비율</dt><dd>중간 ${ft.midR}% · 기말 ${ft.finR}% · 수행 ${ft.perR}%</dd>
+      <dt>환산 인원</dt><dd>${complete.length}명${incomplete.length?` (인정점수 대상 ${incomplete.length}명 제외)`:''}</dd>
+      <dt>환산 평균 / σ</dt><dd>${stats.mean.toFixed(1)}점 · σ ${stats.sd.toFixed(1)}점</dd>
+      <dt>최고 / 최저</dt><dd>${stats.max.toFixed(1)}점 / ${stats.min.toFixed(1)}점</dd>
+      <dt>발 행 일</dt><dd>${dateStr}</dd>
+      <dt>작 성</dt><dd>산남고 이성훈 · Exam-Lens</dd>
+    </dl>
+    <p class="pr-note" style="margin-top:14mm">학기말 환산점수 = 중간×${ft.midR}% + 기말×${ft.finR}% + 수행점수 (지필만점 ${ft.paperMax}).${incomplete.length?' 병결·인정결로 인정점수가 부여되는 학생은 실제 성적처리와 다를 수 있어 통계에서 제외했습니다.':''}${anon?' (익명 모드)':''}</p>
+  </section>`;
+  // 요약 + 분포
+  html += `<section class="pr-page"><h2 class="pr-h2">학기말 환산 결과 요약</h2>
+    <div class="pr-summary">
+      <div class="s"><div class="k">환산 인원</div><div class="v">${complete.length}명</div></div>
+      <div class="s"><div class="k">환산 평균</div><div class="v">${stats.mean.toFixed(1)}</div></div>
+      <div class="s"><div class="k">표준편차</div><div class="v">${stats.sd.toFixed(1)}</div></div>
+      <div class="s"><div class="k">중앙값</div><div class="v">${stats.median.toFixed(1)}</div></div>
+    </div>
+    <h3 class="pr-h3">성취도(A~E·I) 분포</h3>
+    <table class="pr-table"><thead><tr><th>성취도</th>${['A','B','C','D','E','I'].map(l=>`<th>${l}</th>`).join('')}</tr></thead>
+    <tbody><tr><td class="l">인원</td>${['A','B','C','D','E','I'].map(l=>`<td>${achCount[l]}</td>`).join('')}</tr>
+    <tr><td class="l">비율(%)</td>${['A','B','C','D','E','I'].map(l=>`<td>${complete.length?(achCount[l]/complete.length*100).toFixed(1):'0'}</td>`).join('')}</tr></tbody></table>
+    <div class="pr-chart-grid">${imgHist?`<img src="${imgHist}">`:''}${imgGrade?`<img src="${imgGrade}">`:''}</div>
+    ${imgRank?`<div class="pr-chart-center"><img src="${imgRank}"></div>`:''}
+    <h3 class="pr-h3">등급 분포 (${maxG}등급)</h3>
+    <table class="pr-table"><thead><tr><th>등급</th><th>인원</th><th>비율(%)</th><th>최저</th><th>최고</th></tr></thead><tbody>
+    ${gd.map(g=>`<tr><td>${g.grade}</td><td>${g.n}</td><td>${g.ratio.toFixed(1)}</td><td>${g.min!=null?g.min.toFixed(1):'-'}</td><td>${g.max!=null?g.max.toFixed(1):'-'}</td></tr>`).join('')}
+    </tbody></table>
+    ${incomplete.length?`<p class="pr-note">⚠ 인정점수 대상 ${incomplete.length}명: ${incomplete.slice(0,30).map(r=>`${_ftMask(r.name,r.sid,anon)}(${r.missing.join('·')})`).join(', ')}${incomplete.length>30?' 외…':''}</p>`:''}
+  </section>`;
+  // 학생별 종합표 (가로)
+  const sorted=[...complete].sort((a,b)=>b.total-a.total);
+  if(complete[0] && complete[0].rank==null){ assignGrades(complete, grade); }
+  const rankMap={}; sorted.forEach((r)=>{ rankMap[r.sid]=r; });
+  html += `<section class="pr-page pr-landscape"><h2 class="pr-h2">학생별 학기말 종합표</h2>
+    <table class="pr-table"><thead><tr><th>석차</th><th class="l">이름</th><th>중간</th><th>기말</th><th>수행</th><th>환산총점</th><th>성취도</th><th>등급</th></tr></thead><tbody>
+    ${sorted.map((r,i)=>{ const ach=achLevelOf(r.total); return `<tr><td>${r.rank||i+1}</td><td class="l">${_ftMask(r.name,r.sid,anon)}</td><td>${r.midScore!=null?r.midScore:'-'}</td><td>${r.finalScore!=null?r.finalScore:'-'}</td><td>${r.performScore!=null?r.performScore:'-'}</td><td><b>${r.total.toFixed(1)}</b></td><td>${ach}</td><td>${r.grade||'-'}</td></tr>`; }).join('')}
+    </tbody></table>
+    <p class="pr-footer">Exam-Lens · 학기말 종합 · ${dateStr}</p>
+  </section>`;
+  return html;
+}
+
 function buildPrintReport(opts){
+  if(typeof ACTIVE_TAB!=='undefined' && ACTIVE_TAB==='final_term'){
+    return buildFinalTermReport(opts);
+  }
   const stu = (typeof _lastStudents !== 'undefined' && _lastStudents) ? _lastStudents : [];
   const items = (typeof lastItems !== 'undefined' && lastItems) ? lastItems : [];
   if(!stu.length || !items.length) return '';
@@ -5044,9 +5184,10 @@ function buildPrintReport(opts){
 }
 
 function runPrint(){
+  const isFT = (typeof ACTIVE_TAB!=='undefined' && ACTIVE_TAB==='final_term');
   const stu = (typeof _lastStudents !== 'undefined' && _lastStudents) ? _lastStudents : [];
   const items = (typeof lastItems !== 'undefined' && lastItems) ? lastItems : [];
-  if(!stu.length || !items.length){
+  if(!stu.length || (!isFT && !items.length)){
     closePrintOptions();
     if(typeof showToast === 'function') showToast('✗ 분석 결과가 없어 인쇄할 수 없습니다');
     return;
@@ -6539,6 +6680,354 @@ function drawCharts(items, hist, gd, students, grade, anon){
   });
 }
 
+// ===== 다중 평가(중간/기말/수행) 저장소 + 탭 =====
+const EXAM = { mid:null, final:null, perform:null };
+let ACTIVE_TAB = 'mid';
+const pdfStage = { mid:null, final:null };
+
+function achLevelOf(t){ return t>=90?'A':t>=80?'B':t>=70?'C':t>=60?'D':t>=40?'E':'I'; }
+function _examOkBox(fileLog, n){
+  return `<div style="background:#dcfce7;color:#166534;padding:8px 12px;border-radius:9px;font-size:12.5px;margin-top:6px;font-weight:500">✓ ${fileLog.join(', ')} · 총 <b>${n}명</b></div>`;
+}
+function _ftMask(name, sid, anon){
+  if(!anon) return escHTML(name||sid||'');
+  const s = String(name||'');
+  return s ? escHTML(s.slice(0,1)) + 'OO' : escHTML(sid||'');
+}
+
+// 지필(중간/기말) 한 시험 파싱+통계 (DOM 렌더 없음, 상태 텍스트만)
+async function computeExam({files, kind, examNameEl, neisFileEl, autoFillInfo}){
+  let items=null; const students=[]; const fileLog=[];
+  for(const f of files){
+    const buf=await f.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const parsed=parseSheet(rows);
+    if(items===null){
+      items=parsed.items;
+      if(autoFillInfo){
+        const info=parseExamInfo(rows);
+        if(info.grade && [1,2,3].includes(info.grade)) $('grade').value=String(info.grade);
+        if(info.subject && !$('subject').value.trim()) $('subject').value=info.subject;
+        if(info.examName && examNameEl && !examNameEl.value.trim()) examNameEl.value=info.examName;
+      }
+    } else {
+      if(parsed.items.length!==items.length)
+        throw new Error(`${f.name}: 문항 수가 다릅니다 (${parsed.items.length} vs ${items.length})`);
+      for(let i=0;i<items.length;i++){
+        if(parsed.items[i].qno!==items[i].qno)
+          throw new Error(`${f.name}: ${i+1}번째 문항번호 불일치 (${parsed.items[i].qno} vs ${items[i].qno})`);
+      }
+    }
+    parsed.students.forEach(s=>{ s._src=f.name; students.push(s); });
+    fileLog.push(`${escHTML(f.name)} (${parsed.students.length}명)`);
+  }
+  // NEIS 문항정보표 (선택)
+  let neis=null, neisMerge=null;
+  const neisFile = neisFileEl && neisFileEl.files && neisFileEl.files[0];
+  const nstat = neisFileEl ? document.getElementById(neisFileEl.id==='neisFileFinal'?'neisStatusFinal':'neisStatus') : null;
+  if(neisFile){
+    try{
+      const nbuf=await neisFile.arrayBuffer();
+      const nwb=XLSX.read(nbuf,{type:'array'});
+      const nrows=XLSX.utils.sheet_to_json(nwb.Sheets[nwb.SheetNames[0]],{header:1,defval:''});
+      neis=parseNeisItemSheet(nrows);
+      neisMerge=mergeNeisIntoItems(items, neis);
+      if(nstat){
+        if(neisMerge.merged){
+          const warn = neisMerge.answerMismatch>0?` <span style="color:#b45309">⚠ 정답 ${neisMerge.answerMismatch}개 불일치</span>`:'';
+          const openNote = neisMerge.openN>0?` <span style="color:#6b7280">· 서답형 ${neisMerge.openN}개 제외</span>`:'';
+          nstat.innerHTML = `<span style="color:#166534;font-weight:600">✓ NEIS 적용 — 선택형 ${neisMerge.selectN}문항</span>${openNote}${warn}`;
+        } else {
+          nstat.innerHTML = `<span style="color:#b91c1c">✗ NEIS 매칭 실패: ${escHTML(neisMerge.reason)}</span>`;
+        }
+      }
+    }catch(e){
+      console.warn('NEIS 파싱 실패:', e);
+      neisMerge={merged:false, reason:(e.message||String(e))};
+      if(nstat) nstat.innerHTML = `<span style="color:#b91c1c">✗ NEIS 파싱 실패: ${escHTML(e.message||String(e))}</span>`;
+    }
+  }
+  const grade=+$('grade').value;
+  const subject=$('subject').value.trim();
+  const examName=(examNameEl?examNameEl.value.trim():'') || (kind==='final'?'기말고사':'중간고사');
+  const stats=calcStats(students);
+  if(!stats) throw new Error(`${kind==='final'?'기말':'중간'} 총점 데이터를 계산할 수 없습니다.`);
+  assignGrades(students, grade);
+  const gd=gradeDist(students, grade);
+  const itemRes=calcItems(items, students);
+  const hist=histogram(students, subject);
+  const alpha=calcCronbach(items, students);
+  students.forEach((s,i)=>{ s._idx=i; });
+  // PDF 크롭 스냅샷(해당 시험에 업로드된 경우)
+  let pdf={qImages:{}, qImageOrder:[], qSlotMap:{}, qSlotPages:{}};
+  const stage=pdfStage[kind];
+  if(stage && stage.crops && stage.crops.length){
+    try{
+      const {map, order, slotMap}=mapCropsToQuestions(stage.crops, itemRes);
+      pdf={qImages:map, qImageOrder:order, qSlotMap:slotMap, qSlotPages:stage.slotPages||{}};
+    }catch(e){ console.warn('PDF 크롭 매핑 실패', e); }
+  }
+  return {kind, students, items, itemRes, stats, gd, hist, alpha, grade, subject, examName, neis, neisMerge, fileLog, pdf};
+}
+
+// 수행평가 다중 파일 파싱 (학번 기준 병합)
+async function computePerform(files){
+  let areas=null; const map={}; const fileLog=[];
+  for(const f of files){
+    const buf=await f.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const parsed=parsePerformSheet(rows);
+    if(areas===null) areas=parsed.areas;
+    parsed.students.forEach(s=>{ map[s.sid]=s; });
+    fileLog.push(`${escHTML(f.name)} (${parsed.students.length}명)`);
+  }
+  const students=Object.values(map);
+  const totalMax = areas && areas.every(a=>a.max!=null) ? areas.reduce((s,a)=>s+a.max,0) : null;
+  const totalRatio = areas && areas.every(a=>a.ratio!=null) ? areas.reduce((s,a)=>s+a.ratio,0) : null;
+  return {areas, students, totalMax, totalRatio, fileLog};
+}
+
+// 지필 한 시험 렌더 (전역 스왑 후 기존 렌더 함수 재사용)
+function renderExam(b){
+  if(!b) return;
+  const anon=$('anon').checked;
+  _lastStudents=b.students; window._lastStats=b.stats;
+  lastItems=b.itemRes; lastFilter='all';
+  window._lastNeis=b.neis||null; window._lastNeisMerge=b.neisMerge||null;
+  qImages=b.pdf.qImages; qImageOrder=b.pdf.qImageOrder; qSlotMap=b.pdf.qSlotMap; qSlotPages=b.pdf.qSlotPages;
+  const {stats, grade, subject, examName, itemRes, gd, hist, alpha, items, students}=b;
+  setNavMode('paper');
+  $('title').textContent=`${subject||'분석 결과'} ${examName?'— '+examName:''}`;
+  renderSummary(stats, grade, alpha);
+  activateCountUp();
+  renderGradeTable(gd, grade);
+  renderItemTable(itemRes, 'all', students);
+  renderStudents(students, anon);
+  drawCharts(itemRes, hist, gd, students, grade, anon);
+  renderPointRate(itemRes);
+  renderMatrix(items, students);
+  renderDistribution(items, students);
+  try{
+    const intentRes=renderIntentAnalysis(itemRes);
+    const stdRes=renderStandardAnalysis(itemRes);
+    try{ drawNeisCharts(itemRes); }catch(e){ console.warn('drawNeisCharts', e); }
+    const hasNeis=!!(intentRes||stdRes);
+    document.querySelectorAll('.neis-only').forEach(el=>{ el.style.display=hasNeis?'':'none'; });
+  }catch(e){ console.warn('NEIS 분석 렌더링 실패', e); }
+  $('review').innerHTML=buildReview(stats, itemRes, gd, grade, subject, examName, students, alpha);
+  setupCutsSimulator(students);
+  renderFinalScoreAnalysis(stats);
+  ['itemTable','studentTable','gradeTable','distTable','cutsCompTable'].forEach(id=>{ const el=$(id); if(el) makeSortable(el); });
+}
+
+// 학기말 환산 학생 합성 (학번 조인)
+function buildFinalTermStudents(){
+  const midR=parseFloat($('midRatio').value)||0;
+  const finR=parseFloat($('finalRatio').value)||0;
+  const perR=parseFloat($('performRatio').value)||0;
+  const paperMax=parseFloat($('paperMax').value)||100;
+  const mid=EXAM.mid, fin=EXAM.final, perf=EXAM.perform;
+  const idx={};
+  const ensure=(sid,name,cls)=>{ sid=String(sid); if(!idx[sid]) idx[sid]={sid,name:name||'',cls:cls||'',mid:null,final:null,perform:null}; if(name&&!idx[sid].name) idx[sid].name=name; if(cls&&!idx[sid].cls) idx[sid].cls=cls; return idx[sid]; };
+  if(mid) mid.students.forEach(s=>{ ensure(s.no, s.name, s.cls).mid=s.total; });
+  if(fin) fin.students.forEach(s=>{ ensure(s.no, s.name, s.cls).final=s.total; });
+  if(perf) perf.students.forEach(s=>{ ensure(s.sid, s.name, s.cls).perform=s.total; });
+  const useMid = midR>0 && !!mid;
+  const useFin = finR>0 && !!fin;
+  const usePerf = perR>0 && !!perf;
+  const rows=Object.values(idx).map(r=>{
+    const midC = (useMid && r.mid!=null) ? r.mid/paperMax*midR : (useMid?null:0);
+    const finC = (useFin && r.final!=null) ? r.final/paperMax*finR : (useFin?null:0);
+    const perfC = (usePerf && r.perform!=null) ? r.perform : (usePerf?null:0);
+    const missing=[];
+    if(useMid && r.mid==null) missing.push('중간');
+    if(useFin && r.final==null) missing.push('기말');
+    if(usePerf && r.perform==null) missing.push('수행');
+    const complete = missing.length===0;
+    const total = (midC||0)+(finC||0)+(perfC||0);
+    return {sid:r.sid, no:r.sid, name:r.name, cls:r.cls,
+            midScore:r.mid, finalScore:r.final, performScore:r.perform,
+            midC, finC, perfC, missing, complete, total, sel:null, desc:null};
+  });
+  return {rows, useMid, useFin, usePerf, midR, finR, perR, paperMax};
+}
+
+function renderFinalTerm(){
+  const grade=+$('grade').value;
+  const subject=$('subject').value.trim();
+  const ft=buildFinalTermStudents();
+  const complete=ft.rows.filter(r=>r.complete);
+  const incomplete=ft.rows.filter(r=>!r.complete);
+  setNavMode('finalterm');
+  $('title').textContent=`${subject||'학기말'} — 학기말 종합 (환산)`;
+  if(complete.length){
+    assignGrades(complete, grade);
+    complete.forEach((s,i)=>{ s._idx=i; });
+    const stats=calcStats(complete);
+    const gd=gradeDist(complete, grade);
+    const hist=histogram(complete, subject);
+    _lastStudents=complete; window._lastStats=stats; lastItems=[];
+    renderSummary(stats, grade, null);
+    activateCountUp();
+    renderGradeTable(gd, grade);
+    try{ drawCharts([], hist, gd, complete, grade, $('anon').checked); }catch(e){ console.warn('학기말 차트', e); }
+    const gt=$('gradeTable'); if(gt) makeSortable(gt);
+  }
+  renderFinalTermPanels(ft, complete, incomplete, grade);
+}
+
+function renderFinalTermPanels(ft, complete, incomplete, grade){
+  const anon=$('anon').checked;
+  const sum=ft.midR+ft.finR+ft.perR;
+  const _LV=(typeof _LEVEL_COLOR!=='undefined')?_LEVEL_COLOR:{};
+  let html='';
+  html += `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;font-size:12.5px">
+    <span style="background:#e0ecff;color:#1e40af;padding:4px 10px;border-radius:8px;font-weight:600">중간 ${ft.midR}%</span>
+    <span style="background:#dbeafe;color:#1e3a8a;padding:4px 10px;border-radius:8px;font-weight:600">기말 ${ft.finR}%</span>
+    <span style="background:#dcfce7;color:#047857;padding:4px 10px;border-radius:8px;font-weight:600">수행 ${ft.perR}%</span>
+    <span style="background:#f3f4f6;color:#374151;padding:4px 10px;border-radius:8px">합계 ${sum}%${Math.abs(sum-100)>0.5?' ⚠':''}</span>
+    <span style="color:var(--muted)">환산식: 중간×${ft.midR}% + 기말×${ft.finR}% + 수행점수 · 지필만점 ${ft.paperMax}</span>
+  </div>`;
+  if(Math.abs(sum-100)>0.5) html+=`<div style="background:#fef3c7;color:#92400e;padding:9px 13px;border-radius:9px;margin-bottom:12px;font-size:12.5px">⚠ 반영비율 합계가 ${sum}%로 100%가 아닙니다. 상단 [학기말 환산 비율]을 확인하세요.</div>`;
+  // 비율은 있으나 데이터가 없는 영역 경고(과소 환산 방지)
+  const _miss=[];
+  if(ft.midR>0 && !EXAM.mid) _miss.push('중간');
+  if(ft.finR>0 && !EXAM.final) _miss.push('기말');
+  if(ft.perR>0 && !EXAM.perform) _miss.push('수행');
+  if(_miss.length) html+=`<div style="background:#fee2e2;color:#991b1b;padding:9px 13px;border-radius:9px;margin-bottom:12px;font-size:12.5px">⚠ <b>${_miss.join('·')}</b> 반영비율이 설정돼 있으나 해당 데이터가 업로드되지 않아 환산에서 <b>0점 처리</b>됩니다. 정확한 학기말 산출을 위해 ${_miss.join('·')} 파일을 업로드하거나 비율을 조정하세요.</div>`;
+  if(incomplete.length){
+    const names=incomplete.slice(0,40).map(r=>`${_ftMask(r.name,r.sid,anon)}<span style="color:#9ca3af">(${r.missing.join('·')} 누락)</span>`).join(', ');
+    html += `<div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:11px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-weight:700;color:#9a3412;font-size:13px;margin-bottom:5px">⚠ 인정점수 주의 — ${incomplete.length}명</div>
+      <div style="font-size:12.5px;color:#7c2d12;line-height:1.6">병결·인정결 등으로 일부 평가 응시기록이 없는 학생입니다. 실제 학기말 성적처리에서는 <b>인정점수</b>가 별도 부여되므로, 아래 환산·분포 통계에서는 <b>제외</b>되었고 실제 결과와 다를 수 있습니다.</div>
+      <div style="font-size:12px;color:#9a3412;margin-top:6px">${names}${incomplete.length>40?' 외…':''}</div>
+    </div>`;
+  }
+  if(complete.length){
+    const avg = arr=> arr.length? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+    const mC=avg(complete.map(r=>r.midC||0)), fC=avg(complete.map(r=>r.finC||0)), pC=avg(complete.map(r=>r.perfC||0)), tot=avg(complete.map(r=>r.total));
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px">
+      <div style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">중간 평균 기여</div><div style="font-size:20px;font-weight:800;color:#1e40af">${mC.toFixed(2)}</div></div>
+      <div style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">기말 평균 기여</div><div style="font-size:20px;font-weight:800;color:#1e3a8a">${fC.toFixed(2)}</div></div>
+      <div style="background:linear-gradient(135deg,#dcfce7,#d1fae5);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">수행 평균 기여</div><div style="font-size:20px;font-weight:800;color:#047857">${pC.toFixed(2)}</div></div>
+      <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">학기말 환산 평균</div><div style="font-size:20px;font-weight:800;color:#b45309">${tot.toFixed(2)}</div></div>
+    </div>`;
+  } else {
+    html += `<div style="color:var(--muted);padding:14px">환산 가능한 학생이 없습니다. 중간·기말·수행 데이터와 반영비율을 확인하세요.</div>`;
+  }
+  // 중간 ↔ 기말 변화·상관 (둘 다 반영된 경우)
+  if(complete.length>=2 && ft.useMid && ft.useFin){
+    const xs=complete.map(r=>r.midScore), ys=complete.map(r=>r.finalScore);
+    const r=pearsonCorr(xs,ys);
+    const deltas=complete.map(r=>({name:r.name, sid:r.sid, d:(r.finalScore-r.midScore)}));
+    const up=[...deltas].sort((a,b)=>b.d-a.d).slice(0,5).filter(x=>x.d>0);
+    const down=[...deltas].sort((a,b)=>a.d-b.d).slice(0,5).filter(x=>x.d<0);
+    const rTxt = r==null?'—':r.toFixed(2);
+    const rDesc = r==null?'':(r>=0.7?'(강한 양의 상관 — 성취 순위가 대체로 유지)':r>=0.4?'(중간 상관)':r>=0.1?'(약한 상관 — 순위 변동 큼)':'(상관 거의 없음 — 순위 변동 매우 큼)');
+    const li=arr=>arr.map(x=>`<span style="display:inline-block;background:#fff;border:1px solid var(--line);border-radius:8px;padding:2px 8px;margin:2px;font-size:12px">${_ftMask(x.name,x.sid,anon)} <b style="color:${x.d>0?'#047857':'#dc2626'}">${x.d>0?'+':''}${x.d}</b></span>`).join('');
+    html += `<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:6px">📈 중간 ↔ 기말 변화·상관</div>
+      <div style="font-size:12.5px;color:var(--ink-2);margin-bottom:8px">중간·기말 원점수 상관계수 <b style="color:var(--pri-deep)">r = ${rTxt}</b> <span style="color:var(--muted)">${rDesc}</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><div style="font-size:12px;color:#047857;font-weight:600;margin-bottom:3px">▲ 상승 상위</div>${up.length?li(up):'<span style="color:var(--muted);font-size:12px">없음</span>'}</div>
+        <div><div style="font-size:12px;color:#dc2626;font-weight:600;margin-bottom:3px">▼ 하락 상위</div>${down.length?li(down):'<span style="color:var(--muted);font-size:12px">없음</span>'}</div>
+      </div>
+    </div>`;
+  }
+  // 성취도 경계선 학생 (컷 2점 미만 아래)
+  if(complete.length){
+    const cuts=[{lv:'A',c:90},{lv:'B',c:80},{lv:'C',c:70},{lv:'D',c:60},{lv:'E',c:40}];
+    const bands=cuts.map(cut=>{
+      const near=complete.filter(r=> r.total>=cut.c-2 && r.total<cut.c).sort((a,b)=>b.total-a.total);
+      return {cut, near};
+    }).filter(b=>b.near.length);
+    if(bands.length){
+      const _LV2=_LV;
+      html += `<div style="background:#fff7fb;border:1px solid #f5d0e8;border-radius:12px;padding:13px 15px;margin-bottom:14px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px">🎯 성취도 경계선 학생 <span style="color:var(--muted);font-weight:400;font-size:11.5px">(컷 2점 미만으로 아쉽게 미달)</span></div>
+        ${bands.map(b=>`<div style="font-size:12.5px;margin-top:5px"><span style="background:${_LV2[b.cut.lv]||'#999'};color:#fff;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:700">${b.cut.lv} 컷 ${b.cut.c}</span> ${b.near.map(r=>`${_ftMask(r.name,r.sid,anon)}(${r.total.toFixed(1)})`).join(', ')}</div>`).join('')}
+      </div>`;
+    }
+  }
+  const rowHtml=r=>{
+    const ach = r.complete? achLevelOf(r.total):'-';
+    const achColor=_LV[ach]||'#9ca3af';
+    return `<tr${r.complete?'':' style="background:#fff7ed"'}>
+      <td style="text-align:center">${escHTML(r.cls||'')}</td>
+      <td>${_ftMask(r.name,r.sid,anon)}${r.complete?'':' <span style="color:#ea580c;font-size:10px">인정</span>'}</td>
+      <td style="text-align:right">${r.midScore!=null?r.midScore:'—'}</td>
+      <td style="text-align:right;color:#1e40af">${r.midC!=null?r.midC.toFixed(2):'—'}</td>
+      <td style="text-align:right">${r.finalScore!=null?r.finalScore:'—'}</td>
+      <td style="text-align:right;color:#1e3a8a">${r.finC!=null?r.finC.toFixed(2):'—'}</td>
+      <td style="text-align:right;color:#047857">${r.performScore!=null?r.performScore:'—'}</td>
+      <td style="text-align:right;font-weight:700">${r.complete?r.total.toFixed(2):'—'}</td>
+      <td style="text-align:center"><span style="background:${achColor};color:#fff;padding:2px 8px;border-radius:9px;font-size:11px;font-weight:700">${ach}</span></td>
+      <td style="text-align:center">${r.complete&&r.grade?r.grade:'—'}</td>
+      <td style="text-align:center">${r.complete&&r.rank?r.rank:'—'}</td>
+    </tr>`;
+  };
+  const sortedComplete=[...complete].sort((a,b)=>b.total-a.total);
+  html += `<div class="table-wrap" style="max-height:none">
+    <table id="finalTermTable"><thead><tr>
+      <th>반/번호</th><th>이름</th><th>중간</th><th>기여</th><th>기말</th><th>기여</th><th>수행</th><th>환산총점</th><th>성취도</th><th>등급</th><th>석차</th>
+    </tr></thead><tbody>
+      ${sortedComplete.map(rowHtml).join('')}
+      ${incomplete.map(rowHtml).join('')}
+    </tbody></table>
+  </div>`;
+  $('finalTermBody').innerHTML=html;
+  const ftTable=$('finalTermTable'); if(ftTable) makeSortable(ftTable);
+}
+
+// nav/섹션 모드: 'paper'(지필) | 'finalterm'(학기말)
+function setNavMode(mode){
+  const isFT = mode==='finalterm';
+  document.querySelectorAll('#resultNav .item-nav').forEach(el=>{
+    const isNeis=el.classList.contains('neis-only');
+    el.style.display = isFT ? 'none' : (isNeis?'none':'');  // neis-only는 renderExam에서 재노출
+  });
+  document.querySelectorAll('.item-section').forEach(el=>{ el.style.display = isFT?'none':''; });
+  if(isFT) document.querySelectorAll('.neis-only').forEach(el=>{ el.style.display='none'; });
+  document.querySelectorAll('#resultNav .finalterm-only').forEach(el=>{ el.style.display=isFT?'':'none'; });
+  const ftSec=$('navFinalTerm'); if(ftSec) ftSec.style.display=isFT?'':'none';
+  const stuSec=$('navStudents'); if(stuSec) stuSec.style.display=isFT?'none':'';
+  const stuNav=document.querySelector('#resultNav .nav-link[data-target="navStudents"]'); if(stuNav) stuNav.style.display=isFT?'none':'';
+}
+
+function buildExamTabs(){
+  const bar=$('examTabs'); if(!bar) return [];
+  const tabs=[];
+  if(EXAM.mid) tabs.push({key:'mid', label:'📕 중간 분석'});
+  if(EXAM.final) tabs.push({key:'final', label:'📘 기말 분석'});
+  const midR=parseFloat($('midRatio').value)||0, finR=parseFloat($('finalRatio').value)||0, perR=parseFloat($('performRatio').value)||0;
+  const ftAvailable = (EXAM.mid||EXAM.final) && (midR+finR+perR)>0;
+  if(ftAvailable) tabs.push({key:'final_term', label:'🎓 학기말 분석'});
+  if(tabs.length<=1){ bar.style.display='none'; bar.innerHTML=''; }
+  else {
+    bar.style.display='flex';
+    bar.innerHTML = tabs.map(t=>`<button class="exam-tab" data-tab="${t.key}" style="padding:9px 18px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--ink-2);font-weight:700;font-size:13.5px;cursor:pointer;transition:all .15s">${t.label}</button>`).join('');
+    bar.querySelectorAll('.exam-tab').forEach(btn=>{ btn.addEventListener('click', ()=>switchExamTab(btn.dataset.tab)); });
+  }
+  return tabs;
+}
+
+function switchExamTab(tab){
+  ACTIVE_TAB=tab;
+  document.querySelectorAll('#examTabs .exam-tab').forEach(b=>{
+    const on=b.dataset.tab===tab;
+    b.style.background=on?'var(--pri)':'#fff';
+    b.style.color=on?'#fff':'var(--ink-2)';
+    b.style.borderColor=on?'var(--pri)':'var(--line)';
+  });
+  if(tab==='final_term') renderFinalTerm();
+  else renderExam(tab==='mid'?EXAM.mid:EXAM.final);
+  setTimeout(_updateNavActive, 200);
+}
+
 async function run(){
   clearErr();
   const deps = missingLibs();
@@ -6547,191 +7036,67 @@ async function run(){
     showToast('✗ 필수 라이브러리 로드 실패');
     return;
   }
-  const files = selectedFiles.length ? selectedFiles : Array.from($('file').files);
-  if(files.length===0){ showErr('엑셀 파일을 선택해주세요.'); return; }
-  // 분석 중 상태 — 버튼 비활성화 + 스피너
-  const runBtn = $('run');
-  const origBtnHTML = runBtn.innerHTML;
-  runBtn.disabled = true;
-  runBtn.innerHTML = '<span class="spinner"></span>분석 중…';
-  // 짧은 yield — 브라우저가 버튼 상태를 먼저 그리도록
-  await new Promise(r => requestAnimationFrame(()=>requestAnimationFrame(r)));
+  const midFiles = selectedFiles.length ? selectedFiles : Array.from($('file').files);
+  const finalFiles = selectedFilesFinal.slice();
+  const performFiles = selectedFilesPerform.slice();
+  if(midFiles.length===0 && finalFiles.length===0){ showErr('중간 또는 기말 답정오표를 업로드해주세요.'); return; }
+  const runBtn=$('run'); const origBtnHTML=runBtn.innerHTML;
+  runBtn.disabled=true; runBtn.innerHTML='<span class="spinner"></span>분석 중…';
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
   try{
-    const anon = $('anon').checked;
-    let items = null;
-    const students = [];
-    const fileLog = [];
-
-    for(const f of files){
-      const buf = await f.arrayBuffer();
-      const wb = XLSX.read(buf, {type:'array'});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-      const parsed = parseSheet(rows);
-
-      if(items===null){
-        items = parsed.items;
-        // 첫 파일에서 시험 정보 보강 (사용자가 비워둔 경우만)
-        const info = parseExamInfo(rows);
-        if(info.grade && [1,2,3].includes(info.grade)) $('grade').value = String(info.grade);
-        if(info.subject && !$('subject').value.trim()) $('subject').value = info.subject;
-        if(info.examName && !$('examName').value.trim()) $('examName').value = info.examName;
-      }else{
-        // verify item consistency (qno + answer + points)
-        if(parsed.items.length !== items.length)
-          throw new Error(`${f.name}: 문항 수가 다릅니다 (${parsed.items.length} vs ${items.length})`);
-        for(let i=0;i<items.length;i++){
-          if(parsed.items[i].qno !== items[i].qno)
-            throw new Error(`${f.name}: ${i+1}번째 문항번호 불일치 (${parsed.items[i].qno} vs ${items[i].qno})`);
-        }
-      }
-      parsed.students.forEach(s=>{ s._src = f.name; students.push(s); });
-      fileLog.push(`${escHTML(f.name)} (${parsed.students.length}명)`);
+    EXAM.mid=null; EXAM.final=null; EXAM.perform=null;
+    if(midFiles.length) EXAM.mid = await computeExam({files:midFiles, kind:'mid', examNameEl:$('examName'), neisFileEl:$('neisFile'), autoFillInfo:true});
+    if(finalFiles.length) EXAM.final = await computeExam({files:finalFiles, kind:'final', examNameEl:$('examNameFinal'), neisFileEl:$('neisFileFinal'), autoFillInfo:!EXAM.mid});
+    if(performFiles.length){
+      try{ EXAM.perform = await computePerform(performFiles); }
+      catch(e){ console.warn('수행 파싱 실패', e); const ps=$('performStatus'); if(ps) ps.innerHTML=`<span style="color:#b91c1c">✗ 수행 파싱 실패: ${escHTML(e.message||String(e))}</span>`; }
     }
+    if(EXAM.mid) $('fileList').innerHTML=_examOkBox(EXAM.mid.fileLog, EXAM.mid.students.length);
+    if(EXAM.final) $('fileListFinal').innerHTML=_examOkBox(EXAM.final.fileLog, EXAM.final.students.length);
+    if(EXAM.perform) $('fileListPerform').innerHTML=_examOkBox(EXAM.perform.fileLog, EXAM.perform.students.length);
 
-    // NEIS 문항정보표 파싱 + items 병합 (선택사항)
-    window._lastNeis = null;
-    window._lastNeisMerge = null;
-    const neisFileInput = $('neisFile');
-    const neisFile = neisFileInput && neisFileInput.files && neisFileInput.files[0];
-    if(neisFile){
-      try {
-        const nbuf = await neisFile.arrayBuffer();
-        const nwb = XLSX.read(nbuf, {type:'array'});
-        const nws = nwb.Sheets[nwb.SheetNames[0]];
-        const nrows = XLSX.utils.sheet_to_json(nws, {header:1, defval:''});
-        const neis = parseNeisItemSheet(nrows);
-        window._lastNeis = neis;
-        const mergeRes = mergeNeisIntoItems(items, neis);
-        window._lastNeisMerge = mergeRes;
-        const nstat = $('neisStatus');
-        if(nstat){
-          if(mergeRes.merged){
-            const warn = mergeRes.answerMismatch > 0
-              ? ` <span style="color:#b45309">⚠ 정답 ${mergeRes.answerMismatch}개 불일치 (NEIS 갱신 권장)</span>`
-              : '';
-            const openNote = mergeRes.openN > 0
-              ? ` <span style="color:#6b7280">· 서답형 ${mergeRes.openN}개는 분석 제외 (정책)</span>`
-              : '';
-            nstat.innerHTML = `<span style="color:#166534;font-weight:600">✓ NEIS 문항정보표 적용 — 선택형 ${mergeRes.selectN}문항 매칭</span>${openNote}${warn}`;
-          } else {
-            nstat.innerHTML = `<span style="color:#b91c1c">✗ NEIS 매칭 실패: ${escHTML(mergeRes.reason)} — 의도/성취기준 분석 건너뜀</span>`;
-          }
-        }
-      } catch(e){
-        console.warn('NEIS 파싱 실패:', e);
-        const nstat = $('neisStatus');
-        if(nstat) nstat.innerHTML = `<span style="color:#b91c1c">✗ NEIS 파싱 실패: ${escHTML(e.message||String(e))}</span>`;
-      }
-    }
-
-    $('fileList').innerHTML = `<div style="background:#dcfce7;color:#166534;padding:8px 12px;border-radius:9px;font-size:12.5px;margin-top:6px;font-weight:500">✓ 병합 완료: ${fileLog.join(', ')} · 총 <b>${students.length}명</b></div>`;
-
-    // 시험 정보 보강 후 최종값 읽기
-    const grade = +$('grade').value;
-    const subject = $('subject').value.trim();
-    const examName = $('examName').value.trim();
-
-    const stats = calcStats(students);
-    if(!stats){ showErr('총점 데이터를 계산할 수 없습니다.'); return; }
-    window._lastStats = stats;
-    assignGrades(students, grade);
-    const gd = gradeDist(students, grade);
-    const itemRes = calcItems(items, students);
-    const hist = histogram(students, subject);
-
-    const alpha = calcCronbach(items, students);
-    $('title').textContent = `${subject||'분석 결과'} ${examName? '— '+examName:''}`;
-    renderSummary(stats, grade, alpha);
-    activateCountUp();
-    renderGradeTable(gd, grade);
-    // 학생 모달용 인덱스 미리 부여
-    students.forEach((s, i)=>{ s._idx = i; });
-    _lastStudents = students;
-    lastItems = itemRes; lastFilter='all';
-    // PDF가 이미 업로드돼 임시 매핑(Q1..QN)이 만들어져 있다면, 실제 문항번호로 다시 매핑
-    if(qImageOrder.length){
-      const tempCrops = qImageOrder.map(k => ({dataURL: qImages[k], slot: qSlotMap[k]}));
-      const {map, order, slotMap} = mapCropsToQuestions(tempCrops, itemRes);
-      qImages = map; qImageOrder = order; qSlotMap = slotMap;
-    }
-    renderItemTable(itemRes, 'all', students);
-    renderStudents(students, anon);
-    drawCharts(itemRes, hist, gd, students, grade, anon);
-    renderPointRate(itemRes);
-    renderMatrix(items, students);
-    renderDistribution(items, students);
-    // NEIS 문항정보표 분석 (파일 있을 때만, 카드/nav 토글 처리)
-    try {
-      const intentRes = renderIntentAnalysis(itemRes);
-      const stdRes = renderStandardAnalysis(itemRes);
-      try{ drawNeisCharts(itemRes); }catch(e){ console.warn('drawNeisCharts', e); }
-      // nav 버튼 토글
-      const hasNeis = !!(intentRes || stdRes);
-      document.querySelectorAll('.neis-only').forEach(el => {
-        el.style.display = hasNeis ? '' : 'none';
-      });
-    } catch(e){ console.warn('NEIS 분석 렌더링 실패', e); }
-    $('review').innerHTML = buildReview(stats, itemRes, gd, grade, subject, examName, students, alpha);
-
-    // 분할점수 시뮬레이터 + 학기 환산 분석
-    setupCutsSimulator(students);
-    renderFinalScoreAnalysis(stats);
-
-    // 모든 메인 표에 정렬 기능 부여
-    makeSortable($('itemTable'));
-    makeSortable($('studentTable'));
-    makeSortable($('gradeTable'));
-    makeSortable($('distTable'));
-    makeSortable($('cutsCompTable'));
+    buildExamTabs();
+    const first = EXAM.mid? 'mid' : (EXAM.final? 'final' : 'final_term');
+    switchExamTab(first);
 
     $('result').classList.remove('hidden');
-    // 헤더 PDF/HTML 저장 버튼 활성화
-    const bp = document.getElementById('hdrBtnPrint'); if(bp) bp.disabled = false;
-    const bs = document.getElementById('hdrBtnSave');  if(bs) bs.disabled = false;
-    // 통계 카드 stagger 애니메이션 트리거 (재생을 위해 클래스 토글)
-    const resEl = $('result');
-    resEl.classList.remove('show-anim');
-    void resEl.offsetWidth; // reflow
-    resEl.classList.add('show-anim');
-    // 진단 박스 (매트릭스 안내) 등에도 entrance 애니메이션
-    document.querySelectorAll('#matrixInvInfo, #pdfMappingInfo').forEach(el=>{
-      el.classList.remove('info-box-anim');
-      void el.offsetWidth;
-      el.classList.add('info-box-anim');
-    });
-    // 분석이 성공적으로 끝나면 설정 카드 자동 접기 (사용자가 다시 펼 수 있음)
-    const setupCard = document.getElementById('setup');
-    if(setupCard && !setupCard.classList.contains('collapsed')){
-      setupCard.classList.add('collapsed');
-      const toggle = document.getElementById('setupToggle');
-      if(toggle) toggle.textContent = '펼치기 ▼';
-    }
+    const bp=document.getElementById('hdrBtnPrint'); if(bp) bp.disabled=false;
+    const bs=document.getElementById('hdrBtnSave'); if(bs) bs.disabled=false;
+    const resEl=$('result'); resEl.classList.remove('show-anim'); void resEl.offsetWidth; resEl.classList.add('show-anim');
+    document.querySelectorAll('#matrixInvInfo, #pdfMappingInfo').forEach(el=>{ el.classList.remove('info-box-anim'); void el.offsetWidth; el.classList.add('info-box-anim'); });
+    const setupCard=document.getElementById('setup');
+    if(setupCard && !setupCard.classList.contains('collapsed')){ setupCard.classList.add('collapsed'); const toggle=document.getElementById('setupToggle'); if(toggle) toggle.textContent='펼치기 ▼'; }
     window.scrollTo({top:$('result').offsetTop-10, behavior:'smooth'});
-    // 완료 토스트
-    showToast(`✓ 분석 완료 — ${stats.n}명 응시`, 'success');
+    const totalN = (EXAM.mid&&EXAM.mid.stats.n) || (EXAM.final&&EXAM.final.stats.n) || 0;
+    showToast(`✓ 분석 완료${totalN?` — ${totalN}명`:''}`, 'success');
     setTimeout(_updateNavActive, 600);
   }catch(e){
     console.error(e);
     showErr('분석 실패: '+e.message);
     showToast('✗ 분석 실패 — '+e.message);
   }finally{
-    runBtn.disabled = false;
-    runBtn.innerHTML = origBtnHTML;
+    runBtn.disabled=false; runBtn.innerHTML=origBtnHTML;
   }
 }
 
 $('run').addEventListener('click', run);
 
-// 원안지 PDF 업로드 핸들러
+// 원안지 PDF 업로드 핸들러 (중간/기말)
 $('pdfFile').addEventListener('change', e => {
   const f = e.target.files[0];
-  e.target.value = ''; // 같은 파일 다시 선택 가능하도록 초기화
-  onPdfFileChange(f);
+  e.target.value = '';
+  onPdfFileChange(f, 'mid');
 });
-// 모드 변경 시 같은 파일로 재처리
+const _pdfFinalEl = $('pdfFileFinal');
+if(_pdfFinalEl) _pdfFinalEl.addEventListener('change', e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  onPdfFileChange(f, 'final');
+});
+// 모드 변경 시 staged PDF 재처리
 $('pdfMode').addEventListener('change', () => {
-  if(_lastPdfFile) onPdfFileChange(_lastPdfFile);
+  if(pdfStage.mid && pdfStage.mid.file) onPdfFileChange(pdfStage.mid.file, 'mid');
+  if(pdfStage.final && pdfStage.final.file) onPdfFileChange(pdfStage.final.file, 'final');
 });
 
 // 인쇄 시 Chart.js 캔버스 강제 리사이즈
@@ -6799,6 +7164,48 @@ $('file').addEventListener('change', async e=>{
   }
   renderFileList();
 });
+
+// ── 기말 / 수행 파일 누적 핸들러 (중간과 동일 동작) ──
+let selectedFilesFinal = [];
+let selectedFilesPerform = [];
+const _fileStores = { fileListFinal: ()=>selectedFilesFinal, fileListPerform: ()=>selectedFilesPerform };
+
+function renderFilesInto(arr, listId, hint){
+  const box = $(listId); if(!box) return;
+  if(arr.length===0){ box.innerHTML=''; return; }
+  let html = '<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">';
+  arr.forEach((f,i)=>{
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 11px;background:#fff;border:1px solid var(--line);border-radius:9px;font-size:12.5px">
+      <span style="font-size:14px">📄</span>
+      <span style="flex:1;color:var(--ink-2);font-weight:500;word-break:break-all">${escHTML(f.name)} <span style="color:var(--muted-2);font-weight:400">(${(f.size/1024).toFixed(0)} KB)</span></span>
+      <button class="ghost remove-file-g" data-list="${listId}" data-idx="${i}" style="padding:3px 10px;font-size:11px;font-weight:600;border-radius:7px;color:#991b1b;border-color:#fecaca;box-shadow:none">제거</button>
+    </div>`;
+  });
+  html += `<div style="font-size:12px;color:var(--muted);margin-top:4px">총 <b style="color:var(--pri-deep)">${arr.length}개</b> 파일${hint?' · '+hint:''}</div>`;
+  html += '</div>';
+  box.innerHTML = html;
+  box.querySelectorAll('.remove-file-g').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const st = _fileStores[btn.dataset.list]; if(!st) return;
+      st().splice(+btn.dataset.idx, 1);
+      renderFilesInto(st(), btn.dataset.list, hint);
+    });
+  });
+}
+
+function attachAccumInput(inputId, listId, store){
+  const el = $(inputId); if(!el) return;
+  el.addEventListener('change', e=>{
+    Array.from(e.target.files).forEach(f=>{
+      if(!store().some(s=>s.name===f.name && s.size===f.size)) store().push(f);
+    });
+    e.target.value='';
+    renderFilesInto(store(), listId, '강의실별로 추가 업로드 가능');
+  });
+}
+attachAccumInput('fileFinal', 'fileListFinal', ()=>selectedFilesFinal);
+attachAccumInput('filePerform', 'fileListPerform', ()=>selectedFilesPerform);
+
 document.querySelectorAll('.filters button').forEach(b=>{
   b.addEventListener('click', ()=>{ lastFilter=b.dataset.f; renderItemTable(lastItems, lastFilter, _lastStudents); });
 });
@@ -6827,10 +7234,17 @@ $('cutsApply').addEventListener('click', ()=>{
 });
 
 // 학기 환산 비율 변경 시 자동 재계산
-['midRatio','finalRatio','performRatio','performMean','examType'].forEach(id=>{
-  $(id).addEventListener('change', ()=>{
+['midRatio','finalRatio','performRatio','performMean','paperMax','examType'].forEach(id=>{
+  const el=$(id); if(!el) return;
+  el.addEventListener('change', ()=>{
+    // 지필 탭: 기존 환산 예측 갱신
     const stats = window._lastStats;
-    if(stats) renderFinalScoreAnalysis(stats);
+    if(stats && ACTIVE_TAB!=='final_term') renderFinalScoreAnalysis(stats);
+    // 학기말 탭이 존재하면 탭 재구성 + 현재 학기말 보면 재렌더
+    if(EXAM.mid || EXAM.final){
+      buildExamTabs();
+      if(ACTIVE_TAB==='final_term'){ switchExamTab('final_term'); }
+    }
   });
 });
 // 수행 비율 변경 시 수행 평균을 자동 추천(만점의 90%)
