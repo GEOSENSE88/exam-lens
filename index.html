@@ -774,6 +774,20 @@
       </div>
     </div>
 
+    <!-- 학기말 환산 비율 (업로드 위) -->
+    <div style="margin-top:14px;padding:12px 14px;background:#f8faff;border:1px solid var(--line);border-radius:12px">
+      <div style="font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">📋 학기말 환산 비율 <span style="color:var(--muted);font-weight:400">· 학기말 분석 탭 산출 기준 (학기말점수 = 중간×비율 + 기말×비율 + 수행점수)</span></div>
+      <div class="row" style="gap:10px">
+        <div><label>중간 비율(%)</label><input type="number" id="midRatio" value="30" min="0" max="100" step="1"></div>
+        <div><label>기말 비율(%)</label><input type="number" id="finalRatio" value="30" min="0" max="100" step="1"></div>
+        <div><label>수행 비율(%)</label><input type="number" id="performRatio" value="40" min="0" max="100" step="1"></div>
+        <div><label>지필 만점 <span style="color:var(--muted);font-weight:400">(중간·기말 원점수 만점)</span></label><input type="number" id="paperMax" value="100" min="1" max="200" step="1"></div>
+        <div><label>수행평가 평균 <span style="color:var(--muted);font-weight:400">(파일 없을 때만 사용·만점=수행비율)</span></label><input type="number" id="performMean" value="36" min="0" max="100" step="0.1"></div>
+      </div>
+      <!-- examType: 학기말 탭 도입 후 미사용. renderFinalScoreAnalysis 하위호환용 hidden 유지 -->
+      <input type="hidden" id="examType" value="mid">
+    </div>
+
     <!-- 3분할 업로드 (중간 / 기말 / 수행) -->
     <div class="upload-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px">
       <!-- 중간고사 -->
@@ -851,18 +865,6 @@
       <span style="color:var(--muted);font-size:12px">· 동점자는 중간석차백분율(NEIS 표준)로 등급 부여</span>
     </div>
 
-    <div style="margin-top:14px;padding:12px 14px;background:#f8faff;border:1px solid var(--line);border-radius:12px">
-      <div style="font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">📋 학기말 환산 비율 <span style="color:var(--muted);font-weight:400">· 학기말 분석 탭 산출 기준 (학기말점수 = 중간×비율 + 기말×비율 + 수행점수)</span></div>
-      <div class="row" style="gap:10px">
-        <div><label>중간 비율(%)</label><input type="number" id="midRatio" value="30" min="0" max="100" step="1"></div>
-        <div><label>기말 비율(%)</label><input type="number" id="finalRatio" value="30" min="0" max="100" step="1"></div>
-        <div><label>수행 비율(%)</label><input type="number" id="performRatio" value="40" min="0" max="100" step="1"></div>
-        <div><label>지필 만점 <span style="color:var(--muted);font-weight:400">(중간·기말 원점수 만점)</span></label><input type="number" id="paperMax" value="100" min="1" max="200" step="1"></div>
-        <div><label>수행평가 평균 <span style="color:var(--muted);font-weight:400">(파일 없을 때만 사용·만점=수행비율)</span></label><input type="number" id="performMean" value="36" min="0" max="100" step="0.1"></div>
-      </div>
-      <!-- examType: 학기말 탭 도입 후 미사용. renderFinalScoreAnalysis 하위호환용 hidden 유지 -->
-      <input type="hidden" id="examType" value="mid">
-    </div>
     <div style="margin-top:14px">
       <button id="run">분석 시작</button>
       <span style="color:var(--muted);font-size:12px;margin-left:10px">· PDF·HTML 저장은 우측 상단 버튼으로 가능합니다</span>
