@@ -939,7 +939,7 @@
       </div>
     </section>
 
-    <section class="card item-section">
+    <section class="card item-section" id="navProjection">
       <h2>학기말 환산 점수 분석<span class="tip" data-tip="학기말 점수 = 중간×비율 + 기말×비율 + 수행평가&#10;·이번 평가가 학기 환산 평균에 얼마나 기여하는지 계산&#10;·다른 시험(중간 또는 기말) 평균에 따라 학기 환산 평균이 어떻게 변하는지 시나리오 표로 제공&#10;·적정 학기 평균(70/75/80점) 목표 시 다른 시험 필요 평균을 역산해 출제 방향 권고">?</span></h2>
       <p style="color:var(--muted);margin:0 0 12px;font-size:13px">위 [학기말 환산 비율] 입력 기준 · 이번 평가가 학기말 점수에 얼마나 기여하는지, 적정 평균을 위한 기말 평균 권고 산출</p>
       <div id="finalScoreAnalysis"></div>
@@ -6828,6 +6828,11 @@ function renderExam(b){
   setupCutsSimulator(students);
   renderFinalScoreAnalysis(stats);
   ['itemTable','studentTable','gradeTable','distTable','cutsCompTable'].forEach(id=>{ const el=$(id); if(el) makeSortable(el); });
+  // 기말 탭: [학기말 환산 점수 분석]·[성취도 분할점수 시뮬레이터]는 학기말 탭으로 대체되므로 숨김 (중간 탭에는 유지)
+  const isFinal = b.kind==='final';
+  const simSec=$('navSim'); if(simSec) simSec.style.display = isFinal?'none':'';
+  const projSec=$('navProjection'); if(projSec) projSec.style.display = isFinal?'none':'';
+  const simNav=document.querySelector('#resultNav .nav-link[data-target="navSim"]'); if(simNav) simNav.style.display = isFinal?'none':'';
 }
 
 // 학기말 환산 학생 합성 (학번 조인)
