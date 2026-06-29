@@ -4779,7 +4779,7 @@ function buildFinalTermReport(opts){
   const imgRank  = chartToImage('rank',  {width:1100, ratio:0.32});
   // 성취도 집계
   const achCount = {A:0,B:0,C:0,D:0,E:0,I:0};
-  complete.forEach(r=>{ achCount[achLevelOf(r.total)]++; });
+  complete.forEach(r=>{ achCount[ftAch(r.total)]++; });
   const maxG = grade===3?9:5;
   let html='';
   html += `<section class="pr-page pr-cover">
@@ -4823,7 +4823,7 @@ function buildFinalTermReport(opts){
   const rankMap={}; sorted.forEach((r)=>{ rankMap[r.sid]=r; });
   html += `<section class="pr-page pr-landscape"><h2 class="pr-h2">학생별 학기말 종합표</h2>
     <table class="pr-table"><thead><tr><th>석차</th><th class="l">이름</th><th>중간</th><th>기말</th><th>수행</th><th>환산총점</th><th>성취도</th><th>등급</th></tr></thead><tbody>
-    ${sorted.map((r,i)=>{ const ach=achLevelOf(r.total); return `<tr><td>${r.rank||i+1}</td><td class="l">${_ftMask(r.name,r.sid,anon)}</td><td>${r.midScore!=null?r.midScore:'-'}</td><td>${r.finalScore!=null?r.finalScore:'-'}</td><td>${r.performScore!=null?r.performScore:'-'}</td><td><b>${r.total.toFixed(1)}</b></td><td>${ach}</td><td>${r.grade||'-'}</td></tr>`; }).join('')}
+    ${sorted.map((r,i)=>{ const ach=ftAch(r.total); return `<tr><td>${r.rank||i+1}</td><td class="l">${_ftMask(r.name,r.sid,anon)}</td><td>${r.midScore!=null?_n2(r.midScore):'-'}</td><td>${r.finalScore!=null?_n2(r.finalScore):'-'}</td><td>${r.performScore!=null?_n2(r.performScore):'-'}</td><td><b>${r.total.toFixed(2)}</b></td><td>${ach}</td><td>${r.grade||'-'}</td></tr>`; }).join('')}
     </tbody></table>
     <p class="pr-footer">Exam-Lens · 학기말 종합 · ${dateStr}</p>
   </section>`;
@@ -6688,6 +6688,10 @@ let ACTIVE_TAB = 'mid';
 const pdfStage = { mid:null, final:null };
 
 function achLevelOf(t){ return t>=90?'A':t>=80?'B':t>=70?'C':t>=60?'D':t>=40?'E':'I'; }
+// 학기말 환산점수 → 성취도: 점수를 정수로 반올림한 뒤 판정 (예: 89.74 → 90 → A)
+function ftAch(t){ return achLevelOf(Math.round(t)); }
+// 부동소수 artifact 제거 — 소수 둘째자리까지
+function _n2(x){ return Math.round((+x||0)*100)/100; }
 function _examOkBox(fileLog, n){
   return `<div style="background:#dcfce7;color:#166534;padding:8px 12px;border-radius:9px;font-size:12.5px;margin-top:6px;font-weight:500">✓ ${fileLog.join(', ')} · 총 <b>${n}명</b></div>`;
 }
@@ -6850,10 +6854,11 @@ function buildFinalTermStudents(){
     if(useFin && r.final==null) missing.push('기말');
     if(usePerf && r.perform==null) missing.push('수행');
     const complete = missing.length===0;
-    const total = (midC||0)+(finC||0)+(perfC||0);
+    const total = _n2((midC||0)+(finC||0)+(perfC||0));
     return {sid:r.sid, no:r.sid, name:r.name, cls:r.cls,
             midScore:r.mid, finalScore:r.final, performScore:r.perform,
-            midC, finC, perfC, missing, complete, total, sel:null, desc:null};
+            midC:(midC==null?null:_n2(midC)), finC:(finC==null?null:_n2(finC)), perfC:(perfC==null?null:_n2(perfC)),
+            missing, complete, total, sel:null, desc:null};
   });
   return {rows, useMid, useFin, usePerf, midR, finR, perR, paperMax};
 }
@@ -6871,7 +6876,8 @@ function renderFinalTerm(){
     complete.forEach((s,i)=>{ s._idx=i; });
     const stats=calcStats(complete);
     const gd=gradeDist(complete, grade);
-    const hist=histogram(complete, subject);
+    // 성취도 분포는 반올림 정수 기준(89.74→90→A)으로 집계
+    const hist=histogram(complete.map(s=>({total:Math.round(s.total), name:s.name})), subject);
     _lastStudents=complete; window._lastStats=stats; lastItems=[];
     renderSummary(stats, grade, null);
     activateCountUp();
@@ -6909,63 +6915,118 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
       <div style="font-size:12px;color:#9a3412;margin-top:6px">${names}${incomplete.length>40?' 외…':''}</div>
     </div>`;
   }
+  // 성취도 분포(반올림 정수 기준) 집계 — 여러 패널에서 공용
+  const LVS=['A','B','C','D','E','I'];
+  const achCnt={A:0,B:0,C:0,D:0,E:0,I:0};
+  complete.forEach(r=>{ achCnt[ftAch(r.total)]++; });
+  const N=complete.length;
   if(complete.length){
     const avg = arr=> arr.length? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
     const mC=avg(complete.map(r=>r.midC||0)), fC=avg(complete.map(r=>r.finC||0)), pC=avg(complete.map(r=>r.perfC||0)), tot=avg(complete.map(r=>r.total));
     html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px">
-      <div style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">중간 평균 기여</div><div style="font-size:20px;font-weight:800;color:#1e40af">${mC.toFixed(2)}</div></div>
-      <div style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">기말 평균 기여</div><div style="font-size:20px;font-weight:800;color:#1e3a8a">${fC.toFixed(2)}</div></div>
-      <div style="background:linear-gradient(135deg,#dcfce7,#d1fae5);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">수행 평균 기여</div><div style="font-size:20px;font-weight:800;color:#047857">${pC.toFixed(2)}</div></div>
-      <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">학기말 환산 평균</div><div style="font-size:20px;font-weight:800;color:#b45309">${tot.toFixed(2)}</div></div>
+      <div style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">중간 평균 기여</div><div style="font-size:20px;font-weight:800;color:#1e40af">${_n2(mC).toFixed(2)}</div></div>
+      <div style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">기말 평균 기여</div><div style="font-size:20px;font-weight:800;color:#1e3a8a">${_n2(fC).toFixed(2)}</div></div>
+      <div style="background:linear-gradient(135deg,#dcfce7,#d1fae5);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">수행 평균 기여</div><div style="font-size:20px;font-weight:800;color:#047857">${_n2(pC).toFixed(2)}</div></div>
+      <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">학기말 환산 평균</div><div style="font-size:20px;font-weight:800;color:#b45309">${_n2(tot).toFixed(2)}</div></div>
+    </div>`;
+    // ── 성취도 분포 비율 (A~E·I) ──
+    const maxCnt=Math.max(...LVS.map(l=>achCnt[l]),1);
+    html += `<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">🏅 성취도 분포 <span style="color:var(--muted);font-weight:400;font-size:11.5px">· 환산점수 반올림 정수 기준 · 총 ${N}명</span></div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:7px">
+        ${LVS.map(l=>{const c=achCnt[l],p=N?c/N*100:0;return `<div style="text-align:center;border:1px solid var(--line);border-radius:10px;overflow:hidden">
+          <div style="background:${_LV[l]||'#999'};color:#fff;font-weight:800;font-size:13px;padding:3px 0">${l}</div>
+          <div style="padding:7px 2px"><div style="font-size:17px;font-weight:800;color:var(--ink)">${c}</div><div style="font-size:11px;color:var(--muted)">${p.toFixed(1)}%</div>
+          <div style="height:5px;background:#eef1f7;border-radius:3px;margin-top:5px;overflow:hidden"><div style="height:100%;width:${(c/maxCnt*100).toFixed(0)}%;background:${_LV[l]||'#999'}"></div></div></div>
+        </div>`;}).join('')}
+      </div>
     </div>`;
   } else {
     html += `<div style="color:var(--muted);padding:14px">환산 가능한 학생이 없습니다. 중간·기말·수행 데이터와 반영비율을 확인하세요.</div>`;
   }
-  // 중간 ↔ 기말 변화·상관 (둘 다 반영된 경우)
-  if(complete.length>=2 && ft.useMid && ft.useFin){
-    const xs=complete.map(r=>r.midScore), ys=complete.map(r=>r.finalScore);
-    const r=pearsonCorr(xs,ys);
-    const deltas=complete.map(r=>({name:r.name, sid:r.sid, d:(r.finalScore-r.midScore)}));
-    const up=[...deltas].sort((a,b)=>b.d-a.d).slice(0,5).filter(x=>x.d>0);
-    const down=[...deltas].sort((a,b)=>a.d-b.d).slice(0,5).filter(x=>x.d<0);
-    const rTxt = r==null?'—':r.toFixed(2);
-    const rDesc = r==null?'':(r>=0.7?'(강한 양의 상관 — 성취 순위가 대체로 유지)':r>=0.4?'(중간 상관)':r>=0.1?'(약한 상관 — 순위 변동 큼)':'(상관 거의 없음 — 순위 변동 매우 큼)');
-    const li=arr=>arr.map(x=>`<span style="display:inline-block;background:#fff;border:1px solid var(--line);border-radius:8px;padding:2px 8px;margin:2px;font-size:12px">${_ftMask(x.name,x.sid,anon)} <b style="color:${x.d>0?'#047857':'#dc2626'}">${x.d>0?'+':''}${x.d}</b></span>`).join('');
+  // ── 중간 vs 기말 비교 분석 (둘 다 업로드된 경우) ──
+  if(EXAM.mid && EXAM.final){
+    const ms=EXAM.mid.stats, fs=EXAM.final.stats;
+    const cmpRow=(label,m,f,fix)=>{ const d=f-m; return `<tr><td class="l">${label}</td><td>${m.toFixed(fix)}</td><td>${f.toFixed(fix)}</td><td style="color:${d>=0?'#047857':'#dc2626'};font-weight:600">${d>=0?'+':''}${_n2(d)}</td></tr>`; };
+    let cmp=`<table class="pr-table" style="width:auto;min-width:340px;font-size:12.5px"><thead><tr><th class="l">지표</th><th>중간</th><th>기말</th><th>변화</th></tr></thead><tbody>
+      ${cmpRow('평균',ms.mean,fs.mean,1)}${cmpRow('표준편차',ms.sd,fs.sd,1)}${cmpRow('중앙값',ms.median,fs.median,1)}${cmpRow('최고점',ms.max,fs.max,0)}${cmpRow('최저점',ms.min,fs.min,0)}
+      <tr><td class="l">응시 인원</td><td>${ms.n}</td><td>${fs.n}</td><td>—</td></tr></tbody></table>`;
+    const both=complete.filter(r=>r.midScore!=null && r.finalScore!=null);
+    let corrHtml='';
+    if(both.length>=2){
+      const r=pearsonCorr(both.map(x=>x.midScore), both.map(x=>x.finalScore));
+      const deltas=both.map(x=>({name:x.name,sid:x.sid,d:_n2(x.finalScore-x.midScore)}));
+      const up=[...deltas].sort((a,b)=>b.d-a.d).slice(0,5).filter(x=>x.d>0);
+      const down=[...deltas].sort((a,b)=>a.d-b.d).slice(0,5).filter(x=>x.d<0);
+      const rTxt=r==null?'—':r.toFixed(2);
+      const rDesc=r==null?'':(r>=0.7?'(강한 양의 상관 — 성취 순위 대체로 유지)':r>=0.4?'(중간 상관)':r>=0.1?'(약한 상관 — 순위 변동 큼)':'(상관 거의 없음 — 순위 변동 매우 큼)');
+      const li=arr=>arr.map(x=>`<span style="display:inline-block;background:#fff;border:1px solid var(--line);border-radius:8px;padding:2px 8px;margin:2px;font-size:12px">${_ftMask(x.name,x.sid,anon)} <b style="color:${x.d>0?'#047857':'#dc2626'}">${x.d>0?'+':''}${x.d}</b></span>`).join('');
+      corrHtml=`<div style="font-size:12.5px;color:var(--ink-2);margin:10px 0 6px">중간·기말 원점수 상관계수 <b style="color:var(--pri-deep)">r = ${rTxt}</b> <span style="color:var(--muted)">${rDesc}</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><div style="font-size:12px;color:#047857;font-weight:600;margin-bottom:3px">▲ 상승 상위</div>${up.length?li(up):'<span style="color:var(--muted);font-size:12px">없음</span>'}</div>
+          <div><div style="font-size:12px;color:#dc2626;font-weight:600;margin-bottom:3px">▼ 하락 상위</div>${down.length?li(down):'<span style="color:var(--muted);font-size:12px">없음</span>'}</div>
+        </div>`;
+    }
     html += `<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:14px">
-      <div style="font-weight:700;font-size:13px;margin-bottom:6px">📈 중간 ↔ 기말 변화·상관</div>
-      <div style="font-size:12.5px;color:var(--ink-2);margin-bottom:8px">중간·기말 원점수 상관계수 <b style="color:var(--pri-deep)">r = ${rTxt}</b> <span style="color:var(--muted)">${rDesc}</span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><div style="font-size:12px;color:#047857;font-weight:600;margin-bottom:3px">▲ 상승 상위</div>${up.length?li(up):'<span style="color:var(--muted);font-size:12px">없음</span>'}</div>
-        <div><div style="font-size:12px;color:#dc2626;font-weight:600;margin-bottom:3px">▼ 하락 상위</div>${down.length?li(down):'<span style="color:var(--muted);font-size:12px">없음</span>'}</div>
-      </div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">🔬 중간 vs 기말 비교 분석 <span style="color:var(--muted);font-weight:400;font-size:11.5px">· 원점수 기준</span></div>
+      ${cmp}${corrHtml}
     </div>`;
   }
-  // 성취도 경계선 학생 (컷 2점 미만 아래)
+  // 성취도 경계선 학생 (반올림 기준 컷 직전 2점)
   if(complete.length){
     const cuts=[{lv:'A',c:90},{lv:'B',c:80},{lv:'C',c:70},{lv:'D',c:60},{lv:'E',c:40}];
     const bands=cuts.map(cut=>{
-      const near=complete.filter(r=> r.total>=cut.c-2 && r.total<cut.c).sort((a,b)=>b.total-a.total);
+      const near=complete.filter(r=>{ const t=Math.round(r.total); return t>=cut.c-2 && t<cut.c; }).sort((a,b)=>b.total-a.total);
       return {cut, near};
     }).filter(b=>b.near.length);
     if(bands.length){
-      const _LV2=_LV;
       html += `<div style="background:#fff7fb;border:1px solid #f5d0e8;border-radius:12px;padding:13px 15px;margin-bottom:14px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:4px">🎯 성취도 경계선 학생 <span style="color:var(--muted);font-weight:400;font-size:11.5px">(컷 2점 미만으로 아쉽게 미달)</span></div>
-        ${bands.map(b=>`<div style="font-size:12.5px;margin-top:5px"><span style="background:${_LV2[b.cut.lv]||'#999'};color:#fff;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:700">${b.cut.lv} 컷 ${b.cut.c}</span> ${b.near.map(r=>`${_ftMask(r.name,r.sid,anon)}(${r.total.toFixed(1)})`).join(', ')}</div>`).join('')}
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px">🎯 성취도 경계선 학생 <span style="color:var(--muted);font-weight:400;font-size:11.5px">(컷 2점 미만으로 아쉽게 미달 · 반올림 기준)</span></div>
+        ${bands.map(b=>`<div style="font-size:12.5px;margin-top:5px"><span style="background:${_LV[b.cut.lv]||'#999'};color:#fff;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:700">${b.cut.lv} 컷 ${b.cut.c}</span> ${b.near.map(r=>`${_ftMask(r.name,r.sid,anon)}(${_n2(r.total).toFixed(2)})`).join(', ')}</div>`).join('')}
       </div>`;
     }
   }
+  // ── 학기말 결과 총평 ──
+  if(complete.length){
+    const totals=complete.map(r=>r.total);
+    const mean=totals.reduce((a,b)=>a+b,0)/N;
+    const sd=Math.sqrt(totals.reduce((a,b)=>a+(b-mean)**2,0)/N);
+    const topLv=LVS.slice().sort((a,b)=>achCnt[b]-achCnt[a])[0];
+    const aPct=(achCnt.A/N*100), iN=achCnt.I, eIN=achCnt.E+achCnt.I;
+    const gNums=complete.map(r=>r.grade).filter(g=>g);
+    const maxG=grade===3?9:5;
+    const hiN=gNums.filter(g=>g<=Math.ceil(maxG/3)).length;
+    const loN=gNums.filter(g=>g>maxG-Math.ceil(maxG/3)).length;
+    const bits=[];
+    bits.push(`환산 대상 <b>${N}명</b>의 학기말 환산 평균은 <b>${_n2(mean).toFixed(2)}점</b>(표준편차 ${_n2(sd).toFixed(2)})입니다.`);
+    bits.push(`성취도는 <b>${topLv}</b>가 ${achCnt[topLv]}명(${(achCnt[topLv]/N*100).toFixed(1)}%)으로 가장 많고, A 비율은 ${aPct.toFixed(1)}%입니다.`);
+    if(iN>0) bits.push(`미도달(I) <b style="color:#b91c1c">${iN}명</b>이 있어 별도 지도가 필요합니다.`); else bits.push(`미도달(I)은 없습니다.`);
+    bits.push(`상위권(${Math.ceil(maxG/3)}등급 이내) ${hiN}명 · 하위권 ${loN}명 분포입니다.`);
+    if(EXAM.mid && EXAM.final){
+      const both=complete.filter(r=>r.midScore!=null && r.finalScore!=null);
+      if(both.length>=2){
+        const r=pearsonCorr(both.map(x=>x.midScore), both.map(x=>x.finalScore));
+        const md=both.reduce((a,b)=>a+(b.finalScore-b.midScore),0)/both.length;
+        bits.push(`중간→기말 평균 변화는 ${md>=0?'+':''}${_n2(md)}점, 두 시험 상관 r=${r==null?'—':r.toFixed(2)}로 ${r>=0.7?'성취 순위가 대체로 유지':'순위 변동이 다소 큼'}됩니다.`);
+      }
+    }
+    if(incomplete.length) bits.push(`<span style="color:#9a3412">※ 인정점수 대상 ${incomplete.length}명은 통계에서 제외되어 실제 성적처리와 차이가 있을 수 있습니다.</span>`);
+    html += `<div style="background:linear-gradient(135deg,#f0f6ff,#e6f1ff);border:1.5px solid #cfe0ff;border-radius:12px;padding:14px 16px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:6px">📝 학기말 결과 총평</div>
+      <div style="font-size:12.8px;color:var(--ink-2);line-height:1.75">${bits.join(' ')}</div>
+    </div>`;
+  }
   const rowHtml=r=>{
-    const ach = r.complete? achLevelOf(r.total):'-';
+    const ach = r.complete? ftAch(r.total):'-';
     const achColor=_LV[ach]||'#9ca3af';
     return `<tr${r.complete?'':' style="background:#fff7ed"'}>
       <td style="text-align:center">${escHTML(r.cls||'')}</td>
       <td>${_ftMask(r.name,r.sid,anon)}${r.complete?'':' <span style="color:#ea580c;font-size:10px">인정</span>'}</td>
-      <td style="text-align:right">${r.midScore!=null?r.midScore:'—'}</td>
+      <td style="text-align:right">${r.midScore!=null?_n2(r.midScore):'—'}</td>
       <td style="text-align:right;color:#1e40af">${r.midC!=null?r.midC.toFixed(2):'—'}</td>
-      <td style="text-align:right">${r.finalScore!=null?r.finalScore:'—'}</td>
+      <td style="text-align:right">${r.finalScore!=null?_n2(r.finalScore):'—'}</td>
       <td style="text-align:right;color:#1e3a8a">${r.finC!=null?r.finC.toFixed(2):'—'}</td>
-      <td style="text-align:right;color:#047857">${r.performScore!=null?r.performScore:'—'}</td>
+      <td style="text-align:right;color:#047857">${r.performScore!=null?_n2(r.performScore):'—'}</td>
       <td style="text-align:right;font-weight:700">${r.complete?r.total.toFixed(2):'—'}</td>
       <td style="text-align:center"><span style="background:${achColor};color:#fff;padding:2px 8px;border-radius:9px;font-size:11px;font-weight:700">${ach}</span></td>
       <td style="text-align:center">${r.complete&&r.grade?r.grade:'—'}</td>
