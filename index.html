@@ -1792,6 +1792,27 @@ const valueLabel = {
 // ---- 분할점수 시뮬레이터 ----
 let _lastStudents = null;
 
+// 저장본(setup 카드 제거됨)에서 폼 입력 id를 hidden 으로 재생성 — 환산/탭 함수가 값을 읽도록
+function _restoreSnapForm(f){
+  f = f || {};
+  if(document.getElementById('__snapForm')) return;
+  const need = id => !document.getElementById(id);
+  const box = document.createElement('div'); box.id='__snapForm'; box.style.display='none';
+  const mk=(id,val)=>{ const i=document.createElement('input'); i.id=id; i.value=(val==null?'':String(val)); box.appendChild(i); };
+  if(need('grade')) mk('grade', f.grade||'1');
+  if(need('subject')) mk('subject', f.subject||'');
+  if(need('examName')) mk('examName', f.examName||'');
+  if(need('examNameFinal')) mk('examNameFinal', f.examNameFinal||'');
+  if(need('midRatio')) mk('midRatio', f.midRatio||'0');
+  if(need('finalRatio')) mk('finalRatio', f.finalRatio||'0');
+  if(need('performRatio')) mk('performRatio', f.performRatio||'0');
+  if(need('paperMax')) mk('paperMax', f.paperMax||'100');
+  if(need('performMean')) mk('performMean', f.performMean||'0');
+  if(need('examType')) mk('examType', 'mid');
+  if(need('anon')){ const a=document.createElement('input'); a.id='anon'; a.type='checkbox'; a.checked=!!f.anon; box.appendChild(a); }
+  document.body.appendChild(box);
+}
+
 // 🔧 HTML 저장 후 다시 열 때, snapshot script가 호출하는 진입점.
 //    snapshot은 별도 <script>라 메인 스크립트의 let 변수에 직접 접근 불가 →
 //    이 함수가 메인 스크립트 스코프 안에서 let들에 값을 주입한다.
@@ -1803,6 +1824,21 @@ window.__restoreExamLensSnapshot = function(snap){
     //  $('grade') 가 null 인 채로 재렌더 → 9등급제로 박혀버리는 깜빡임 방지)
     if(_lastStudents && Array.isArray(_lastStudents) && _lastStudents.length > 0){
       return;
+    }
+    // 폼 입력 복원 (저장본엔 setup 카드가 없어 $('grade')·비율 등이 null)
+    _restoreSnapForm(snap._form || {});
+    // 신형: 다중 평가(중간/기말/수행) 저장소 복원 → 탭 재구성 후 종료
+    if(snap.EXAM && (snap.EXAM.mid || snap.EXAM.final || snap.EXAM.perform)){
+      try{
+        EXAM.mid = snap.EXAM.mid || null;
+        EXAM.final = snap.EXAM.final || null;
+        EXAM.perform = snap.EXAM.perform || null;
+        const _result0 = document.getElementById('result'); if(_result0) _result0.classList.remove('hidden');
+        buildExamTabs();
+        switchExamTab(snap.ACTIVE_TAB || (EXAM.mid?'mid':(EXAM.final?'final':'final_term')));
+        console.log('[Exam-Lens] 다중평가 스냅샷 복원 완료');
+        return;
+      }catch(e){ console.error('[Exam-Lens] EXAM 복원 실패 — 단일 복원 폴백', e); }
     }
     if(snap._lastStudents) _lastStudents = snap._lastStudents;
     if(snap.lastItems) lastItems = snap.lastItems;
@@ -5261,7 +5297,13 @@ function saveHtml(){
     grade: ($('grade') && $('grade').value) || '',
     subject: ($('subject') && $('subject').value) || '',
     examName: ($('examName') && $('examName').value) || '',
+    examNameFinal: ($('examNameFinal') && $('examNameFinal').value) || '',
     anon: !!($('anon') && $('anon').checked),
+    midRatio: ($('midRatio') && $('midRatio').value) || '',
+    finalRatio: ($('finalRatio') && $('finalRatio').value) || '',
+    performRatio: ($('performRatio') && $('performRatio').value) || '',
+    paperMax: ($('paperMax') && $('paperMax').value) || '100',
+    performMean: ($('performMean') && $('performMean').value) || '',
   };
 
   // [1. 파일 업로드 및 설정] 카드는 저장본에서 제거 — 보고서 전용
@@ -5307,6 +5349,9 @@ function saveHtml(){
         qImages: (typeof qImages !== 'undefined' ? qImages : {}),
         qImageOrder: (typeof qImageOrder !== 'undefined' ? qImageOrder : []),
         qSlotMap: (typeof qSlotMap !== 'undefined' ? qSlotMap : {}),
+        // 다중 평가(중간/기말/수행) 저장소 + 활성 탭 — 저장본에서 탭 전환·재렌더 복원용
+        EXAM: (typeof EXAM !== 'undefined' ? EXAM : null),
+        ACTIVE_TAB: (typeof ACTIVE_TAB !== 'undefined' ? ACTIVE_TAB : 'mid'),
         // 폼 값 — 저장 직전 캡처 (setup 카드 제거 전 값). 9등급 폴백 버그 방지
         _form: _snapForm,
       };
