@@ -4835,6 +4835,11 @@ function buildFinalTermReport(opts){
     </dl>
     <p class="pr-note" style="margin-top:14mm">학기말 환산점수 = 중간×${ft.midR}% + 기말×${ft.finR}% + 수행점수 (지필만점 ${ft.paperMax}).${incomplete.length?' 병결·인정결로 인정점수가 부여되는 학생은 실제 성적처리와 다를 수 있어 통계에서 제외했습니다.':''}${anon?' (익명 모드)':''}</p>
   </section>`;
+  // 서술형 총평
+  try{
+    const rev = buildFinalTermReview(complete, incomplete, grade, subject, ft);
+    if(rev) html += `<section class="pr-page"><h2 class="pr-h2">학기말 결과 총평</h2><div class="pr-review">${rev}</div></section>`;
+  }catch(e){ console.warn('학기말 총평(보고서) 생성 실패', e); }
   // 요약 + 분포
   html += `<section class="pr-page"><h2 class="pr-h2">학기말 환산 결과 요약</h2>
     <div class="pr-summary">
@@ -6942,6 +6947,77 @@ function renderFinalTerm(){
   renderFinalTermPanels(ft, complete, incomplete, grade);
 }
 
+// 학기말 종합 서술형 총평 (성취도 중심 — 「출제 검토 자동 총평」 스타일)
+function buildFinalTermReview(complete, incomplete, grade, subject, ft){
+  const n = complete.length; if(!n) return '';
+  const totals = complete.map(r=>r.total);
+  const mean = totals.reduce((a,b)=>a+b,0)/n;
+  const sd = Math.sqrt(totals.reduce((a,b)=>a+(b-mean)**2,0)/n);
+  const sorted=[...totals].sort((a,b)=>a-b);
+  const median = n%2? sorted[(n-1)/2] : (sorted[n/2-1]+sorted[n/2])/2;
+  const maxV=Math.max(...totals), minV=Math.min(...totals);
+  const ach={A:0,B:0,C:0,D:0,E:0,I:0}; complete.forEach(r=>ach[ftAch(r.total)]++);
+  const perfect = totals.filter(t=>t>=100).length;
+  const pct = c => (c/n*100);
+  const cls = classBreakdown(complete);
+  const meanDesc = mean>=80?'매우 높은':mean>=70?'다소 높은':mean>=60?'적정한':mean>=50?'다소 낮은':'낮은';
+  // 성취도 분포 균등성
+  const bandCounts=[ach.A,ach.B,ach.C,ach.D,ach.E];
+  const bMean=bandCounts.reduce((a,b)=>a+b,0)/5;
+  const bSd=Math.sqrt(bandCounts.reduce((a,b)=>a+(b-bMean)**2,0)/5);
+  const evenDesc = (bMean>0 && (bSd/bMean)<0.45) ? '다소 고르게 분포함' : '특정 구간에 다소 편중됨';
+
+  // 1. 평균 및 성취도 해석
+  let p1 = `<p>학기말 환산 평균은 <b>${mean.toFixed(1)}점</b>이며, 표준편차는 <b>${sd.toFixed(1)}점</b>(최고 ${maxV}점 / 최저 ${minV}점)으로 ${meanDesc} 수준의 성취를 보임.`;
+  if(cls.classes.length>1 && cls.significantCount>=2){
+    p1 += ` 학급별(5명 이상 응시 학급 기준) 평균 차이는 약 <b>${cls.spread.toFixed(1)}점</b>임.`;
+  }
+  p1 += `</p>`;
+
+  let p2 = `<p>고정분할점수에 따른 성취도 분포를 보면 `;
+  p2 += `<b>A(90점 이상)</b> ${ach.A}명(${pct(ach.A).toFixed(1)}%)`;
+  if(perfect>0) p2 += ` 가운데 만점자 ${perfect}명 포함`;
+  p2 += `, <b>B</b> ${ach.B}명(${pct(ach.B).toFixed(1)}%), <b>C</b> ${ach.C}명(${pct(ach.C).toFixed(1)}%), <b>D</b> ${ach.D}명(${pct(ach.D).toFixed(1)}%), <b>E</b> ${ach.E}명(${pct(ach.E).toFixed(1)}%)으로 ${evenDesc}. `;
+  p2 += `최소성취수준 미도달(40점 미만)은 <b style="color:#dc2626">${ach.I}명(${pct(ach.I).toFixed(1)}%)</b>`;
+  p2 += ach.I>0 ? `으로, 최소성취수준 도달을 위한 단원별 보충 지도와 개별 피드백이 필요함.` : `으로 없음.`;
+  p2 += `</p>`;
+
+  // 표준편차/변별 + 중간↔기말 변화
+  let p3='<p>';
+  if(sd>=18) p3+=`표준편차 ${sd.toFixed(1)}점으로 상·하위권 점수 격차가 큰 편이므로, 하위권에 대한 보충과 상위권 심화를 병행할 필요가 있음. `;
+  else if(sd<=10) p3+=`표준편차 ${sd.toFixed(1)}점으로 점수 분포가 좁아 변별이 크지 않음. `;
+  else p3+=`표준편차 ${sd.toFixed(1)}점으로 점수 분포는 적정 수준임. `;
+  const skew = mean - median;
+  if(Math.abs(skew)>=4){
+    p3 += skew>0
+      ? `평균(${mean.toFixed(1)})이 중앙값(${median.toFixed(1)})보다 높아 상위권 일부가 평균을 끌어올린 형태이며 중위권 점검이 필요함. `
+      : `중앙값(${median.toFixed(1)})이 평균(${mean.toFixed(1)})보다 높아 하위권 소수가 평균을 끌어내린 형태이며 미도달 학생 지원이 시급함. `;
+  }
+  if(EXAM.mid && EXAM.final){
+    const both=complete.filter(r=>r.midScore!=null && r.finalScore!=null);
+    if(both.length>=2){
+      const r=pearsonCorr(both.map(x=>x.midScore),both.map(x=>x.finalScore));
+      const md=both.reduce((a,b)=>a+(b.finalScore-b.midScore),0)/both.length;
+      p3+=`중간 대비 기말 원점수는 평균 <b>${md>=0?'+':''}${_n2(md)}점</b> 변화했고, 두 시험의 상관계수는 r=${r==null?'—':r.toFixed(2)}로 ${r>=0.7?'성취 순위가 대체로 유지됨':'순위 변동이 다소 큼'}. `;
+    }
+  }
+  if(incomplete.length) p3+=`한편 병결·인정결 등으로 인정점수가 부여되는 학생 ${incomplete.length}명은 위 통계에서 제외되었으므로 실제 성적처리 결과와는 차이가 있을 수 있음. `;
+  p3+='</p>';
+
+  // 학급별 표
+  let classTable='';
+  if(cls.classes.length>1){
+    classTable = `<table><thead><tr><th>학급</th><th>응시</th><th>환산 평균</th></tr></thead><tbody>`
+      + cls.classes.map(c=>`<tr><td class="qcell">${escHTML(c.cls)}반</td><td class="qcell">${c.n}</td><td class="qcell">${c.mean.toFixed(1)}${c.n<5?' <span style="color:#9ca3af;font-size:11px">(소규모)</span>':''}</td></tr>`).join('')
+      + `</tbody></table>`;
+    if(cls.significantCount<cls.classes.length) classTable += `<p style="font-size:11.5px;color:#6b7280;margin:4px 0 0">※ 5명 미만 학급은 평균의 통계적 신뢰성이 낮아 편차 산정에서 제외됨.</p>`;
+  }
+
+  const head = `<h3>${grade}학년 · ${escHTML(subject||'과목')} · 학기말 종합 결과 분석</h3>`;
+  return head + `<h3>1. 평균 및 성취도 해석</h3>` + p1 + p2 + p3
+       + (classTable ? `<h3>2. 학급별 환산 평균</h3>` + classTable : '');
+}
+
 function renderFinalTermPanels(ft, complete, incomplete, grade){
   const anon=$('anon').checked;
   const sum=ft.midR+ft.finR+ft.perR;
@@ -7040,34 +7116,12 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
       </div>`;
     }
   }
-  // ── 학기말 결과 총평 ──
+  // ── 학기말 결과 총평 (서술형 리포트) ──
   if(complete.length){
-    const totals=complete.map(r=>r.total);
-    const mean=totals.reduce((a,b)=>a+b,0)/N;
-    const sd=Math.sqrt(totals.reduce((a,b)=>a+(b-mean)**2,0)/N);
-    const topLv=LVS.slice().sort((a,b)=>achCnt[b]-achCnt[a])[0];
-    const aPct=(achCnt.A/N*100), iN=achCnt.I, eIN=achCnt.E+achCnt.I;
-    const gNums=complete.map(r=>r.grade).filter(g=>g);
-    const maxG=grade===3?9:5;
-    const hiN=gNums.filter(g=>g<=Math.ceil(maxG/3)).length;
-    const loN=gNums.filter(g=>g>maxG-Math.ceil(maxG/3)).length;
-    const bits=[];
-    bits.push(`환산 대상 <b>${N}명</b>의 학기말 환산 평균은 <b>${_n2(mean).toFixed(2)}점</b>(표준편차 ${_n2(sd).toFixed(2)})입니다.`);
-    bits.push(`성취도는 <b>${topLv}</b>가 ${achCnt[topLv]}명(${(achCnt[topLv]/N*100).toFixed(1)}%)으로 가장 많고, A 비율은 ${aPct.toFixed(1)}%입니다.`);
-    if(iN>0) bits.push(`미도달(I) <b style="color:#b91c1c">${iN}명</b>이 있어 별도 지도가 필요합니다.`); else bits.push(`미도달(I)은 없습니다.`);
-    bits.push(`상위권(${Math.ceil(maxG/3)}등급 이내) ${hiN}명 · 하위권 ${loN}명 분포입니다.`);
-    if(EXAM.mid && EXAM.final){
-      const both=complete.filter(r=>r.midScore!=null && r.finalScore!=null);
-      if(both.length>=2){
-        const r=pearsonCorr(both.map(x=>x.midScore), both.map(x=>x.finalScore));
-        const md=both.reduce((a,b)=>a+(b.finalScore-b.midScore),0)/both.length;
-        bits.push(`중간→기말 평균 변화는 ${md>=0?'+':''}${_n2(md)}점, 두 시험 상관 r=${r==null?'—':r.toFixed(2)}로 ${r>=0.7?'성취 순위가 대체로 유지':'순위 변동이 다소 큼'}됩니다.`);
-      }
-    }
-    if(incomplete.length) bits.push(`<span style="color:#9a3412">※ 인정점수 대상 ${incomplete.length}명은 통계에서 제외되어 실제 성적처리와 차이가 있을 수 있습니다.</span>`);
-    html += `<div style="background:linear-gradient(135deg,#f0f6ff,#e6f1ff);border:1.5px solid #cfe0ff;border-radius:12px;padding:14px 16px;margin-bottom:14px">
-      <div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:6px">📝 학기말 결과 총평</div>
-      <div style="font-size:12.8px;color:var(--ink-2);line-height:1.75">${bits.join(' ')}</div>
+    const subject=$('subject').value.trim();
+    html += `<div style="background:linear-gradient(135deg,#f0f6ff,#e6f1ff);border:1.5px solid #cfe0ff;border-radius:12px;padding:14px 18px;margin-bottom:14px">
+      <div style="font-weight:800;font-size:14.5px;color:var(--ink);margin-bottom:6px">📝 학기말 결과 총평</div>
+      <div class="review">${buildFinalTermReview(complete, incomplete, grade, subject, ft)}</div>
     </div>`;
   }
   const rowHtml=r=>{
