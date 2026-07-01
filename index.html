@@ -2328,19 +2328,22 @@ function gradeCuts(grade){
   return [0.10,0.34,0.66,0.90,1.00];
 }
 
-function assignGrades(students, grade){
+// scoreOf: 석차 산정에 쓸 점수 접근자 (기본 s.total).
+//   학기말 탭은 반올림 전 환산점수(rawSum)로 석차·등급을 매기고, 성취도만 반올림 정수로 판정.
+function assignGrades(students, grade, scoreOf){
+  scoreOf = scoreOf || (s=>s.total);
   // NEIS 학생부 조견표 방식:
   //   등급별 경계 석차 = 반올림(수강자수 × 누적비율)  (예: 82명 2등급 = 반올림(82×0.34)=28 → 28등까지)
   //   동점자는 중간석차(= 석차 + (동석차수-1)/2)로 판정하여 동일 등급 부여
   const cuts = gradeCuts(grade);
-  const list = students.filter(s=>s.total!==null).sort((a,b)=>b.total-a.total);
+  const list = students.filter(s=>scoreOf(s)!==null).sort((a,b)=>scoreOf(b)-scoreOf(a));
   const n = list.length;
   // 각 등급의 누적 경계 석차(반올림). 부동소수 보정을 위해 소량 epsilon.
   const bounds = cuts.map(c => Math.round(n * c + 1e-9));
   let i=0;
   while(i<n){
     let j=i;
-    while(j+1<n && list[j+1].total===list[i].total) j++;
+    while(j+1<n && scoreOf(list[j+1])===scoreOf(list[i])) j++;
     const startRank = i + 1;                        // 석차
     const groupSize = j - i + 1;
     const midRank = startRank + (groupSize - 1) / 2; // 중간석차
@@ -2358,7 +2361,7 @@ function assignGrades(students, grade){
     }
     i = j+1;
   }
-  students.forEach(s=>{ if(s.total===null){ s.grade=null; s.rank=null; s.midRank=null; s.midPct=null; } });
+  students.forEach(s=>{ if(scoreOf(s)===null){ s.grade=null; s.rank=null; s.midRank=null; s.midPct=null; } });
   return list;
 }
 
@@ -4870,8 +4873,8 @@ function buildFinalTermReport(opts){
     ${incomplete.length?`<p class="pr-note">⚠ 인정점수 대상 ${incomplete.length}명: ${incomplete.slice(0,30).map(r=>`${_ftMask(r.name,r.sid,anon)}(${r.missing.join('·')})`).join(', ')}${incomplete.length>30?' 외…':''}</p>`:''}
   </section>`;
   // 학생별 종합표 (가로)
-  const sorted=[...complete].sort((a,b)=>b.total-a.total);
-  if(complete[0] && complete[0].rank==null){ assignGrades(complete, grade); }
+  const sorted=[...complete].sort((a,b)=>(b.rawSum??b.total)-(a.rawSum??a.total));
+  if(complete[0] && complete[0].rank==null){ assignGrades(complete, grade, s=>s.rawSum); }
   const rankMap={}; sorted.forEach((r)=>{ rankMap[r.sid]=r; });
   html += `<section class="pr-page pr-landscape"><h2 class="pr-h2">학생별 학기말 종합표</h2>
     <table class="pr-table"><thead><tr><th>석차</th><th class="l">이름</th><th>중간</th><th>기말</th><th>수행</th><th>환산총점</th><th>성취도</th><th>등급</th></tr></thead><tbody>
@@ -6923,7 +6926,8 @@ function buildFinalTermStudents(){
     if(useFin && r.final==null) missing.push('기말');
     if(usePerf && r.perform==null) missing.push('수행');
     const complete = missing.length===0;
-    // 원점수(정기시험 환산 + 수행)는 소수 첫째 자리에서 반올림한 정수 — 성취도·석차 기준
+    // 원점수(정기시험 환산 + 수행) 반올림 정수(total)는 성취도 판정·표시 기준.
+    // 석차·등급은 반올림 전 환산점수(rawSum)로 산정 (assignGrades scoreOf 참조)
     const rawSum = (midC||0)+(finC||0)+(perfC||0);
     const total = Math.round(rawSum);
     return {sid:r.sid, no:r.sid, name:r.name, cls:r.cls,
@@ -6943,7 +6947,8 @@ function renderFinalTerm(){
   setNavMode('finalterm');
   $('title').textContent=`${subject||'학기말'} — 학기말 종합 (환산)`;
   if(complete.length){
-    assignGrades(complete, grade);
+    // 석차·등급은 반올림 전 환산점수(rawSum) 기준, 성취도는 반올림 정수(total) 기준
+    assignGrades(complete, grade, s=>s.rawSum);
     complete.forEach((s,i)=>{ s._idx=i; });
     const stats=calcStats(complete);
     const gd=gradeDist(complete, grade);
@@ -7195,7 +7200,7 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
       <td style="text-align:center">${r.complete&&r.rank?r.rank:'—'}</td>
     </tr>`;
   };
-  const sortedComplete=[...complete].sort((a,b)=>b.total-a.total);
+  const sortedComplete=[...complete].sort((a,b)=>(b.rawSum??b.total)-(a.rawSum??a.total));
   html += `<div class="table-wrap" style="max-height:none">
     <table id="finalTermTable"><thead><tr>
       <th>반/번호</th><th>이름</th><th>중간</th><th>기여</th><th>기말</th><th>기여</th><th>수행</th><th>환산총점</th><th>성취도</th><th>등급</th><th>석차</th>
