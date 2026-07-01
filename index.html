@@ -1847,6 +1847,7 @@ window.__restoreExamLensSnapshot = function(snap){
     if(snap.qImages) qImages = snap.qImages;
     if(snap.qImageOrder) qImageOrder = snap.qImageOrder;
     if(snap.qSlotMap) qSlotMap = snap.qSlotMap;
+    if(snap.qSlotPages) qSlotPages = snap.qSlotPages;
 
     // 폼 값 복원 — 저장된 파일에선 setup 카드가 제거되어 $('grade') 등이 null.
     // snap._form 에 저장 직전 캡처된 값이 있으면 그걸 우선 사용 (9등급 폴백 방지).
@@ -4014,7 +4015,7 @@ function mapCropsToQuestions(crops, items){
     order.sort((a,b)=>{
       const aS = a.startsWith('S'), bS = b.startsWith('S');
       if(aS !== bS) return aS ? 1 : -1;
-      return parseInt(a.slice(1)) - parseInt(b.slice(1));
+      return parseInt(a.slice(1), 10) - parseInt(b.slice(1), 10);
     });
   }
   return {map, order, slotMap};
@@ -5360,6 +5361,7 @@ function saveHtml(){
         qImages: (typeof qImages !== 'undefined' ? qImages : {}),
         qImageOrder: (typeof qImageOrder !== 'undefined' ? qImageOrder : []),
         qSlotMap: (typeof qSlotMap !== 'undefined' ? qSlotMap : {}),
+        qSlotPages: (typeof qSlotPages !== 'undefined' ? qSlotPages : {}),
         // 다중 평가(중간/기말/수행) 저장소 + 활성 탭 — 저장본에서 탭 전환·재렌더 복원용
         EXAM: (typeof EXAM !== 'undefined' ? EXAM : null),
         ACTIVE_TAB: (typeof ACTIVE_TAB !== 'undefined' ? ACTIVE_TAB : 'mid'),
@@ -6862,6 +6864,8 @@ function renderExam(b){
   window._lastNeis=b.neis||null; window._lastNeisMerge=b.neisMerge||null;
   qImages=b.pdf.qImages; qImageOrder=b.pdf.qImageOrder; qSlotMap=b.pdf.qSlotMap; qSlotPages=b.pdf.qSlotPages;
   const {stats, grade, subject, examName, itemRes, gd, hist, alpha, items, students}=b;
+  // 하위호환 hidden(#examType)을 현재 탭에 맞춰 갱신 — renderFinalScoreAnalysis가 중간/기말 비율·라벨을 올바르게 선택
+  const _etEl=$('examType'); if(_etEl) _etEl.value = (b.kind==='final') ? 'final' : 'mid';
   setNavMode('paper');
   $('title').textContent=`${subject||'분석 결과'} ${examName?'— '+examName:''}`;
   renderSummary(stats, grade, alpha);
@@ -7307,10 +7311,14 @@ async function run(){
   }
 }
 
-$('run').addEventListener('click', run);
+// ⚠ 아래 setup 카드 요소들은 HTML 저장본에서 제거되어 null — 가드 없으면 여기서 TypeError로
+//    이후 모든 최상위 바인딩(필터·분할점수 시뮬레이터·모달 리프트)이 통째로 죽는다.
+const _runEl = $('run');
+if(_runEl) _runEl.addEventListener('click', run);
 
 // 원안지 PDF 업로드 핸들러 (중간/기말)
-$('pdfFile').addEventListener('change', e => {
+const _pdfEl = $('pdfFile');
+if(_pdfEl) _pdfEl.addEventListener('change', e => {
   const f = e.target.files[0];
   e.target.value = '';
   onPdfFileChange(f, 'mid');
@@ -7322,7 +7330,8 @@ if(_pdfFinalEl) _pdfFinalEl.addEventListener('change', e => {
   onPdfFileChange(f, 'final');
 });
 // 모드 변경 시 staged PDF 재처리
-$('pdfMode').addEventListener('change', () => {
+const _pdfModeEl = $('pdfMode');
+if(_pdfModeEl) _pdfModeEl.addEventListener('change', () => {
   if(pdfStage.mid && pdfStage.mid.file) onPdfFileChange(pdfStage.mid.file, 'mid');
   if(pdfStage.final && pdfStage.final.file) onPdfFileChange(pdfStage.final.file, 'final');
 });
@@ -7365,7 +7374,8 @@ function renderFileList(){
   });
 }
 
-$('file').addEventListener('change', async e=>{
+const _fileEl = $('file');
+if(_fileEl) _fileEl.addEventListener('change', async e=>{
   const newFiles = Array.from(e.target.files);
   if(!newFiles.length) return;
   // 같은 파일(name+size) 중복 제외 후 추가
@@ -7476,9 +7486,10 @@ $('cutsApply').addEventListener('click', ()=>{
   });
 });
 // 수행 비율 변경 시 수행 평균을 자동 추천(만점의 90%)
-$('performRatio').addEventListener('input', ()=>{
+const _perfRatioEl = $('performRatio');
+if(_perfRatioEl) _perfRatioEl.addEventListener('input', ()=>{
   const perR = parseFloat($('performRatio').value)||0;
-  $('performMean').value = (perR * 0.9).toFixed(1);
+  const pm = $('performMean'); if(pm) pm.value = (perR * 0.9).toFixed(1);
 });
 
 // 🔧 모달들이 #result(초기 hidden) 안에 들어 있어 분석 전엔 안 보이는 버그 fix:
