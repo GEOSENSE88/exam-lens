@@ -4815,6 +4815,8 @@ function buildFinalTermReport(opts){
   const imgHist  = chartToImage('hist',  {width:1100, ratio:0.45});
   const imgGrade = chartToImage('grade', {width:1100, ratio:0.45});
   const imgRank  = chartToImage('rank',  {width:1100, ratio:0.32});
+  const imgAch   = (charts && charts.ftAch)     ? chartToImage('ftAch',     {width:900, ratio:0.6}) : null;
+  const imgScat  = (charts && charts.ftScatter) ? chartToImage('ftScatter', {width:900, ratio:0.7}) : null;
   // 성취도 집계
   const achCount = {A:0,B:0,C:0,D:0,E:0,I:0};
   complete.forEach(r=>{ achCount[ftAch(r.total)]++; });
@@ -4853,7 +4855,9 @@ function buildFinalTermReport(opts){
     <tbody><tr><td class="l">인원</td>${['A','B','C','D','E','I'].map(l=>`<td>${achCount[l]}</td>`).join('')}</tr>
     <tr><td class="l">비율(%)</td>${['A','B','C','D','E','I'].map(l=>`<td>${complete.length?(achCount[l]/complete.length*100).toFixed(1):'0'}</td>`).join('')}</tr></tbody></table>
     <div class="pr-chart-grid">${imgHist?`<img src="${imgHist}">`:''}${imgGrade?`<img src="${imgGrade}">`:''}</div>
+    ${imgAch?`<div class="pr-chart-center"><img src="${imgAch}"></div>`:''}
     ${imgRank?`<div class="pr-chart-center"><img src="${imgRank}"></div>`:''}
+    ${imgScat?`<h3 class="pr-h3">중간 ↔ 기말 원점수 비교</h3><div class="pr-chart-center"><img src="${imgScat}"></div>`:''}
     <h3 class="pr-h3">등급 분포 (${maxG}등급)</h3>
     <table class="pr-table"><thead><tr><th>등급</th><th>인원</th><th>비율(%)</th><th>최저</th><th>최고</th></tr></thead><tbody>
     ${gd.map(g=>`<tr><td>${g.grade}</td><td>${g.n}</td><td>${g.ratio.toFixed(1)}</td><td>${g.min!=null?g.min.toFixed(1):'-'}</td><td>${g.max!=null?g.max.toFixed(1):'-'}</td></tr>`).join('')}
@@ -6945,6 +6949,53 @@ function renderFinalTerm(){
     const gt=$('gradeTable'); if(gt) makeSortable(gt);
   }
   renderFinalTermPanels(ft, complete, incomplete, grade);
+  try{ drawFinalTermCharts(complete); }catch(e){ console.warn('학기말 종합 차트', e); }
+}
+
+// 학기말 종합 분석 그래프 — 성취도 도넛 + 중간↔기말 산점도
+function drawFinalTermCharts(complete){
+  if(typeof Chart==='undefined' || !complete || !complete.length) return;
+  const _LV=(typeof _LEVEL_COLOR!=='undefined')?_LEVEL_COLOR:{};
+  const LVS=['A','B','C','D','E','I'];
+  const ach={A:0,B:0,C:0,D:0,E:0,I:0}; complete.forEach(r=>ach[ftAch(r.total)]++);
+  const N=complete.length||1;
+  try{ destroyChart('ftAch'); }catch(e){}
+  const de=document.getElementById('ftAchChart');
+  if(de){
+    charts.ftAch=new Chart(de,{
+      type:'doughnut',
+      data:{labels:LVS.slice(), datasets:[{data:LVS.map(l=>ach[l]), backgroundColor:LVS.map(l=>_LV[l]||'#999'), borderWidth:2, borderColor:'#fff'}]},
+      options:{responsive:true, maintainAspectRatio:false, cutout:'52%',
+        plugins:{
+          title:{display:true, text:'성취도 비율 (A~E·I)', font:{size:13,weight:'600'}, color:'#1a1f2e'},
+          legend:{position:'right', labels:{font:{size:11.5}, boxWidth:12, generateLabels:()=>LVS.map((l,i)=>({text:`${l}  ${ach[l]}명 (${(ach[l]/N*100).toFixed(1)}%)`, fillStyle:_LV[l]||'#999', strokeStyle:_LV[l]||'#999', index:i}))}},
+          tooltip:{callbacks:{label:c=>`${c.label}  ${c.raw}명 (${(c.raw/N*100).toFixed(1)}%)`}}
+        }}
+    });
+  }
+  try{ destroyChart('ftScatter'); }catch(e){}
+  const se=document.getElementById('ftScatterChart');
+  if(se && EXAM.mid && EXAM.final){
+    const both=complete.filter(r=>r.midScore!=null && r.finalScore!=null);
+    if(both.length){
+      const pts=both.map(r=>({x:r.midScore, y:r.finalScore}));
+      const vals=both.flatMap(r=>[r.midScore,r.finalScore]);
+      const lo=Math.floor(Math.min(...vals)/10)*10, hi=Math.ceil(Math.max(...vals)/10)*10;
+      charts.ftScatter=new Chart(se,{
+        data:{datasets:[
+          {type:'scatter', label:'학생 (중간→기말)', data:pts, backgroundColor:'rgba(37,99,235,.55)', pointRadius:4, pointHoverRadius:6},
+          {type:'line', label:'변화 없음 (y=x)', data:[{x:lo,y:lo},{x:hi,y:hi}], borderColor:'#9ca3af', borderDash:[5,5], pointRadius:0, borderWidth:1.5, fill:false}
+        ]},
+        options:{responsive:true, maintainAspectRatio:false,
+          plugins:{
+            title:{display:true, text:'중간 ↔ 기말 원점수 (점선 위=상승)', font:{size:13,weight:'600'}, color:'#1a1f2e'},
+            legend:{position:'top', labels:{font:{size:11}, boxWidth:12}},
+            tooltip:{callbacks:{label:c=> c.datasetIndex===0 ? `중간 ${c.raw.x} → 기말 ${c.raw.y}` : ''}}
+          },
+          scales:{ x:{title:{display:true,text:'중간 원점수'}, min:lo, max:hi}, y:{title:{display:true,text:'기말 원점수'}, min:lo, max:hi} }}
+      });
+    }
+  }
 }
 
 // 학기말 종합 서술형 총평 (성취도 중심 — 「출제 검토 자동 총평」 스타일)
@@ -7059,16 +7110,19 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
       <div style="background:linear-gradient(135deg,#dcfce7,#d1fae5);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">수행 평균 기여</div><div style="font-size:20px;font-weight:800;color:#047857">${_n2(pC).toFixed(2)}</div></div>
       <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:12px;padding:12px 14px"><div style="font-size:11px;color:var(--muted)">학기말 환산 평균</div><div style="font-size:20px;font-weight:800;color:#b45309">${_n2(tot).toFixed(2)}</div></div>
     </div>`;
-    // ── 성취도 분포 비율 (A~E·I) ──
+    // ── 성취도 분포 비율 (A~E·I) — 차트 + 카드 ──
     const maxCnt=Math.max(...LVS.map(l=>achCnt[l]),1);
     html += `<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:14px">
       <div style="font-weight:700;font-size:13px;margin-bottom:8px">🏅 성취도 분포 <span style="color:var(--muted);font-weight:400;font-size:11.5px">· 환산점수 반올림 정수 기준 · 총 ${N}명</span></div>
-      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:7px">
-        ${LVS.map(l=>{const c=achCnt[l],p=N?c/N*100:0;return `<div style="text-align:center;border:1px solid var(--line);border-radius:10px;overflow:hidden">
-          <div style="background:${_LV[l]||'#999'};color:#fff;font-weight:800;font-size:13px;padding:3px 0">${l}</div>
-          <div style="padding:7px 2px"><div style="font-size:17px;font-weight:800;color:var(--ink)">${c}</div><div style="font-size:11px;color:var(--muted)">${p.toFixed(1)}%</div>
-          <div style="height:5px;background:#eef1f7;border-radius:3px;margin-top:5px;overflow:hidden"><div style="height:100%;width:${(c/maxCnt*100).toFixed(0)}%;background:${_LV[l]||'#999'}"></div></div></div>
-        </div>`;}).join('')}
+      <div style="display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:16px;align-items:center" class="ft-ach-grid">
+        <div style="height:230px;position:relative"><canvas id="ftAchChart"></canvas></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+          ${LVS.map(l=>{const c=achCnt[l],p=N?c/N*100:0;return `<div style="text-align:center;border:1px solid var(--line);border-radius:10px;overflow:hidden">
+            <div style="background:${_LV[l]||'#999'};color:#fff;font-weight:800;font-size:13px;padding:3px 0">${l}</div>
+            <div style="padding:7px 2px"><div style="font-size:17px;font-weight:800;color:var(--ink)">${c}</div><div style="font-size:11px;color:var(--muted)">${p.toFixed(1)}%</div>
+            <div style="height:5px;background:#eef1f7;border-radius:3px;margin-top:5px;overflow:hidden"><div style="height:100%;width:${(c/maxCnt*100).toFixed(0)}%;background:${_LV[l]||'#999'}"></div></div></div>
+          </div>`;}).join('')}
+        </div>
       </div>
     </div>`;
   } else {
@@ -7099,7 +7153,10 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
     }
     html += `<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:14px">
       <div style="font-weight:700;font-size:13px;margin-bottom:8px">🔬 중간 vs 기말 비교 분석 <span style="color:var(--muted);font-weight:400;font-size:11.5px">· 원점수 기준</span></div>
-      ${cmp}${corrHtml}
+      <div style="display:grid;grid-template-columns:1fr minmax(280px,440px);gap:16px;align-items:start" class="ft-cmp-grid">
+        <div>${cmp}${corrHtml}</div>
+        <div style="height:300px;position:relative"><canvas id="ftScatterChart"></canvas></div>
+      </div>
     </div>`;
   }
   // 성취도 경계선 학생 (반올림 기준 컷 직전 2점)
