@@ -4861,7 +4861,7 @@ function buildFinalTermReport(opts){
   const rankMap={}; sorted.forEach((r)=>{ rankMap[r.sid]=r; });
   html += `<section class="pr-page pr-landscape"><h2 class="pr-h2">학생별 학기말 종합표</h2>
     <table class="pr-table"><thead><tr><th>석차</th><th class="l">이름</th><th>중간</th><th>기말</th><th>수행</th><th>환산총점</th><th>성취도</th><th>등급</th></tr></thead><tbody>
-    ${sorted.map((r,i)=>{ const ach=ftAch(r.total); return `<tr><td>${r.rank||i+1}</td><td class="l">${_ftMask(r.name,r.sid,anon)}</td><td>${r.midScore!=null?_n2(r.midScore):'-'}</td><td>${r.finalScore!=null?_n2(r.finalScore):'-'}</td><td>${r.performScore!=null?_n2(r.performScore):'-'}</td><td><b>${r.total.toFixed(2)}</b></td><td>${ach}</td><td>${r.grade||'-'}</td></tr>`; }).join('')}
+    ${sorted.map((r,i)=>{ const ach=ftAch(r.total); return `<tr><td>${r.rank||i+1}</td><td class="l">${_ftMask(r.name,r.sid,anon)}</td><td>${r.midScore!=null?_n2(r.midScore):'-'}</td><td>${r.finalScore!=null?_n2(r.finalScore):'-'}</td><td>${r.performScore!=null?_n2(r.performScore):'-'}</td><td><b>${r.total}</b></td><td>${ach}</td><td>${r.grade||'-'}</td></tr>`; }).join('')}
     </tbody></table>
     <p class="pr-footer">Exam-Lens · 학기말 종합 · ${dateStr}</p>
   </section>`;
@@ -6906,11 +6906,13 @@ function buildFinalTermStudents(){
     if(useFin && r.final==null) missing.push('기말');
     if(usePerf && r.perform==null) missing.push('수행');
     const complete = missing.length===0;
-    const total = _n2((midC||0)+(finC||0)+(perfC||0));
+    // 원점수(정기시험 환산 + 수행)는 소수 첫째 자리에서 반올림한 정수 — 성취도·석차 기준
+    const rawSum = (midC||0)+(finC||0)+(perfC||0);
+    const total = Math.round(rawSum);
     return {sid:r.sid, no:r.sid, name:r.name, cls:r.cls,
             midScore:r.mid, finalScore:r.final, performScore:r.perform,
             midC:(midC==null?null:_n2(midC)), finC:(finC==null?null:_n2(finC)), perfC:(perfC==null?null:_n2(perfC)),
-            missing, complete, total, sel:null, desc:null};
+            rawSum:_n2(rawSum), missing, complete, total, sel:null, desc:null};
   });
   return {rows, useMid, useFin, usePerf, midR, finR, perR, paperMax};
 }
@@ -7034,7 +7036,7 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
     if(bands.length){
       html += `<div style="background:#fff7fb;border:1px solid #f5d0e8;border-radius:12px;padding:13px 15px;margin-bottom:14px">
         <div style="font-weight:700;font-size:13px;margin-bottom:4px">🎯 성취도 경계선 학생 <span style="color:var(--muted);font-weight:400;font-size:11.5px">(컷 2점 미만으로 아쉽게 미달 · 반올림 기준)</span></div>
-        ${bands.map(b=>`<div style="font-size:12.5px;margin-top:5px"><span style="background:${_LV[b.cut.lv]||'#999'};color:#fff;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:700">${b.cut.lv} 컷 ${b.cut.c}</span> ${b.near.map(r=>`${_ftMask(r.name,r.sid,anon)}(${_n2(r.total).toFixed(2)})`).join(', ')}</div>`).join('')}
+        ${bands.map(b=>`<div style="font-size:12.5px;margin-top:5px"><span style="background:${_LV[b.cut.lv]||'#999'};color:#fff;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:700">${b.cut.lv} 컷 ${b.cut.c}</span> ${b.near.map(r=>`${_ftMask(r.name,r.sid,anon)}(${r.total})`).join(', ')}</div>`).join('')}
       </div>`;
     }
   }
@@ -7079,7 +7081,7 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
       <td style="text-align:right">${r.finalScore!=null?_n2(r.finalScore):'—'}</td>
       <td style="text-align:right;color:#1e3a8a">${r.finC!=null?r.finC.toFixed(2):'—'}</td>
       <td style="text-align:right;color:#047857">${r.performScore!=null?_n2(r.performScore):'—'}</td>
-      <td style="text-align:right;font-weight:700">${r.complete?r.total.toFixed(2):'—'}</td>
+      <td style="text-align:right;font-weight:700">${r.complete?r.total:'—'}</td>
       <td style="text-align:center"><span style="background:${achColor};color:#fff;padding:2px 8px;border-radius:9px;font-size:11px;font-weight:700">${ach}</span></td>
       <td style="text-align:center">${r.complete&&r.grade?r.grade:'—'}</td>
       <td style="text-align:center">${r.complete&&r.rank?r.rank:'—'}</td>
