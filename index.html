@@ -2327,12 +2327,14 @@ function gradeCuts(grade){
 }
 
 function assignGrades(students, grade){
-  // NEIS 표준: 중간석차 = 석차 + (동석차 인원수 - 1) / 2
-  //           중간석차백분율 = 중간석차 / 수강자수 × 100
-  // 동점자 그룹 전체에 동일한 중간석차백분율을 적용해 같은 등급 부여
+  // NEIS 학생부 조견표 방식:
+  //   등급별 경계 석차 = 반올림(수강자수 × 누적비율)  (예: 82명 2등급 = 반올림(82×0.34)=28 → 28등까지)
+  //   동점자는 중간석차(= 석차 + (동석차수-1)/2)로 판정하여 동일 등급 부여
   const cuts = gradeCuts(grade);
   const list = students.filter(s=>s.total!==null).sort((a,b)=>b.total-a.total);
   const n = list.length;
+  // 각 등급의 누적 경계 석차(반올림). 부동소수 보정을 위해 소량 epsilon.
+  const bounds = cuts.map(c => Math.round(n * c + 1e-9));
   let i=0;
   while(i<n){
     let j=i;
@@ -2340,9 +2342,9 @@ function assignGrades(students, grade){
     const startRank = i + 1;                        // 석차
     const groupSize = j - i + 1;
     const midRank = startRank + (groupSize - 1) / 2; // 중간석차
-    const midPct = midRank / n;                       // 중간석차백분율(0~1)
+    const midPct = midRank / n;                       // 중간석차백분율(0~1) — 표시용
     let g = cuts.length;
-    for(let c=0;c<cuts.length;c++) if(midPct <= cuts[c]+1e-9){ g=c+1; break; }
+    for(let c=0;c<cuts.length;c++) if(midRank <= bounds[c] + 1e-9){ g=c+1; break; }
     for(let x=i;x<=j;x++){
       list[x].rank = startRank;
       list[x].midRank = midRank;
