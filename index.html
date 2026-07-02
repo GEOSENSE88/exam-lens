@@ -1895,6 +1895,8 @@ function _idb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('examlen
 function _idbPut(key,val){ return _idb().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('sessions','readwrite'); tx.objectStore('sessions').put(val,key); tx.oncomplete=()=>{ db.close(); res(); }; tx.onerror=()=>{ db.close(); rej(tx.error); }; })); }
 function _idbGet(key){ return _idb().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('sessions','readonly'); const rq=tx.objectStore('sessions').get(key); rq.onsuccess=()=>{ db.close(); res(rq.result); }; rq.onerror=()=>{ db.close(); rej(rq.error); }; })); }
 function _idbDel(key){ return _idb().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('sessions','readwrite'); tx.objectStore('sessions').delete(key); tx.oncomplete=()=>{ db.close(); res(); }; tx.onerror=()=>{ db.close(); rej(tx.error); }; })); }
+// 전체 세션 [{key, snap}] — 과목별 다중 저장 지원
+function _idbAll(){ return _idb().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('sessions','readonly'); const st=tx.objectStore('sessions'); const out=[]; const cur=st.openCursor(); cur.onsuccess=()=>{ const c=cur.result; if(c){ out.push({key:String(c.key), snap:c.value}); c.continue(); } else { db.close(); res(out); } }; cur.onerror=()=>{ db.close(); rej(cur.error); }; })); }
 
 function _captureFormValues(){
   const v=id=>{ const el=document.getElementById(id); return el?el.value:''; };
@@ -1904,16 +1906,28 @@ function _captureFormValues(){
            paperMax:v('paperMax')||'100', performMean:v('performMean') };
 }
 
+// 세션 키 = "학년|과목" — 여러 과목을 담당해도 과목별로 따로 저장/복원
+function _sessionKey(f){ return `${f.grade||'1'}|${(f.subject||'').trim()||'(과목미상)'}`; }
+const _MAX_SESSIONS = 8;
+
 async function _saveSessionToIdb(){
   if(!window.indexedDB) return;
   if(!(EXAM.mid||EXAM.final||EXAM.perform)) return;
-  const snap={ savedAt:new Date().toISOString(), EXAM:{mid:EXAM.mid,final:EXAM.final,perform:EXAM.perform}, ACTIVE_TAB, _form:_captureFormValues() };
-  try{ await _idbPut('last', snap); }
+  const form=_captureFormValues();
+  const key=_sessionKey(form);
+  const snap={ savedAt:new Date().toISOString(), EXAM:{mid:EXAM.mid,final:EXAM.final,perform:EXAM.perform}, ACTIVE_TAB, _form:form };
+  try{ await _idbPut(key, snap); }
   catch(e){
     // 구조화 복제 불가 객체 대비 — JSON 왕복으로 정화 후 재시도
-    try{ await _idbPut('last', JSON.parse(JSON.stringify(snap))); }
-    catch(e2){ console.warn('[Exam-Lens] 세션 자동 저장 실패', e2); }
+    try{ await _idbPut(key, JSON.parse(JSON.stringify(snap))); }
+    catch(e2){ console.warn('[Exam-Lens] 세션 자동 저장 실패', e2); return; }
   }
+  // 구버전 단일 키('last') 정리 + 오래된 세션 상한 관리
+  try{
+    await _idbDel('last');
+    const all=(await _idbAll()).sort((a,b)=>String(b.snap&&b.snap.savedAt||'').localeCompare(String(a.snap&&a.snap.savedAt||'')));
+    for(const s of all.slice(_MAX_SESSIONS)) await _idbDel(s.key);
+  }catch(e){}
 }
 
 function _resumeSession(snap){
@@ -1938,23 +1952,42 @@ async function _initSessionResume(){
     const setup=document.getElementById('setup');
     if(!setup) return;                                        // 저장본 보고서에서는 미표시
     if(document.querySelector('script[data-snapshot]')) return;
-    const snap=await _idbGet('last');
-    if(!snap || !snap.EXAM || !(snap.EXAM.mid||snap.EXAM.final||snap.EXAM.perform)) return;
-    const f=snap._form||{};
-    const src=snap.EXAM.mid||snap.EXAM.final;
-    const nStu=(src&&src.students&&src.students.length)||((snap.EXAM.perform&&snap.EXAM.perform.students)||[]).length||0;
-    let when=''; try{ when=new Date(snap.savedAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){}
-    const parts=[]; if(snap.EXAM.mid)parts.push('중간'); if(snap.EXAM.final)parts.push('기말'); if(snap.EXAM.perform)parts.push('수행');
+    const all=(await _idbAll())
+      .filter(s=>s.snap && s.snap.EXAM && (s.snap.EXAM.mid||s.snap.EXAM.final||s.snap.EXAM.perform))
+      .sort((a,b)=>String(b.snap.savedAt||'').localeCompare(String(a.snap.savedAt||'')));
+    if(!all.length) return;
     const bar=document.createElement('div');
     bar.id='resumeBanner';
-    bar.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:linear-gradient(135deg,#eef4ff,#e6f0ff);border:1.5px solid #c7dbff;border-radius:12px;padding:11px 16px;margin:0 0 14px;font-size:13px';
-    bar.innerHTML=`<span style="font-size:16px">🕘</span>
-      <span style="flex:1;min-width:220px;color:var(--ink-2)"><b style="color:var(--pri-deep)">지난 분석 이어서 보기</b> — ${escHTML(f.subject||'과목 미상')} · ${parts.join('·')}${nStu?' · '+nStu+'명':''}${when?' · '+when+' 저장':''} <span style="color:var(--muted)">(이 컴퓨터 브라우저에만 저장됨)</span></span>
-      <button id="resumeGo" class="ghost" style="font-weight:700;color:var(--pri-deep);border-color:#b9d2ff">이어서 보기</button>
-      <button id="resumeDel" class="ghost" style="color:#991b1b;border-color:#fecaca">저장본 삭제</button>`;
+    bar.style.cssText='background:linear-gradient(135deg,#eef4ff,#e6f0ff);border:1.5px solid #c7dbff;border-radius:12px;padding:12px 16px;margin:0 0 14px;font-size:13px';
+    const rowHtml=(s,i)=>{
+      const f=s.snap._form||{};
+      const src=s.snap.EXAM.mid||s.snap.EXAM.final;
+      const nStu=(src&&src.students&&src.students.length)||((s.snap.EXAM.perform&&s.snap.EXAM.perform.students)||[]).length||0;
+      let when=''; try{ when=new Date(s.snap.savedAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){}
+      const parts=[]; if(s.snap.EXAM.mid)parts.push('중간'); if(s.snap.EXAM.final)parts.push('기말'); if(s.snap.EXAM.perform)parts.push('수행');
+      return `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;${i?'border-top:1px dashed #c7dbff;margin-top:8px;padding-top:8px':''}">
+        <span style="flex:1;min-width:220px;color:var(--ink-2)"><b style="color:var(--pri-deep)">${escHTML((f.grade||'?')+'학년 '+(f.subject||'과목 미상'))}</b> · ${parts.join('·')}${nStu?' · '+nStu+'명':''}${when?' · '+when+' 저장':''}</span>
+        <button class="ghost resume-go" data-key="${escHTML(s.key)}" style="font-weight:700;color:var(--pri-deep);border-color:#b9d2ff;padding:5px 14px">이어서 보기</button>
+        <button class="ghost resume-del" data-key="${escHTML(s.key)}" style="color:#991b1b;border-color:#fecaca;padding:5px 10px">삭제</button>
+      </div>`;
+    };
+    bar.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+        <span style="font-size:16px">🕘</span><b style="color:var(--pri-deep)">지난 분석 이어서 보기</b>
+        <span style="color:var(--muted);font-size:12px">과목별 저장 · 이 컴퓨터 브라우저에만 저장됨</span>
+      </div>
+      ${all.map(rowHtml).join('')}`;
     setup.parentElement.insertBefore(bar, setup);
-    document.getElementById('resumeGo').addEventListener('click', ()=>{ try{ _resumeSession(snap); }catch(e){ console.error(e); showToast('✗ 복원 실패 — 파일을 다시 업로드해 주세요'); } bar.remove(); });
-    document.getElementById('resumeDel').addEventListener('click', async ()=>{ try{ await _idbDel('last'); }catch(e){} bar.remove(); showToast('저장된 세션을 삭제했습니다'); });
+    const byKey={}; all.forEach(s=>{ byKey[s.key]=s.snap; });
+    bar.querySelectorAll('.resume-go').forEach(btn=>btn.addEventListener('click', ()=>{
+      try{ _resumeSession(byKey[btn.dataset.key]); }catch(e){ console.error(e); showToast('✗ 복원 실패 — 파일을 다시 업로드해 주세요'); }
+      bar.remove();
+    }));
+    bar.querySelectorAll('.resume-del').forEach(btn=>btn.addEventListener('click', async ()=>{
+      try{ await _idbDel(btn.dataset.key); }catch(e){}
+      const row=btn.parentElement; if(row) row.remove();
+      if(!bar.querySelector('.resume-go')) bar.remove();
+      showToast('저장된 세션을 삭제했습니다');
+    }));
   }catch(e){ console.warn('[Exam-Lens] 세션 복원 배너 실패', e); }
 }
 
