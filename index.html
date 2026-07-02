@@ -1958,7 +1958,7 @@ async function _initSessionResume(){
     if(!all.length) return;
     const bar=document.createElement('div');
     bar.id='resumeBanner';
-    bar.style.cssText='background:linear-gradient(135deg,#eef4ff,#e6f0ff);border:1.5px solid #c7dbff;border-radius:12px;padding:12px 16px;margin:0 0 14px;font-size:13px';
+    bar.style.cssText='background:linear-gradient(135deg,#eef4ff,#e6f0ff);border:1.5px solid #a8c7ff;border-radius:12px;padding:12px 16px;margin:0 0 14px;font-size:13px;box-shadow:0 2px 10px rgba(37,99,235,.10)';
     const rowHtml=(s,i)=>{
       const f=s.snap._form||{};
       const src=s.snap.EXAM.mid||s.snap.EXAM.final;
@@ -1976,7 +1976,10 @@ async function _initSessionResume(){
         <span style="color:var(--muted);font-size:12px">과목별 저장 · 이 컴퓨터 브라우저에만 저장됨</span>
       </div>
       ${all.map(rowHtml).join('')}`;
-    setup.parentElement.insertBefore(bar, setup);
+    // 최상단(개인정보 안내 카드보다 위)에 표시 — 열자마자 바로 보이도록
+    const mainEl=document.querySelector('main');
+    if(mainEl && mainEl.firstElementChild) mainEl.insertBefore(bar, mainEl.firstElementChild);
+    else setup.parentElement.insertBefore(bar, setup);
     const byKey={}; all.forEach(s=>{ byKey[s.key]=s.snap; });
     bar.querySelectorAll('.resume-go').forEach(btn=>btn.addEventListener('click', ()=>{
       try{ _resumeSession(byKey[btn.dataset.key]); }catch(e){ console.error(e); showToast('✗ 복원 실패 — 파일을 다시 업로드해 주세요'); }
