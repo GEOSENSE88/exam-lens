@@ -4981,7 +4981,7 @@ function buildFinalTermReport(opts){
   const rankMap={}; sorted.forEach((r)=>{ rankMap[r.sid]=r; });
   html += `<section class="pr-page pr-landscape"><h2 class="pr-h2">학생별 학기말 종합표</h2>
     <table class="pr-table"><thead><tr><th>석차</th><th class="l">이름</th><th>중간</th><th>기말</th><th>수행</th><th>환산총점</th><th>성취도</th><th>등급</th></tr></thead><tbody>
-    ${sorted.map((r,i)=>{ const ach=ftAch(r.total); return `<tr><td>${r.rank||i+1}</td><td class="l">${_ftMask(r.name,r.sid,anon)}</td><td>${r.midScore!=null?_n2(r.midScore):'-'}</td><td>${r.finalScore!=null?_n2(r.finalScore):'-'}</td><td>${r.performScore!=null?_n2(r.performScore):'-'}</td><td><b>${r.total}</b></td><td>${ach}</td><td>${r.grade||'-'}</td></tr>`; }).join('')}
+    ${sorted.map((r,i)=>{ const ach=ftAch(r.total); return `<tr><td>${r.rank||i+1}</td><td class="l">${_ftMask(r.name,r.sid,anon)}</td><td>${r.midScore!=null?_n2(r.midScore):'-'}</td><td>${r.finalScore!=null?_n2(r.finalScore):'-'}</td><td>${r.performScore!=null?_n2(r.performScore):'-'}</td><td><b>${r.rawSum!=null?(+r.rawSum).toFixed(2):r.total}</b></td><td>${ach}</td><td>${r.grade||'-'}</td></tr>`; }).join('')}
     </tbody></table>
     <p class="pr-footer">Exam-Lens · 학기말 종합 · ${dateStr}</p>
   </section>`;
@@ -7297,7 +7297,7 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
       <td style="text-align:right">${r.finalScore!=null?_n2(r.finalScore):'—'}</td>
       <td style="text-align:right;color:#1e3a8a">${r.finC!=null?r.finC.toFixed(2):'—'}</td>
       <td style="text-align:right;color:#047857">${r.performScore!=null?_n2(r.performScore):'—'}</td>
-      <td style="text-align:right;font-weight:700">${r.complete?r.total:'—'}</td>
+      <td style="text-align:right;font-weight:700">${r.complete?(+r.rawSum).toFixed(2):'—'}</td>
       <td style="text-align:center"><span style="background:${achColor};color:#fff;padding:2px 8px;border-radius:9px;font-size:11px;font-weight:700">${ach}</span></td>
       <td style="text-align:center">${r.complete&&r.grade?r.grade:'—'}</td>
       <td style="text-align:center">${r.complete&&r.rank?r.rank:'—'}</td>
