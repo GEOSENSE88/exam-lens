@@ -1783,12 +1783,20 @@ const gradeBandsPlugin = {
       ctx.fillRect(x0, chartArea.top, x1-x0, chartArea.bottom-chartArea.top);
       // 경계선
       if(b.start!==0){ ctx.strokeStyle=_hexA(b.color,0.45); ctx.lineWidth=1; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(x0, chartArea.top); ctx.lineTo(x0, chartArea.bottom); ctx.stroke(); ctx.setLineDash([]); }
-      // 밴드 상단 등급 라벨 (폭이 충분할 때만)
-      if(x1-x0 > 34){
-        ctx.fillStyle = _hexA(b.color, 0.95);
-        ctx.font = '700 11px Pretendard, sans-serif';
-        ctx.textAlign = 'center';
+      // 밴드 상단 등급 라벨 — 넓으면 가로, 좁으면 세로로 눕혀서 항상 표시
+      ctx.fillStyle = _hexA(b.color, 0.95);
+      ctx.font = '700 11px Pretendard, sans-serif';
+      ctx.textAlign = 'center';
+      if(x1-x0 > 40){
         ctx.fillText(`${b.grade}등급`, (x0+x1)/2, chartArea.top+13);
+      } else {
+        ctx.save();
+        ctx.translate((x0+x1)/2, chartArea.top+6);
+        ctx.rotate(Math.PI/2);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${b.grade}등급`, 0, 0);
+        ctx.restore();
       }
     });
     ctx.restore();
