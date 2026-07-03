@@ -700,7 +700,10 @@
       <h1>Exam-Lens · <span style="font-weight:700">정기시험 결과 문항분석 프로그램</span></h1>
       <div class="sub">제작 · <b>산남고 이성훈</b> <a href="mailto:ming0987@naver.com" style="color:rgba(255,255,255,.88);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.55);margin-left:6px">(ming0987@naver.com)</a></div>
     </div>
-    <div class="header-actions no-print" style="display:flex;gap:8px;flex-shrink:0">
+    <div class="header-actions no-print" style="display:flex;gap:8px;flex-shrink:0;position:relative">
+      <button class="hdr-btn" id="hdrBtnResume" title="이 브라우저에 저장된 지난 분석을 파일 업로드 없이 복원" style="display:none">
+        <span class="ico">🕘</span><span>이어서 보기</span>
+      </button>
       <button class="hdr-btn" id="hdrBtnPrint" onclick="openPrintOptions()" title="보고서 양식으로 PDF 출력/인쇄 — 구성·옵션 선택 가능" disabled>
         <span class="ico">🖨</span><span>PDF / 인쇄</span>
       </button>
@@ -1755,6 +1758,43 @@ function isCorrect(resp){
   return resp === '.';
 }
 
+// hex 색상 → rgba (등급 밴드 반투명 배경용)
+function _hexA(hex, a){
+  const n = parseInt(String(hex).replace('#',''), 16);
+  if(isNaN(n)) return `rgba(156,163,175,${a})`;
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+
+// 석차순 점수 곡선 배경 — 등급 구간을 세로 색 밴드로 표시하는 플러그인
+const gradeBandsPlugin = {
+  id:'gradeBands',
+  beforeDatasetsDraw(chart, args, opts){
+    const bands = (opts && opts.bands) || [];
+    if(!bands.length) return;
+    const {ctx, chartArea, scales:{x}} = chart;
+    if(!x || !chartArea) return;
+    const N = (opts.count || 0);
+    ctx.save();
+    bands.forEach(b=>{
+      // 밴드 경계 = 이웃 점과의 중간 지점 (양 끝은 차트 영역 가장자리)
+      const x0 = b.start===0   ? chartArea.left  : (x.getPixelForValue(b.start-1)+x.getPixelForValue(b.start))/2;
+      const x1 = b.end===N-1   ? chartArea.right : (x.getPixelForValue(b.end)+x.getPixelForValue(b.end+1))/2;
+      ctx.fillStyle = _hexA(b.color, 0.13);
+      ctx.fillRect(x0, chartArea.top, x1-x0, chartArea.bottom-chartArea.top);
+      // 경계선
+      if(b.start!==0){ ctx.strokeStyle=_hexA(b.color,0.45); ctx.lineWidth=1; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(x0, chartArea.top); ctx.lineTo(x0, chartArea.bottom); ctx.stroke(); ctx.setLineDash([]); }
+      // 밴드 상단 등급 라벨 (폭이 충분할 때만)
+      if(x1-x0 > 34){
+        ctx.fillStyle = _hexA(b.color, 0.95);
+        ctx.font = '700 11px Pretendard, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${b.grade}등급`, (x0+x1)/2, chartArea.top+13);
+      }
+    });
+    ctx.restore();
+  }
+};
+
 // 막대 위 값 라벨 플러그인 (전역)
 const valueLabel = {
   id:'valueLabel',
@@ -1938,6 +1978,9 @@ function _resumeSession(snap){
   const an=document.getElementById('anon'); if(an && f.anon!=null) an.checked=!!f.anon;
   EXAM.mid=snap.EXAM.mid||null; EXAM.final=snap.EXAM.final||null; EXAM.perform=snap.EXAM.perform||null;
   const res=document.getElementById('result'); if(res) res.classList.remove('hidden');
+  // PDF/인쇄·HTML 저장 버튼 활성화 (run()과 동일 — 복원 후에도 저장·공유 가능해야 함)
+  const bp=document.getElementById('hdrBtnPrint'); if(bp) bp.disabled=false;
+  const bs=document.getElementById('hdrBtnSave'); if(bs) bs.disabled=false;
   buildExamTabs();
   switchExamTab(snap.ACTIVE_TAB || (EXAM.mid?'mid':(EXAM.final?'final':'final_term')));
   const setupCard=document.getElementById('setup');
@@ -1946,52 +1989,59 @@ function _resumeSession(snap){
   window.scrollTo({top:0});
 }
 
+// 헤더 [이어서 보기] 버튼 + 드롭다운 — 과목별 저장 세션 목록에서 골라 복원
 async function _initSessionResume(){
   try{
     if(!window.indexedDB) return;
-    const setup=document.getElementById('setup');
-    if(!setup) return;                                        // 저장본 보고서에서는 미표시
+    if(!document.getElementById('setup')) return;             // 저장본 보고서에서는 미표시
     if(document.querySelector('script[data-snapshot]')) return;
-    const all=(await _idbAll())
+    const btn=document.getElementById('hdrBtnResume');
+    if(!btn) return;
+    let all=(await _idbAll())
       .filter(s=>s.snap && s.snap.EXAM && (s.snap.EXAM.mid||s.snap.EXAM.final||s.snap.EXAM.perform))
       .sort((a,b)=>String(b.snap.savedAt||'').localeCompare(String(a.snap.savedAt||'')));
     if(!all.length) return;
-    const bar=document.createElement('div');
-    bar.id='resumeBanner';
-    bar.style.cssText='background:linear-gradient(135deg,#eef4ff,#e6f0ff);border:1.5px solid #a8c7ff;border-radius:12px;padding:12px 16px;margin:0 0 14px;font-size:13px;box-shadow:0 2px 10px rgba(37,99,235,.10)';
+    btn.style.display='';
+    let menu=null;
+    const closeMenu=()=>{ if(menu){ menu.remove(); menu=null; document.removeEventListener('click', onDocClick, true); } };
+    const onDocClick=e=>{ if(menu && !menu.contains(e.target) && e.target!==btn && !btn.contains(e.target)) closeMenu(); };
     const rowHtml=(s,i)=>{
       const f=s.snap._form||{};
       const src=s.snap.EXAM.mid||s.snap.EXAM.final;
       const nStu=(src&&src.students&&src.students.length)||((s.snap.EXAM.perform&&s.snap.EXAM.perform.students)||[]).length||0;
       let when=''; try{ when=new Date(s.snap.savedAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){}
       const parts=[]; if(s.snap.EXAM.mid)parts.push('중간'); if(s.snap.EXAM.final)parts.push('기말'); if(s.snap.EXAM.perform)parts.push('수행');
-      return `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;${i?'border-top:1px dashed #c7dbff;margin-top:8px;padding-top:8px':''}">
-        <span style="flex:1;min-width:220px;color:var(--ink-2)"><b style="color:var(--pri-deep)">${escHTML((f.grade||'?')+'학년 '+(f.subject||'과목 미상'))}</b> · ${parts.join('·')}${nStu?' · '+nStu+'명':''}${when?' · '+when+' 저장':''}</span>
-        <button class="ghost resume-go" data-key="${escHTML(s.key)}" style="font-weight:700;color:var(--pri-deep);border-color:#b9d2ff;padding:5px 14px">이어서 보기</button>
-        <button class="ghost resume-del" data-key="${escHTML(s.key)}" style="color:#991b1b;border-color:#fecaca;padding:5px 10px">삭제</button>
+      return `<div class="resume-row" style="display:flex;align-items:center;gap:8px;padding:9px 12px;${i?'border-top:1px solid #eef1f7':''}">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;color:var(--pri-deep);font-size:13px">${escHTML((f.grade||'?')+'학년 '+(f.subject||'과목 미상'))}</div>
+          <div style="font-size:11.5px;color:var(--muted)">${parts.join('·')}${nStu?' · '+nStu+'명':''}${when?' · '+when+' 저장':''}</div>
+        </div>
+        <button class="ghost resume-go" data-key="${escHTML(s.key)}" style="font-weight:700;color:var(--pri-deep);border-color:#b9d2ff;padding:5px 12px;font-size:12px;flex-shrink:0">열기</button>
+        <button class="ghost resume-del" data-key="${escHTML(s.key)}" style="color:#991b1b;border-color:#fecaca;padding:5px 9px;font-size:12px;flex-shrink:0">삭제</button>
       </div>`;
     };
-    bar.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
-        <span style="font-size:16px">🕘</span><b style="color:var(--pri-deep)">지난 분석 이어서 보기</b>
-        <span style="color:var(--muted);font-size:12px">과목별 저장 · 이 컴퓨터 브라우저에만 저장됨</span>
-      </div>
-      ${all.map(rowHtml).join('')}`;
-    // 최상단(개인정보 안내 카드보다 위)에 표시 — 열자마자 바로 보이도록
-    const mainEl=document.querySelector('main');
-    if(mainEl && mainEl.firstElementChild) mainEl.insertBefore(bar, mainEl.firstElementChild);
-    else setup.parentElement.insertBefore(bar, setup);
-    const byKey={}; all.forEach(s=>{ byKey[s.key]=s.snap; });
-    bar.querySelectorAll('.resume-go').forEach(btn=>btn.addEventListener('click', ()=>{
-      try{ _resumeSession(byKey[btn.dataset.key]); }catch(e){ console.error(e); showToast('✗ 복원 실패 — 파일을 다시 업로드해 주세요'); }
-      bar.remove();
-    }));
-    bar.querySelectorAll('.resume-del').forEach(btn=>btn.addEventListener('click', async ()=>{
-      try{ await _idbDel(btn.dataset.key); }catch(e){}
-      const row=btn.parentElement; if(row) row.remove();
-      if(!bar.querySelector('.resume-go')) bar.remove();
-      showToast('저장된 세션을 삭제했습니다');
-    }));
-  }catch(e){ console.warn('[Exam-Lens] 세션 복원 배너 실패', e); }
+    const openMenu=()=>{
+      menu=document.createElement('div');
+      menu.id='resumeMenu';
+      menu.style.cssText='position:absolute;top:calc(100% + 8px);right:0;z-index:1000;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,.18);min-width:320px;max-width:92vw;max-height:70vh;overflow:auto';
+      menu.innerHTML=`<div style="padding:9px 12px;border-bottom:1px solid #eef1f7;font-size:12px;color:var(--muted)"><b style="color:var(--ink)">지난 분석 이어서 보기</b> · 과목별 저장 · 이 브라우저에만 저장됨</div>${all.map(rowHtml).join('')}`;
+      btn.parentElement.appendChild(menu);
+      const byKey={}; all.forEach(s=>{ byKey[s.key]=s.snap; });
+      menu.querySelectorAll('.resume-go').forEach(b=>b.addEventListener('click', ()=>{
+        try{ _resumeSession(byKey[b.dataset.key]); }catch(e){ console.error(e); showToast('✗ 복원 실패 — 파일을 다시 업로드해 주세요'); }
+        closeMenu();
+      }));
+      menu.querySelectorAll('.resume-del').forEach(b=>b.addEventListener('click', async ()=>{
+        try{ await _idbDel(b.dataset.key); }catch(e){}
+        all=all.filter(s=>s.key!==b.dataset.key);
+        const row=b.closest('.resume-row'); if(row) row.remove();
+        if(!all.length){ closeMenu(); btn.style.display='none'; }
+        showToast('저장된 세션을 삭제했습니다');
+      }));
+      document.addEventListener('click', onDocClick, true);
+    };
+    btn.addEventListener('click', ()=>{ if(menu) closeMenu(); else openMenu(); });
+  }catch(e){ console.warn('[Exam-Lens] 세션 복원 메뉴 실패', e); }
 }
 
 function applyCuts(students, cuts){
@@ -5439,6 +5489,13 @@ function saveHtml(){
     setupNext = setupCard.nextSibling;
     setupParent.removeChild(setupCard);
   }
+  // [이어서 보기] 버튼은 저장본에서 숨김 — IndexedDB 세션은 원본 브라우저에만 있어 동작 불가
+  const resumeBtn = document.getElementById('hdrBtnResume');
+  const resumeBtnDisp = resumeBtn ? resumeBtn.style.display : null;
+  if(resumeBtn) resumeBtn.style.display = 'none';
+  const resumeMenu = document.getElementById('resumeMenu');
+  if(resumeMenu) resumeMenu.remove();
+
   // [개인정보 보호 안내] 카드도 저장본에서 제거 — 라이브 앱 안내용
   const privacyCard = document.getElementById('privacyNotice');
   let privacyParent = null, privacyNext = null;
@@ -5533,6 +5590,8 @@ function saveHtml(){
   if(baseEl) baseEl.remove();
   if(banner) banner.remove();
   if(snapshotScript) snapshotScript.remove();
+  // [이어서 보기] 버튼 표시 복귀
+  if(resumeBtn && resumeBtnDisp !== null) resumeBtn.style.display = resumeBtnDisp;
   // setup 카드 원래 위치로 복귀
   if(setupCard && setupParent){
     if(setupNext) setupParent.insertBefore(setupCard, setupNext);
@@ -6698,12 +6757,23 @@ function drawCharts(items, hist, gd, students, grade, anon){
   const labels = ranked.map((s,i)=>`${i+1}등`);
   const data = ranked.map(s=>_rs(s));
   const colors = ranked.map(s=>gradeColor(s.grade, maxG));
-  // 등급별 범례용 데이터셋 (실제 표시는 단일 막대지만 색상은 등급별)
+  // 등급 구간(밴드) 계산 — 배경 색 밴드 + 점수 곡선
+  const bands=[];
+  ranked.forEach((s,i)=>{
+    const last=bands[bands.length-1];
+    if(last && last.grade===s.grade) last.end=i;
+    else bands.push({grade:s.grade, start:i, end:i, color:gradeColor(s.grade, maxG)});
+  });
   charts.rank = new Chart($('rankChart'), {
-    type:'bar',
-    data:{labels, datasets:[{label:'점수', data, backgroundColor:colors, borderWidth:0, categoryPercentage:0.95, barPercentage:1.0, borderRadius:3}]},
+    type:'line',
+    plugins:[gradeBandsPlugin],
+    data:{labels, datasets:[{label:'점수', data,
+      borderColor:'rgba(51,65,85,.8)', borderWidth:2, tension:0.25, fill:false,
+      pointBackgroundColor:colors, pointBorderColor:'#fff', pointBorderWidth:1,
+      pointRadius: ranked.length>90?2.5:(ranked.length>50?3.5:4.5), pointHoverRadius:7}]},
     options:{
-      responsive:true, maintainAspectRatio:false, animation:waveBar(8),
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'nearest', axis:'x', intersect:false},
       onClick:(evt, els)=>{
         if(!els.length) return;
         const s = ranked[els[0].index];
@@ -6711,7 +6781,8 @@ function drawCharts(items, hist, gd, students, grade, anon){
       },
       onHover:(e,els)=>{ e.native.target.style.cursor = els.length?'pointer':'default'; },
       plugins:{
-        title:{display:true,text:`석차순 점수 분포 (막대 클릭 → 학생별 정오표) · 전체 ${ranked.length}명`,...baseTitle},
+        gradeBands:{bands, count: ranked.length},
+        title:{display:true,text:`석차순 점수 곡선 (배경 = 등급 구간 · 점 클릭 → 학생별 정오표) · 전체 ${ranked.length}명`,...baseTitle},
         legend:{display:false},
         tooltip:{...baseTooltip, callbacks:{
           title:c=>{
