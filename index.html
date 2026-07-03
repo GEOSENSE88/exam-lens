@@ -2536,7 +2536,8 @@ function gradeDist(students, grade){
   const out = [];
   for(let g=1;g<=max;g++){
     const arr = students.filter(s=>s.grade===g);
-    const totals = arr.map(s=>s.total);
+    // 학기말(rawSum 보유)은 반올림 전 환산점수로 최저·최고 표시 — 등급 산정 기준과 일치
+    const totals = arr.map(s=> s.rawSum!=null ? +s.rawSum : s.total);
     out.push({
       grade:g, n:arr.length,
       ratio: students.length? arr.length/students.length*100 : 0,
@@ -3130,7 +3131,8 @@ function renderGradeTable(gd, grade){
   tb.innerHTML = gd.map(g=>`<tr>
     <td><span style="display:inline-block;width:10px;height:10px;background:${gradeColor(g.grade,maxG)};border-radius:2px;margin-right:6px;vertical-align:middle"></span>${g.grade}등급</td>
     <td>${g.n}</td><td>${g.ratio.toFixed(1)}</td>
-    <td>${g.min??'-'}</td><td>${g.max??'-'}</td>
+    <td>${g.min==null?'-':(Number.isInteger(g.min)?g.min:(+g.min).toFixed(2))}</td>
+    <td>${g.max==null?'-':(Number.isInteger(g.max)?g.max:(+g.max).toFixed(2))}</td>
   </tr>`).join('');
   $('gradeLegend').innerHTML = gd.map(g=>`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:14px;height:14px;background:${gradeColor(g.grade,maxG)};border-radius:3px"></span>${g.grade}등급</span>`).join('');
 }
@@ -5034,7 +5036,7 @@ function buildFinalTermReport(opts){
     ${imgScat?`<h3 class="pr-h3">중간 ↔ 기말 원점수 비교</h3><div class="pr-chart-center"><img src="${imgScat}"></div>`:''}
     <h3 class="pr-h3">등급 분포 (${maxG}등급)</h3>
     <table class="pr-table"><thead><tr><th>등급</th><th>인원</th><th>비율(%)</th><th>최저</th><th>최고</th></tr></thead><tbody>
-    ${gd.map(g=>`<tr><td>${g.grade}</td><td>${g.n}</td><td>${g.ratio.toFixed(1)}</td><td>${g.min!=null?g.min.toFixed(1):'-'}</td><td>${g.max!=null?g.max.toFixed(1):'-'}</td></tr>`).join('')}
+    ${gd.map(g=>`<tr><td>${g.grade}</td><td>${g.n}</td><td>${g.ratio.toFixed(1)}</td><td>${g.min!=null?g.min.toFixed(2):'-'}</td><td>${g.max!=null?g.max.toFixed(2):'-'}</td></tr>`).join('')}
     </tbody></table>
     ${incomplete.length?`<p class="pr-note">⚠ 인정점수 대상 ${incomplete.length}명: ${incomplete.slice(0,30).map(r=>`${_ftMask(r.name,r.sid,anon)}(${r.missing.join('·')})`).join(', ')}${incomplete.length>30?' 외…':''}</p>`:''}
   </section>`;
