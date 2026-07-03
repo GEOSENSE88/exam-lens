@@ -2023,9 +2023,11 @@ async function _initSessionResume(){
     const openMenu=()=>{
       menu=document.createElement('div');
       menu.id='resumeMenu';
-      menu.style.cssText='position:absolute;top:calc(100% + 8px);right:0;z-index:1000;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,.18);min-width:320px;max-width:92vw;max-height:70vh;overflow:auto';
+      // 헤더가 overflow 로 잘라내지 않도록 body 에 fixed 로 부착 (버튼 위치 기준 산출)
+      const r=btn.getBoundingClientRect();
+      menu.style.cssText=`position:fixed;top:${Math.round(r.bottom+8)}px;right:${Math.max(8, Math.round(window.innerWidth-r.right))}px;z-index:10000;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,.18);min-width:320px;max-width:92vw;max-height:70vh;overflow:auto`;
       menu.innerHTML=`<div style="padding:9px 12px;border-bottom:1px solid #eef1f7;font-size:12px;color:var(--muted)"><b style="color:var(--ink)">지난 분석 이어서 보기</b> · 과목별 저장 · 이 브라우저에만 저장됨</div>${all.map(rowHtml).join('')}`;
-      btn.parentElement.appendChild(menu);
+      document.body.appendChild(menu);
       const byKey={}; all.forEach(s=>{ byKey[s.key]=s.snap; });
       menu.querySelectorAll('.resume-go').forEach(b=>b.addEventListener('click', ()=>{
         try{ _resumeSession(byKey[b.dataset.key]); }catch(e){ console.error(e); showToast('✗ 복원 실패 — 파일을 다시 업로드해 주세요'); }
