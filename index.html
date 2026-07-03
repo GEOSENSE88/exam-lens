@@ -6690,10 +6690,13 @@ function drawCharts(items, hist, gd, students, grade, anon){
   });
 
   // 석차순 점수 분포 (1등 → 꼴찌, 등급별 색상)
+  // 정렬은 등급 산정과 같은 기준(학기말=반올림 전 rawSum)으로 — total(반올림 정수) 정렬 시
+  // 동일 정수로 반올림된 학생들의 순서가 뒤섞여 등급 색이 중간에 끼어 보이는 문제
+  const _rs = s => (s.rawSum!=null ? s.rawSum : s.total);
   const ranked = [...students].filter(s=>s.total!==null && s.grade!=null)
-                              .sort((a,b)=>(b.total)-(a.total));
+                              .sort((a,b)=>_rs(b)-_rs(a));
   const labels = ranked.map((s,i)=>`${i+1}등`);
-  const data = ranked.map(s=>s.total);
+  const data = ranked.map(s=>_rs(s));
   const colors = ranked.map(s=>gradeColor(s.grade, maxG));
   // 등급별 범례용 데이터셋 (실제 표시는 단일 막대지만 색상은 등급별)
   charts.rank = new Chart($('rankChart'), {
@@ -6721,7 +6724,8 @@ function drawCharts(items, hist, gd, students, grade, anon){
           label:c=>{
             const s = ranked[c.dataIndex];
             const {ban, num} = splitCls(s.cls);
-            return `${ban}반 ${num}번 · 총점 ${s.total} · ${s.grade}등급 · 석차 ${c.dataIndex+1}등 (중간석차 ${s.midRank?.toFixed(1)})`;
+            const scoreTxt = s.rawSum!=null ? (+s.rawSum).toFixed(2) : s.total;
+            return `${ban}반 ${num}번 · 총점 ${scoreTxt} · ${s.grade}등급 · 석차 ${s.rank||c.dataIndex+1}등 (중간석차 ${s.midRank?.toFixed(1)})`;
           },
           footer:()=>'클릭 → 학생 정오표'
         }}
