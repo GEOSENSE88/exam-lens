@@ -2514,11 +2514,16 @@ function assignGrades(students, grade, scoreOf){
     const groupSize = j - i + 1;
     const midRank = startRank + (groupSize - 1) / 2; // 중간석차
     const midPct = midRank / n;                       // 중간석차백분율(0~1) — 표시용
-    // 중간석차백분율은 정수로 반올림하여 등급 비율과 비교 (NEIS 방식)
-    // 예: 57명 중 2·3등 동점 → 중간석차 2.5 → 2.5/57=4.39% → 반올림 4% ≤ 4% → 1등급
-    const pctR = Math.round(midRank / n * 100 + 1e-9);
+    // 등급 = 중간석차가 경계석차(=반올림(N×누적비율)) 이내인 가장 상위 등급. (NEIS 조견표 방식)
+    //   동점자는 중간석차(석차+(동석차수-1)/2)로 판정 → 경계에 걸친 동점은 중간석차가
+    //   경계석차를 "넘으면" 함께 하위 등급으로 내려간다.
+    //   예: N=246, 경계석차(1등급)=반올림(246×0.04)=10.
+    //       - 동점 없음: 10등까지 1등급(10명), 11등(11>10)은 2등급.
+    //       - 10·11등 동점: 중간석차 10.5 > 10 → 둘 다 2등급(1등급 9명).
+    //   ※ 이전의 '중간석차백분율을 반올림해 ≤비율이면 상위등급' 보정(2026-07-02)은
+    //      큰 N에서 경계 밖 석차를 잘못 상위등급으로 편입시켜 제거함(2026-07-06 사용자 정정).
     let g = cuts.length;
-    for(let c=0;c<cuts.length;c++) if(midRank <= bounds[c] + 1e-9 || pctR <= cuts[c]*100 + 1e-9){ g=c+1; break; }
+    for(let c=0;c<cuts.length;c++) if(midRank <= bounds[c] + 1e-9){ g=c+1; break; }
     for(let x=i;x<=j;x++){
       list[x].rank = startRank;
       list[x].midRank = midRank;
@@ -3086,7 +3091,9 @@ function activateCountUp(){
   });
 }
 
-function renderSummary(stats, grade, alpha){
+function renderSummary(stats, grade, alpha, opts){
+  opts = opts || {};
+  const excluded = opts.excluded || 0;   // 학기말: 인정점수(무점수) 대상 — 총원(N)에서 제외된 인원
   const alphaInfo = alpha!=null ? (alpha>=0.9?'매우 높음':alpha>=0.8?'높음':alpha>=0.7?'적정':alpha>=0.6?'다소 낮음':alpha>=0.5?'낮음':'매우 낮음') : '';
   const TIPS = {
     n: '시험에 응답한 학생 총 인원수.\n·여러 반 합쳐서 분석할 경우 모두 합산됩니다.',
@@ -3101,8 +3108,13 @@ function renderSummary(stats, grade, alpha){
     sys: '5등급제: 1·2학년 / 9등급제: 3학년 (NEIS 기준).\n·동점자는 중간석차백분율로 등급 부여(NEIS 표준).',
   };
   const tipHTML = (k)=> `<span class="tip" data-tip="${TIPS[k]}">?</span>`;
+  // 학기말 탭: 무점수(인정) 학생은 총원에서 제외 — 등급·석차·비율이 재적수 기준임을 명시
+  const nCard = excluded>0
+    ? ['재적(등급 산정)', `${stats.n}명<span class="sub-line">인정 ${excluded}명 제외</span>`,
+       `<span class="tip" data-tip="등급·석차 산정 총원(재적) = ${stats.n}명.&#10;병결·인정결 등 응시기록이 없는 인정점수 대상 ${excluded}명은 총원에서 제외했습니다.&#10;1등급 비율 등 모든 등급 계산이 이 ${stats.n}명 기준입니다.">?</span>`]
+    : ['응시자 수', stats.n+'명', tipHTML('n')];
   const cards = [
-    ['응시자 수', stats.n+'명', tipHTML('n')],
+    nCard,
     ['평균', stats.mean.toFixed(1)+'점', tipHTML('mean')],
     ['표준편차', stats.sd.toFixed(1), tipHTML('sd')],
     ['중앙값', stats.median.toFixed(1)+'점', tipHTML('median')],
@@ -5461,7 +5473,8 @@ function runPrint(){
 }
 
 // 현재 분석 결과를 HTML 보고서로 저장 (차트는 원본 데이터로 다시 그려짐)
-function saveHtml(){
+// 저장본은 Chart.js 를 파일 안에 통째로 인라인 → 인터넷 없이도 아이패드 등에서 동작.
+async function saveHtml(){
   const result = document.getElementById('result');
   const hasResult = result && !result.classList.contains('hidden');
 
@@ -5583,23 +5596,68 @@ function saveHtml(){
     }
   }
 
-  // <base href> 주입 — 저장된 HTML 을 로컬(file://)에서 열어도 libs/, icon.png 등
-  // 상대 경로가 라이브 서버(26sannam3.site/exam-lens/)로 resolve 되도록.
-  // 라이브러리(libs/xlsx, chart, pdf.js)는 학교망에서 CDN 차단되더라도 우리 서버에서 받아옴.
+  // ═══ 자립형(오프라인) 저장: 차트 라이브러리를 파일 안에 직접 넣는다 ═══
+  //   저장본은 setup 카드가 제거돼 런타임엔 Chart.js 만 필요. 이걸 인라인으로 박아두면
+  //   인터넷·CDN·우리 서버 없이도 아이패드 Safari 등에서 차트·모달이 그대로 동작한다.
+  //   (Chart.js 부재 시 다중평가 복원 경로가 렌더 도중 throw → 표·모달까지 함께 죽던 문제 해결)
+  let _inlinedChart = false;
+  const _stripped = [];          // 저장본에서 잠시 떼어낸 원격 라이브러리 <script> 들
+  let _chartInlineEl = null;
+  try{
+    const _loadedChartSrc = Array.from(document.scripts).map(s=>s.src).find(x=>/chart\.umd\.min\.js/.test(x||''));
+    const _tryUrls = [ _loadedChartSrc, 'libs/chart.umd.min.js',
+      'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js' ].filter(Boolean);
+    let _chartSrc = null;
+    for(const u of _tryUrls){
+      try{ const r = await fetch(u); if(r && r.ok){ _chartSrc = await r.text(); break; } }catch(_){}
+    }
+    if(_chartSrc && _chartSrc.length > 1000){
+      // 원격 의존 스크립트(xlsx/chart/pdf/worker + document.write CDN 폴백 + worker 설정) 제거
+      const _reSrc = /(xlsx\.full\.min|chart\.umd\.min|pdf\.min|pdf\.worker)\.js/;
+      document.querySelectorAll('script').forEach(s=>{
+        const t = s.textContent || '';
+        const isExt = s.src && _reSrc.test(s.src);
+        const isFallback = !s.src && /document\.write/.test(t) && /(window\.XLSX|window\.Chart|window\.pdfjsLib)/.test(t);
+        const isWorkerCfg = !s.src && /pdfjsLib\.GlobalWorkerOptions/.test(t);
+        if(isExt || isFallback || isWorkerCfg){ _stripped.push({node:s, parent:s.parentNode, next:s.nextSibling}); }
+      });
+      _stripped.forEach(r=> r.parent && r.parent.removeChild(r.node));
+      // Chart.js 를 통째로 인라인 — 어떤 스크립트보다 먼저 실행되도록 head 최상단
+      _chartInlineEl = document.createElement('script');
+      _chartInlineEl.dataset.snapshotChart = '1';
+      // 닫는 스크립트 태그 리터럴이 있으면 직렬화 시 조기 종료되므로 이스케이프
+      _chartInlineEl.textContent = _chartSrc.replace(/<\/script/gi, '<\\/script');
+      document.head.insertBefore(_chartInlineEl, document.head.firstChild);
+      _inlinedChart = true;
+      if(banner) banner.textContent = `📁 저장된 분석 보고서 — ${new Date().toLocaleString('ko-KR')} · 인터넷 없이 열람 가능 (오프라인 지원)`;
+    }
+  }catch(e){ console.warn('[Exam-Lens] Chart.js 인라인 실패 — 원격 폴백 사용', e); }
+
+  // <base href> 주입 — 인라인에 실패한 경우에만(저장 시 오프라인 등) 옛 방식으로 폴백.
+  //   저장된 HTML 을 로컬(file://)에서 열어도 libs/·icon.png 상대경로가 라이브 서버로 resolve 되도록.
   const _existingBase = document.head.querySelector('base[data-snapshot-base]');
   let baseEl = null;
-  if(!_existingBase){
+  if(!_inlinedChart && !_existingBase){
     baseEl = document.createElement('base');
     baseEl.href = 'https://26sannam3.site/exam-lens/';
     baseEl.dataset.snapshotBase = '1';
     document.head.insertBefore(baseEl, document.head.firstChild);
   }
 
-  // 직렬화
-  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  // 직렬화 (인라인 성공 시 icon.png 오프라인 깨진 이미지 숨김 처리)
+  let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  if(_inlinedChart){
+    html = html.replace(/src="icon\.png"/g, 'src="icon.png" onerror="this.style.display=\'none\'"');
+  }
 
-  // 원복
+  // 원복 — 라이브 페이지 기능이 계속 살아있도록 떼어낸 것들 되돌리기
   if(baseEl) baseEl.remove();
+  if(_chartInlineEl) _chartInlineEl.remove();
+  for(let i=_stripped.length-1; i>=0; i--){
+    const r = _stripped[i];
+    if(r.parent){ if(r.next) r.parent.insertBefore(r.node, r.next); else r.parent.appendChild(r.node); }
+  }
   if(banner) banner.remove();
   if(snapshotScript) snapshotScript.remove();
   // [이어서 보기] 버튼 표시 복귀
@@ -7088,11 +7146,12 @@ function renderExam(b){
   setupCutsSimulator(students);
   renderFinalScoreAnalysis(stats);
   ['itemTable','studentTable','gradeTable','distTable','cutsCompTable'].forEach(id=>{ const el=$(id); if(el) makeSortable(el); });
-  // 기말 탭: [학기말 환산 점수 분석]·[성취도 분할점수 시뮬레이터]는 학기말 탭으로 대체되므로 숨김 (중간 탭에는 유지)
+  // 기말 탭: [학기말 환산 점수 분석]만 학기말 탭으로 대체되므로 숨김.
+  //          [성취도 분할점수 시뮬레이터]는 중간·기말 모두 유지.
   const isFinal = b.kind==='final';
-  const simSec=$('navSim'); if(simSec) simSec.style.display = isFinal?'none':'';
+  const simSec=$('navSim'); if(simSec) simSec.style.display = '';
   const projSec=$('navProjection'); if(projSec) projSec.style.display = isFinal?'none':'';
-  const simNav=document.querySelector('#resultNav .nav-link[data-target="navSim"]'); if(simNav) simNav.style.display = isFinal?'none':'';
+  const simNav=document.querySelector('#resultNav .nav-link[data-target="navSim"]'); if(simNav) simNav.style.display = '';
 }
 
 // 학기말 환산 학생 합성 (학번 조인)
@@ -7148,7 +7207,7 @@ function renderFinalTerm(){
     // 성취도 분포는 반올림 정수 기준(89.74→90→A)으로 집계
     const hist=histogram(complete.map(s=>({total:Math.round(s.total), name:s.name})), subject);
     _lastStudents=complete; window._lastStats=stats; lastItems=[];
-    renderSummary(stats, grade, null);
+    renderSummary(stats, grade, null, {excluded: incomplete.length});
     activateCountUp();
     renderGradeTable(gd, grade);
     try{ drawCharts([], hist, gd, complete, grade, $('anon').checked); }catch(e){ console.warn('학기말 차트', e); }
