@@ -760,7 +760,7 @@
     </h2>
     <div id="setupBody" style="overflow:hidden;transition:max-height .35s var(--ease), opacity .25s var(--ease);max-height:2000px">
     <div style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border-left:4px solid var(--pri);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--ink-2);border-radius:10px;font-weight:500">
-      📥 <b style="color:var(--pri-deep)">다운로드 경로</b>: NEIS → 성적 → 지필평가조회 → 교과목별학생답정오표 → <b>[XLS data]</b> 저장
+      📥 <b style="color:var(--pri-deep)">다운로드 경로</b>: NEIS → 성적 → 정기시험조회 → 교과목별학생답정오표 → <b>[XLS data]</b> 저장
     </div>
     <!-- 공통 설정 -->
     <div class="row">
@@ -785,7 +785,7 @@
         <div><label>중간 비율(%)</label><input type="number" id="midRatio" value="30" min="0" max="100" step="1"></div>
         <div><label>기말 비율(%)</label><input type="number" id="finalRatio" value="30" min="0" max="100" step="1"></div>
         <div><label>수행 비율(%)</label><input type="number" id="performRatio" value="40" min="0" max="100" step="1"></div>
-        <div><label>지필 만점 <span style="color:var(--muted);font-weight:400">(중간·기말 원점수 만점)</span></label><input type="number" id="paperMax" value="100" min="1" max="200" step="1"></div>
+        <div><label>정기시험 만점 <span style="color:var(--muted);font-weight:400">(중간·기말 원점수 만점)</span></label><input type="number" id="paperMax" value="100" min="1" max="200" step="1"></div>
         <div><label>수행평가 평균 <span style="color:var(--muted);font-weight:400">(파일 없을 때만 사용·만점=수행비율)</span></label><input type="number" id="performMean" value="36" min="0" max="100" step="0.1"></div>
       </div>
       <!-- examType: 학기말 탭 도입 후 미사용. renderFinalScoreAnalysis 하위호환용 hidden 유지 -->
@@ -5175,7 +5175,7 @@ function buildFinalTermReport(opts){
       <dt>발 행 일</dt><dd>${dateStr}</dd>
       <dt>작 성</dt><dd>산남고 이성훈 · Exam-Lens</dd>
     </dl>
-    <p class="pr-note" style="margin-top:14mm">학기말 환산점수 = 중간×${ft.midR}% + 기말×${ft.finR}% + 수행점수 (지필만점 ${ft.paperMax}).${incomplete.length?' 병결·인정결로 인정점수가 부여되는 학생은 실제 성적처리와 다를 수 있어 통계에서 제외했습니다.':''}${anon?' (익명 모드)':''}</p>
+    <p class="pr-note" style="margin-top:14mm">학기말 환산점수 = 중간×${ft.midR}% + 기말×${ft.finR}% + 수행점수 (정기시험 만점 ${ft.paperMax}).${incomplete.length?' 병결·인정결로 인정점수가 부여되는 학생은 실제 성적처리와 다를 수 있어 통계에서 제외했습니다.':''}${anon?' (익명 모드)':''}</p>
   </section>`;
   // 서술형 총평
   try{
@@ -7172,7 +7172,7 @@ function _ftMask(name, sid, anon){
   return s ? escHTML(s.slice(0,1)) + 'OO' : escHTML(sid||'');
 }
 
-// 지필(중간/기말) 한 시험 파싱+통계 (DOM 렌더 없음, 상태 텍스트만)
+// 정기시험(중간/기말) 한 시험 파싱+통계 (DOM 렌더 없음, 상태 텍스트만)
 async function computeExam({files, kind, examNameEl, neisFileEl, autoFillInfo}){
   let items=null; const students=[]; const fileLog=[];
   for(const f of files){
@@ -7268,7 +7268,7 @@ async function computePerform(files){
   return {areas, students, totalMax, totalRatio, fileLog};
 }
 
-// 지필 한 시험 렌더 (전역 스왑 후 기존 렌더 함수 재사용)
+// 정기시험 한 시험 렌더 (전역 스왑 후 기존 렌더 함수 재사용)
 function renderExam(b){
   if(!b) return;
   const anon=$('anon').checked;
@@ -7499,7 +7499,7 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
     <span style="background:#dbeafe;color:#1e3a8a;padding:4px 10px;border-radius:8px;font-weight:600">기말 ${ft.finR}%</span>
     <span style="background:#dcfce7;color:#047857;padding:4px 10px;border-radius:8px;font-weight:600">수행 ${ft.perR}%</span>
     <span style="background:#f3f4f6;color:#374151;padding:4px 10px;border-radius:8px">합계 ${sum}%${Math.abs(sum-100)>0.5?' ⚠':''}</span>
-    <span style="color:var(--muted)">환산식: 중간×${ft.midR}% + 기말×${ft.finR}% + 수행점수 · 지필만점 ${ft.paperMax}</span>
+    <span style="color:var(--muted)">환산식: 중간×${ft.midR}% + 기말×${ft.finR}% + 수행점수 · 정기시험 만점 ${ft.paperMax}</span>
   </div>`;
   if(Math.abs(sum-100)>0.5) html+=`<div style="background:#fef3c7;color:#92400e;padding:9px 13px;border-radius:9px;margin-bottom:12px;font-size:12.5px">⚠ 반영비율 합계가 ${sum}%로 100%가 아닙니다. 상단 [학기말 환산 비율]을 확인하세요.</div>`;
   // 비율은 있으나 데이터가 없는 영역 경고(과소 환산 방지)
@@ -7681,7 +7681,7 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
   const ftTable=$('finalTermTable'); if(ftTable) makeSortable(ftTable);
 }
 
-// nav/섹션 모드: 'paper'(지필) | 'finalterm'(학기말)
+// nav/섹션 모드: 'paper'(정기시험) | 'finalterm'(학기말)
 function setNavMode(mode){
   const isFT = mode==='finalterm';
   document.querySelectorAll('#resultNav .item-nav').forEach(el=>{
@@ -7942,7 +7942,7 @@ $('cutsApply').addEventListener('click', ()=>{
 ['midRatio','finalRatio','performRatio','performMean','paperMax','examType'].forEach(id=>{
   const el=$(id); if(!el) return;
   el.addEventListener('change', ()=>{
-    // 지필 탭: 기존 환산 예측 갱신
+    // 정기시험 탭: 기존 환산 예측 갱신
     const stats = window._lastStats;
     if(stats && ACTIVE_TAB!=='final_term') renderFinalScoreAnalysis(stats);
     // 학기말 탭이 존재하면 탭 재구성 + 현재 학기말 보면 재렌더
