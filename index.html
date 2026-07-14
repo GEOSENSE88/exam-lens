@@ -5204,6 +5204,21 @@ function buildFinalTermReport(opts){
     </tbody></table>
     ${incomplete.length?`<p class="pr-note">⚠ 인정점수 대상 ${incomplete.length}명: ${incomplete.slice(0,30).map(r=>`${_ftMask(r.name,r.sid,anon)}(${r.missing.join('·')})`).join(', ')}${incomplete.length>30?' 외…':''}</p>`:''}
   </section>`;
+  // 성취수준 A 비율 점검 체크리스트 + 종합분석 의견 (기준 초과 또는 작성 내용이 있을 때)
+  try{
+    const aPct = complete.length ? achCount.A/complete.length*100 : 0;
+    const ck = loadFtCheck();
+    const hasData = ck && ((ck.op&&String(ck.op).trim()) || (ck.a&&Object.keys(ck.a).length));
+    if(aPct > FT_A_THRESHOLD || hasData){
+      html += `<section class="pr-page">
+        <h2 class="pr-h2">성취수준 A 비율 점검 — 단계별 성취평가 결과 점검</h2>
+        <p class="pr-note" style="margin:0 0 4mm">성취수준 A 비율 <b>${aPct.toFixed(1)}%</b> (${achCount.A}/${complete.length}명) ${aPct>FT_A_THRESHOLD?`— 기준 <b>${FT_A_THRESHOLD}%</b> 초과로 체크리스트 작성 및 종합분석 의견 기술 대상임.`:`— 기준(${FT_A_THRESHOLD}%) 이내.`}</p>
+        ${_ftChecklistTableHTML(ck, false)}
+        <h3 class="pr-h3">종합분석 의견</h3>
+        <div style="border:1px solid #cbd5e1;border-radius:3mm;padding:4mm;min-height:30mm;font-size:12px;line-height:1.75;white-space:pre-wrap">${ck.op?escHTML(ck.op):'<span style="color:#9ca3af">(작성된 종합분석 의견 없음 — 학기말 분석 화면에서 입력)</span>'}</div>
+      </section>`;
+    }
+  }catch(e){ console.warn('체크리스트(보고서) 생성 실패', e); }
   // 학생별 종합표 (가로)
   const sorted=[...complete].sort((a,b)=>(b.rawSum??b.total)-(a.rawSum??a.total));
   if(complete[0] && complete[0].rank==null){ assignGrades(complete, grade, s=>s.rawSum); }
@@ -7489,6 +7504,86 @@ function buildFinalTermReview(complete, incomplete, grade, subject, ft){
        + (classTable ? `<h3>2. 학급별 환산 평균</h3>` + classTable : '');
 }
 
+// ── 성취수준 A 비율 점검 체크리스트 (A 비율 > 23.9% 시 작성 · 종합분석 의견 기술) ──
+const FT_A_THRESHOLD = 23.9;
+const FT_CHECK_ITEMS = [
+  {no:1,  stage:'평가계획 및 평가문항 출제', text:'과목별 성취기준에 따른 성취수준(또는 평가기준)을 마련하여 이에 근거하여 평가 계획을 수립하였는가?'},
+  {no:2,  text:'성취수준별 추정분할점수 산출 방식을 따를 경우 교과 특성, 평가 문항의 난이도 등을 고려하였으며 담당 교사의 협의 과정을 거쳤는가?'},
+  {no:3,  text:'1차 고사의 분석 결과(문항 난이도, 변별도, 정답률, 오답률 등)를 2차 고사의 출제시 반영하였는가?'},
+  {no:4,  text:'동일 교과(목) 담당 교사 간 공동 출제를 하고, 교과 내 검토를 강화하였는가?'},
+  {no:5,  text:'평가 출제시 각 성취수준 도달 여부를 판단할 수 있는 다양한 수준의 문항을 출제하였는가?'},
+  {no:6,  stage:'분할점수 산출', text:'성취수준별 추정분할점수 적용 시, 나이스 분할점수 기능 또는 분할점수 산출 프로그램을 사용하였는가?'},
+  {no:7,  text:'성취수준별 추정분할점수 적용 시, 공동 출제 교사들이 모두 참여하였는가?'},
+  {no:8,  stage:'평가시행 및 결과 분석', text:'채점에서 타당성과 객관성을 확보하는가? (채점자 간 일치도, 특정 집단에 유리하지 않은 기술)'},
+  {no:9,  text:'성취수준별 비율이 특정 성취수준에 편중된 경우 교과협의회 등을 통해 원인을 분석하였는가?'},
+  {no:10, text:'평가문항을 분석함으로써 출제한 문항이 다양한 성취수준에 부합한지 판단하고 성찰하였는가?'},
+  {no:11, text:'성취수준 판별과 무관한, 지나치게 쉬운 문항이나 어려운 문항을 출제하지는 않았는가?'},
+  {no:12, text:'학생들의 학업 성취 정도를 고려하였을 때, 우리 학교의 성취수준 A의 비율은 적절한 것으로 판단할 수 있는가?'},
+];
+// 저장소 — 학년|과목 별 localStorage (자동 저장, 인쇄 보고서에 포함)
+function _ftCheckKey(){ return `examlens_ftcheck|${($('grade')||{}).value||'1'}|${((($('subject')||{}).value)||'').trim()}`; }
+function loadFtCheck(){ try{ return JSON.parse(localStorage.getItem(_ftCheckKey())||'{}')||{}; }catch(e){ return {}; } }
+function saveFtCheck(d){ try{ localStorage.setItem(_ftCheckKey(), JSON.stringify(d)); }catch(e){} }
+// 체크리스트 표 HTML — interactive(화면 입력) / 정적(인쇄 ✓ 표시) 공용
+function _ftChecklistTableHTML(ck, interactive){
+  const a=(ck&&ck.a)||{}, m=(ck&&ck.m)||{};
+  // 단계별 rowspan 계산
+  const spans={};
+  let cur=null;
+  FT_CHECK_ITEMS.forEach(it=>{ if(it.stage){ cur=it.no; spans[cur]=0; } spans[cur]++; });
+  const rows = FT_CHECK_ITEMS.map(it=>{
+    const stageTd = it.stage ? `<td rowspan="${spans[it.no]}" style="text-align:center;font-weight:700;font-size:11.5px;background:#f8fafc;vertical-align:middle;white-space:pre-line">${it.stage.replace(' 및 ',' 및\n')}</td>` : '';
+    const yes = a[it.no]==='y', no = a[it.no]==='n';
+    const yesTd = interactive
+      ? `<td style="text-align:center"><input type="radio" name="ftchk_${it.no}" data-no="${it.no}" value="y"${yes?' checked':''} style="cursor:pointer;width:15px;height:15px;accent-color:#16a34a"></td>`
+      : `<td style="text-align:center;font-size:14px">${yes?'✓':''}</td>`;
+    const noTd = interactive
+      ? `<td style="text-align:center"><input type="radio" name="ftchk_${it.no}" data-no="${it.no}" value="n"${no?' checked':''} style="cursor:pointer;width:15px;height:15px;accent-color:#dc2626"></td>`
+      : `<td style="text-align:center;font-size:14px">${no?'✓':''}</td>`;
+    const noteTd = interactive
+      ? `<td><input type="text" class="ftchk-note" data-no="${it.no}" value="${escHTML(m[it.no]||'')}" placeholder="특이사항" style="width:100%;min-width:90px;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:11.5px;box-sizing:border-box"></td>`
+      : `<td style="font-size:11px">${escHTML(m[it.no]||'')}</td>`;
+    return `<tr>${stageTd}<td class="l" style="font-size:12px;line-height:1.5">${it.no}. ${it.text}</td>${yesTd}${noTd}${noteTd}</tr>`;
+  }).join('');
+  return `<table class="pr-table" style="width:100%;font-size:12px">
+    <thead><tr><th style="width:78px">점검 단계</th><th class="l">단계별 성취평가 결과 점검</th><th style="width:44px">예</th><th style="width:52px">아니오</th><th style="width:140px">비고(특이사항)</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+// 종합분석 의견 초안 자동 생성
+function _ftOpinionDraft(aPct, achCnt, N){
+  const ck = loadFtCheck(); const a = ck.a||{};
+  const s=[];
+  s.push(`본 과목의 학기말 성취수준 A 비율은 ${aPct.toFixed(1)}%(${achCnt.A}/${N}명)로 기준(${FT_A_THRESHOLD}%)을 상회함.`);
+  const done=[];
+  if(a[1]==='y') done.push('성취기준에 따른 성취수준에 근거한 평가 계획 수립');
+  if(a[4]==='y') done.push('동일 교과 담당 교사 간 공동 출제 및 교과 내 검토');
+  if(a[5]==='y') done.push('각 성취수준 도달 여부를 판단할 수 있는 다양한 수준의 문항 출제');
+  if(a[8]==='y') done.push('채점의 타당성·객관성 확보');
+  if(a[9]==='y') done.push('교과협의회를 통한 성취수준 편중 원인 분석');
+  if(done.length) s.push(`평가의 계획·출제·시행 전 과정에서 ${done.join(', ')}을(를) 거쳤음.`);
+  s.push(`A 비율이 높게 나타난 것은 학생들의 전반적인 학업 성취 수준과 학습 참여도가 높은 데 기인한 것으로 판단되며, 성취수준 판별과 무관한 지나치게 쉬운 문항의 출제에 따른 결과는 아님.`);
+  s.push(`다음 학기 평가에서는 문항별 난이도·변별도·정답률 분석 결과를 출제에 반영하고, 성취수준 경계(특히 A/B 경계)를 판별하는 문항의 비중을 조정하여 성취수준별 비율이 균형 있게 산출되도록 관리하고자 함.`);
+  return s.join(' ');
+}
+// 화면용 체크리스트 카드
+function _ftChecklistCardHTML(aPct, achCnt, N){
+  const ck = loadFtCheck();
+  return `<div id="ftChecklistCard" style="background:#fff;border:1.5px solid #fecaca;border-radius:12px;padding:14px 16px;margin-bottom:14px">
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:9px 13px;margin-bottom:11px;font-size:12.5px;color:#991b1b;line-height:1.6">
+      🚨 <b>성취수준 A 비율 ${aPct.toFixed(1)}%</b> (${achCnt.A}/${N}명) — 기준 <b>${FT_A_THRESHOLD}%</b> 초과.
+      아래 <b>단계별 성취평가 결과 점검 체크리스트</b>를 작성한 후 <b>종합분석 의견</b>을 기술하세요.
+      <span style="color:#b45309">입력 내용은 자동 저장되며(학년·과목별), 학기말 인쇄 보고서에 포함됩니다.</span>
+    </div>
+    <div class="table-wrap" style="max-height:none">${_ftChecklistTableHTML(ck, true)}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin:12px 0 6px">
+      <div style="font-weight:700;font-size:13px;color:var(--ink)">📝 종합분석 의견</div>
+      <button id="ftDraftBtn" class="ghost no-print" style="font-size:11.5px;padding:4px 10px">✍ 초안 자동 생성</button>
+      <span style="font-size:11px;color:var(--muted)">체크 결과·분포 통계를 반영한 초안을 만든 뒤 수정하세요</span>
+    </div>
+    <textarea id="ftOpinion" placeholder="A 비율이 기준을 초과한 원인 분석과 향후 평가 관리 계획을 기술" style="width:100%;min-height:110px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px;line-height:1.65;box-sizing:border-box;resize:vertical;font-family:inherit">${escHTML(ck.op||'')}</textarea>
+  </div>`;
+}
+
 function renderFinalTermPanels(ft, complete, incomplete, grade){
   const anon=$('anon').checked;
   const sum=ft.midR+ft.finR+ft.perR;
@@ -7545,6 +7640,13 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
         </div>
       </div>
     </div>`;
+    // ── 성취수준 A 비율 점검 — 기준(23.9%) 초과 시 체크리스트 + 종합분석 의견 ──
+    const aPct = N ? achCnt.A/N*100 : 0;
+    if(aPct > FT_A_THRESHOLD){
+      html += _ftChecklistCardHTML(aPct, achCnt, N);
+    } else {
+      html += `<div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:11px;padding:10px 14px;margin-bottom:14px;font-size:12.5px">✅ 성취수준 A 비율 <b>${aPct.toFixed(1)}%</b> (${achCnt.A}/${N}명) — 기준(${FT_A_THRESHOLD}%) 이하로 점검 체크리스트·종합분석 의견 작성 대상이 아닙니다.</div>`;
+    }
   } else {
     html += `<div style="color:var(--muted);padding:14px">환산 가능한 학생이 없습니다. 중간·기말·수행 데이터와 반영비율을 확인하세요.</div>`;
   }
@@ -7679,6 +7781,30 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
   </div>`;
   $('finalTermBody').innerHTML=html;
   const ftTable=$('finalTermTable'); if(ftTable) makeSortable(ftTable);
+
+  // ── 체크리스트 자동 저장 + 초안 생성 바인딩 ──
+  const ckCard=$('ftChecklistCard');
+  if(ckCard){
+    const persist=t=>{
+      const ck=loadFtCheck(); ck.a=ck.a||{}; ck.m=ck.m||{};
+      if(t.matches('input[type=radio][data-no]')) ck.a[t.dataset.no]=t.value;
+      else if(t.matches('input.ftchk-note')) ck.m[t.dataset.no]=t.value;
+      else if(t.id==='ftOpinion') ck.op=t.value;
+      else return;
+      saveFtCheck(ck);
+    };
+    ckCard.addEventListener('change', e=>persist(e.target));
+    ckCard.addEventListener('input',  e=>persist(e.target));
+    const draftBtn=$('ftDraftBtn');
+    if(draftBtn) draftBtn.addEventListener('click', ()=>{
+      const op=$('ftOpinion'); if(!op) return;
+      if(op.value.trim() && !confirm('작성 중인 종합분석 의견을 자동 초안으로 덮어쓸까요?')) return;
+      const _N=complete.length; const _cnt={A:0,B:0,C:0,D:0,E:0,I:0};
+      complete.forEach(r=>{ _cnt[ftAch(r.total)]++; });
+      op.value=_ftOpinionDraft(_N?_cnt.A/_N*100:0, _cnt, _N);
+      const ck=loadFtCheck(); ck.op=op.value; saveFtCheck(ck);
+    });
+  }
 }
 
 // nav/섹션 모드: 'paper'(정기시험) | 'finalterm'(학기말)
