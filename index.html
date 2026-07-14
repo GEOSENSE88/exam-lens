@@ -5204,18 +5204,18 @@ function buildFinalTermReport(opts){
     </tbody></table>
     ${incomplete.length?`<p class="pr-note">⚠ 인정점수 대상 ${incomplete.length}명: ${incomplete.slice(0,30).map(r=>`${_ftMask(r.name,r.sid,anon)}(${r.missing.join('·')})`).join(', ')}${incomplete.length>30?' 외…':''}</p>`:''}
   </section>`;
-  // 성취수준 A 비율 점검 체크리스트 + 종합분석 의견 (기준 초과 또는 작성 내용이 있을 때)
+  // 성취수준 A 비율 점검 — 참고 체크리스트(수기 점검용) + 종합분석 의견 (기준 초과 시)
   try{
     const aPct = complete.length ? achCount.A/complete.length*100 : 0;
     const ck = loadFtCheck();
-    const hasData = ck && ((ck.op&&String(ck.op).trim()) || (ck.a&&Object.keys(ck.a).length));
-    if(aPct > FT_A_THRESHOLD || hasData){
+    if(aPct > FT_A_THRESHOLD){
+      const op = (ck.op && String(ck.op).trim()) ? ck.op : _ftOpinionDraft(aPct, achCount, complete.length);
       html += `<section class="pr-page">
         <h2 class="pr-h2">성취수준 A 비율 점검 — 단계별 성취평가 결과 점검</h2>
-        <p class="pr-note" style="margin:0 0 4mm">성취수준 A 비율 <b>${aPct.toFixed(1)}%</b> (${achCount.A}/${complete.length}명) ${aPct>FT_A_THRESHOLD?`— 기준 <b>${FT_A_THRESHOLD}%</b> 초과로 체크리스트 작성 및 종합분석 의견 기술 대상임.`:`— 기준(${FT_A_THRESHOLD}%) 이내.`}</p>
-        ${_ftChecklistTableHTML(ck, false)}
+        <p class="pr-note" style="margin:0 0 4mm">성취수준 A 비율 <b>${aPct.toFixed(1)}%</b> (${achCount.A}/${complete.length}명) — 기준 <b>${FT_A_THRESHOLD}%</b> 초과로 종합분석 의견 기술 대상임. 아래 체크리스트는 수기 점검용.</p>
+        ${_ftChecklistTableHTML()}
         <h3 class="pr-h3">종합분석 의견</h3>
-        <div style="border:1px solid #cbd5e1;border-radius:3mm;padding:4mm;min-height:30mm;font-size:12px;line-height:1.75;white-space:pre-wrap">${ck.op?escHTML(ck.op):'<span style="color:#9ca3af">(작성된 종합분석 의견 없음 — 학기말 분석 화면에서 입력)</span>'}</div>
+        <div style="border:1px solid #cbd5e1;border-radius:3mm;padding:4mm;min-height:30mm;font-size:12px;line-height:1.75;white-space:pre-wrap">${escHTML(op)}</div>
       </section>`;
     }
   }catch(e){ console.warn('체크리스트(보고서) 생성 실패', e); }
@@ -7524,10 +7524,9 @@ const FT_CHECK_ITEMS = [
 function _ftCheckKey(){ return `examlens_ftcheck|${($('grade')||{}).value||'1'}|${((($('subject')||{}).value)||'').trim()}`; }
 function loadFtCheck(){ try{ return JSON.parse(localStorage.getItem(_ftCheckKey())||'{}')||{}; }catch(e){ return {}; } }
 function saveFtCheck(d){ try{ localStorage.setItem(_ftCheckKey(), JSON.stringify(d)); }catch(e){} }
-// 체크리스트 표 HTML — interactive(화면 입력) / 정적(인쇄 ✓ 표시) 공용
+// 체크리스트 표 HTML — 참고자료용 정적 표 (입력 없음 · 인쇄 시 수기 점검용)
 // ※ 전역 CSS가 th,td를 우측 정렬하므로 정렬·폭은 모두 인라인으로 고정
-function _ftChecklistTableHTML(ck, interactive){
-  const a=(ck&&ck.a)||{}, m=(ck&&ck.m)||{};
+function _ftChecklistTableHTML(){
   // 단계별 rowspan 계산
   const spans={};
   let cur=null;
@@ -7536,61 +7535,41 @@ function _ftChecklistTableHTML(ck, interactive){
   const cellB='border-bottom:1px solid var(--line-2, #e5e8f0);';
   const rows = FT_CHECK_ITEMS.map(it=>{
     const stageTd = it.stage ? `<td rowspan="${spans[it.no]}" style="${cellB}text-align:center;font-weight:700;font-size:11.5px;background:#f8fafc;vertical-align:middle;word-break:keep-all;line-height:1.5;padding:6px 8px;border-right:1px solid var(--line-2, #e5e8f0)">${it.stage}</td>` : '';
-    const yes = a[it.no]==='y', no = a[it.no]==='n';
-    const yesTd = interactive
-      ? `<td style="${cellB}text-align:center"><input type="radio" name="ftchk_${it.no}" data-no="${it.no}" value="y"${yes?' checked':''} style="cursor:pointer;width:15px;height:15px;accent-color:#16a34a"></td>`
-      : `<td style="${cellB}text-align:center;font-size:14px">${yes?'✓':''}</td>`;
-    const noTd = interactive
-      ? `<td style="${cellB}text-align:center"><input type="radio" name="ftchk_${it.no}" data-no="${it.no}" value="n"${no?' checked':''} style="cursor:pointer;width:15px;height:15px;accent-color:#dc2626"></td>`
-      : `<td style="${cellB}text-align:center;font-size:14px">${no?'✓':''}</td>`;
-    const noteTd = interactive
-      ? `<td style="${cellB}text-align:center"><input type="text" class="ftchk-note" data-no="${it.no}" value="${escHTML(m[it.no]||'')}" placeholder="특이사항" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:11.5px;box-sizing:border-box"></td>`
-      : `<td style="${cellB}text-align:center;font-size:11px;word-break:keep-all">${escHTML(m[it.no]||'')}</td>`;
-    return `<tr>${stageTd}<td style="${cellB}text-align:left;font-size:12px;line-height:1.55;padding:7px 10px;word-break:keep-all">${it.no}. ${it.text}</td>${yesTd}${noTd}${noteTd}</tr>`;
+    return `<tr>${stageTd}<td style="${cellB}text-align:left;font-size:12px;line-height:1.55;padding:7px 10px;word-break:keep-all">${it.no}. ${it.text}</td><td style="${cellB}"></td><td style="${cellB}"></td><td style="${cellB}"></td></tr>`;
   }).join('');
   return `<table style="width:100%;border-collapse:collapse;font-size:12px">
     <colgroup><col style="width:96px"><col><col style="width:46px"><col style="width:58px"><col style="width:150px"></colgroup>
     <thead><tr><th style="${thS}">점검 단계</th><th style="${thS}">단계별 성취평가 결과 점검</th><th style="${thS}">예</th><th style="${thS}">아니오</th><th style="${thS}">비고(특이사항)</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
 }
-// 종합분석 의견 초안 — 체크리스트 응답(예/아니오·비고)을 반영해 자동 생성
-const _FT_ITEM_SHORT = {
-  1:'성취기준에 근거한 평가 계획 수립', 2:'분할점수 산출 시 교과 특성·문항 난이도 고려 및 교사 협의',
-  3:'1차 고사 분석 결과의 2차 고사 출제 반영', 4:'교과 담당 교사 간 공동 출제 및 교과 내 검토',
-  5:'성취수준 도달 여부를 판단할 수 있는 다양한 수준의 문항 출제', 6:'나이스 분할점수 기능(분할점수 산출 프로그램) 활용',
-  7:'분할점수 산출 시 공동 출제 교사 전원 참여', 8:'채점의 타당성·객관성 확보',
-  9:'교과협의회를 통한 성취수준 편중 원인 분석', 10:'출제 문항의 성취수준 부합 여부 분석·성찰',
-  11:'성취수준 판별과 무관한 지나치게 쉽거나 어려운 문항 배제'
-};
+// 종합분석 의견 초안 — 분포 통계 기반 자동 생성
 function _ftOpinionDraft(aPct, achCnt, N){
-  const ck = loadFtCheck(); const a = ck.a||{}, m = ck.m||{};
-  const memoOf = no => (m[no]&&String(m[no]).trim()) ? `(${String(m[no]).trim()})` : '';
-  const yes=[], noItems=[];
-  for(let i=1;i<=11;i++){
-    if(a[i]==='y') yes.push(_FT_ITEM_SHORT[i]);
-    else if(a[i]==='n') noItems.push(_FT_ITEM_SHORT[i]+memoOf(i));
-  }
   const s=[];
-  s.push(`본 과목의 학기말 성취수준 A 비율은 ${aPct.toFixed(1)}%(${achCnt.A}/${N}명)로 기준(${FT_A_THRESHOLD}%)을 상회하여 단계별 성취평가 결과 점검을 실시함.`);
-  if(yes.length) s.push(`점검 결과 ${yes.join(', ')} 등이 정상적으로 이행된 것으로 확인됨.`);
-  if(a[12]==='y') s.push(`학생들의 학업 성취 정도를 고려할 때 본교의 성취수준 A 비율은 적절한 수준으로 판단되며, A 비율 상회는 학생들의 전반적인 학업 성취 수준과 학습 참여도가 높은 데 기인한 것으로 성취수준 판별과 무관한 지나치게 쉬운 문항 출제에 따른 결과는 아님.`);
-  else if(a[12]==='n') s.push(`다만 학업 성취 정도 대비 A 비율의 적절성에 대해서는 교과협의회를 통한 추가 검토가 필요한 것으로 판단됨.`);
-  if(noItems.length) s.push(`한편 ${noItems.join(', ')} 항목은 '아니오'로 점검되어 다음 학기 평가에서 우선적으로 보완하고자 함.`);
+  s.push(`본 과목의 학기말 성취수준 A 비율은 ${aPct.toFixed(1)}%(${achCnt.A}/${N}명)로 기준(${FT_A_THRESHOLD}%)을 상회함.`);
+  s.push(`이는 학생들의 전반적인 학업 성취 수준과 학습 참여도가 높은 데 기인한 것으로 판단되며, 성취수준 판별과 무관한 지나치게 쉬운 문항의 출제에 따른 결과는 아님.`);
+  s.push(`평가 계획 수립 시 과목별 성취기준에 따른 성취수준에 근거하였고, 동일 교과 담당 교사 간 공동 출제와 교과 내 검토를 거쳤으며, 각 성취수준 도달 여부를 판단할 수 있는 다양한 수준의 문항을 출제하였음.`);
+  s.push(`또한 채점의 타당성과 객관성을 확보하였고, 성취수준별 비율 편중 여부에 대해서는 교과협의회를 통해 원인을 분석하였음.`);
   s.push(`향후 문항별 난이도·변별도·정답률 분석 결과를 출제에 반영하고, 성취수준 경계(특히 A/B 경계)를 판별하는 문항의 비중을 조정하여 성취수준별 비율이 균형 있게 산출되도록 관리할 계획임.`);
   return s.join(' ');
 }
-// 체크리스트 카드 (📝 학기말 결과 총평 내부에 표시)
+// A 비율 점검 카드 (📝 학기말 결과 총평 내부) — 참고 체크리스트 + 자동 초안 의견
 function _ftChecklistCardHTML(aPct, achCnt, N){
   const ck = loadFtCheck();
+  // 직접 수정본이 있으면 유지, 없거나 자동 초안 상태면 최신 통계로 초안 생성
+  const op = (ck.op && String(ck.op).trim() && !ck.auto) ? ck.op : _ftOpinionDraft(aPct, achCnt, N);
   return `<div id="ftChecklistCard" style="background:#fff;border:1.5px solid #fecaca;border-radius:12px;padding:14px 16px;margin-top:14px">
     <div style="font-weight:800;font-size:13.5px;color:#991b1b;margin-bottom:4px">🚨 성취수준 A 비율 점검 — <b>${aPct.toFixed(1)}%</b> (${achCnt.A}/${N}명) · 기준 ${FT_A_THRESHOLD}% 초과</div>
-    <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px">아래 <b>단계별 성취평가 결과 점검 체크리스트</b>를 작성하면 체크 내용을 바탕으로 <b>종합분석 의견 초안이 자동 생성·갱신</b>됩니다 (의견을 직접 수정하면 자동 갱신 중지). 입력 내용은 학년·과목별로 자동 저장되며 학기말 인쇄 보고서에 포함됩니다.</div>
-    <div class="table-wrap" style="max-height:none">${_ftChecklistTableHTML(ck, true)}</div>
-    <div style="display:flex;align-items:center;gap:10px;margin:12px 0 6px;flex-wrap:wrap">
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px">A 비율이 기준을 초과하여 <b>종합분석 의견</b> 기술 대상입니다. 아래에 분포 통계를 반영한 <b>초안이 자동 생성</b>되어 있으니 검토 후 수정하세요 (수정 내용은 학년·과목별 자동 저장 · 인쇄 보고서 포함). 점검 체크리스트는 참고자료로 함께 제공됩니다.</div>
+    <details style="margin-bottom:11px">
+      <summary style="font-size:12.5px;font-weight:700;color:var(--ink-2)">📋 단계별 성취평가 결과 점검 체크리스트 <span style="font-weight:400;color:var(--muted)">(참고자료 — 펼쳐 보기 · 인쇄 보고서에 수기 점검용 표 포함)</span></summary>
+      <div class="table-wrap" style="max-height:none;margin-top:8px">${_ftChecklistTableHTML()}</div>
+    </details>
+    <div style="display:flex;align-items:center;gap:10px;margin:0 0 6px;flex-wrap:wrap">
       <div style="font-weight:700;font-size:13px;color:var(--ink)">📝 종합분석 의견</div>
-      <button id="ftDraftBtn" class="ghost no-print" style="font-size:11.5px;padding:4px 10px">✍ 체크 내용으로 초안 다시 생성</button>
+      <button id="ftDraftBtn" class="ghost no-print" style="font-size:11.5px;padding:4px 10px">✍ 초안 다시 생성</button>
+      <span style="font-size:11px;color:var(--muted)">자동 초안 — 검토 후 자유롭게 수정하세요</span>
     </div>
-    <textarea id="ftOpinion" placeholder="체크리스트를 작성하면 초안이 자동으로 생성됩니다 — A 비율 초과 원인 분석과 향후 평가 관리 계획" style="width:100%;min-height:110px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px;line-height:1.65;box-sizing:border-box;resize:vertical;font-family:inherit">${escHTML(ck.op||'')}</textarea>
+    <textarea id="ftOpinion" style="width:100%;min-height:110px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px;line-height:1.65;box-sizing:border-box;resize:vertical;font-family:inherit">${escHTML(op)}</textarea>
   </div>`;
 }
 
@@ -7790,42 +7769,26 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
   $('finalTermBody').innerHTML=html;
   const ftTable=$('finalTermTable'); if(ftTable) makeSortable(ftTable);
 
-  // ── 체크리스트 자동 저장 + 체크 내용 기반 의견 초안 자동 생성 ──
+  // ── 종합분석 의견 자동 저장 + 초안 재생성 ──
   const ckCard=$('ftChecklistCard');
   if(ckCard){
     const _N=complete.length;
     const _cnt={A:0,B:0,C:0,D:0,E:0,I:0};
     complete.forEach(r=>{ _cnt[ftAch(r.total)]++; });
     const _aP=_N?_cnt.A/_N*100:0;
-    // 초안 재생성 — ck.auto=true 로 표시 (직접 수정 전까지 체크 변경 시 계속 갱신)
-    const regen=()=>{
-      const op=$('ftOpinion'); if(!op) return;
-      op.value=_ftOpinionDraft(_aP, _cnt, _N);
-      const ck=loadFtCheck(); ck.op=op.value; ck.auto=true; saveFtCheck(ck);
-    };
-    const persist=t=>{
-      if(!t || !t.matches) return;
-      const ck=loadFtCheck(); ck.a=ck.a||{}; ck.m=ck.m||{};
-      if(t.matches('input[type=radio][data-no]')){
-        ck.a[t.dataset.no]=t.value; saveFtCheck(ck);
-        if(!(ck.op&&String(ck.op).trim()) || ck.auto) regen();   // 미작성 또는 자동 초안 상태면 즉시 갱신
-      } else if(t.matches('input.ftchk-note')){
-        ck.m[t.dataset.no]=t.value; saveFtCheck(ck);
-        if(ck.auto) regen();
-      } else if(t.id==='ftOpinion'){
-        ck.op=t.value; ck.auto=false; saveFtCheck(ck);           // 직접 수정 → 자동 갱신 중지
-      }
-    };
-    ckCard.addEventListener('change', e=>persist(e.target));
-    ckCard.addEventListener('input',  e=>{
-      if(e.target.id==='ftOpinion' || (e.target.matches&&e.target.matches('input.ftchk-note'))) persist(e.target);
+    const op=$('ftOpinion');
+    // 렌더 시 표시된 초안을 저장 (직접 수정 전까지 auto 유지 → 통계 변경 시 최신 초안으로 갱신됨)
+    const ck0=loadFtCheck();
+    if(!(ck0.op&&String(ck0.op).trim()) || ck0.auto){ ck0.op=op.value; ck0.auto=true; saveFtCheck(ck0); }
+    op.addEventListener('input', ()=>{
+      const ck=loadFtCheck(); ck.op=op.value; ck.auto=false; saveFtCheck(ck);   // 직접 수정 → 수정본 유지
     });
     const draftBtn=$('ftDraftBtn');
     if(draftBtn) draftBtn.addEventListener('click', ()=>{
-      const op=$('ftOpinion');
       const ck=loadFtCheck();
-      if(op && op.value.trim() && !ck.auto && !confirm('직접 수정한 종합분석 의견을 체크 내용 기반 초안으로 덮어쓸까요?')) return;
-      regen();
+      if(op.value.trim() && !ck.auto && !confirm('직접 수정한 종합분석 의견을 자동 초안으로 덮어쓸까요?')) return;
+      op.value=_ftOpinionDraft(_aP, _cnt, _N);
+      const ck2=loadFtCheck(); ck2.op=op.value; ck2.auto=true; saveFtCheck(ck2);
     });
   }
 }
