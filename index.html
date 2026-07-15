@@ -902,7 +902,7 @@
     </section>
 
     <section class="card" id="navDist">
-      <h2>점수 / 등급 분포<span class="tip" data-tip="좌: 성취도(A~E·I) 분포&#10;우: 등급제(5/9등급) 분포&#10;하: 석차순 점수 분포&#10;·막대를 클릭하면 해당 영역의 학생 명단을 볼 수 있음.&#10;·I(40 미만)는 E 위에 적층 표시.">?</span></h2>
+      <h2>점수 / 등급 분포<span class="tip" data-tip="좌: 성취도 분포&#10;우: 등급제(5/9등급) 분포&#10;하: 석차순 점수 분포&#10;·막대를 클릭하면 해당 영역의 학생 명단을 볼 수 있음.&#10;·I(40 미만·미도달)는 1학년 공통과목에만 표시 — 그 외 과목은 E에 포함.">?</span></h2>
       <div class="charts">
         <div class="chart-box"><canvas id="histChart"></canvas></div>
         <div class="chart-box"><canvas id="gradeChart"></canvas></div>
@@ -917,8 +917,8 @@
     </section>
 
     <section class="card item-section" id="navSim">
-      <h2>성취도 분할점수 시뮬레이터<span class="tip" data-tip="성취평가제 분할점수(컷)를 바꿔가며 A~E·I 분포가 어떻게 달라지는지 시뮬레이션.&#10;·고정: 90/80/70/60/40 표준&#10;·정규분포 추천: 데이터 분포 기반 자동 산출(A 10·B 25·C 30·D 25·E 10%)&#10;·상위권 확대: A 비율을 15%로 확대&#10;·E컷은 성취평가제 표준에 따라 40 권장">?</span></h2>
-      <p style="color:var(--muted);margin:0 0 12px;font-size:13px">분할점수를 바꿔 성취도(A~E·I) 분포가 어떻게 달라지는지 실시간으로 확인 · 정규분포 추천도 자동 계산</p>
+      <h2>성취도 분할점수 시뮬레이터<span class="tip" data-tip="성취평가제 분할점수(컷)를 바꿔가며 성취도 분포가 어떻게 달라지는지 시뮬레이션.&#10;·고정: 90/80/70/60 표준&#10;·정규분포 추천: 데이터 분포 기반 자동 산출(A 10·B 25·C 30·D 25·E 10%)&#10;·상위권 확대: A 비율을 15%로 확대&#10;·E컷(40)·미도달(I)은 1학년 공통과목에만 적용">?</span></h2>
+      <p style="color:var(--muted);margin:0 0 12px;font-size:13px">분할점수를 바꿔 성취도 분포가 어떻게 달라지는지 실시간으로 확인 · 정규분포 추천도 자동 계산</p>
       <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
         <button class="ghost cuts-mode" data-mode="fixed" style="background:var(--pri-50);border-color:var(--pri);color:var(--pri-deep)">고정 (90/80/70/60/40)</button>
         <button class="ghost cuts-mode" data-mode="recommend">정규분포 추천 (10·25·30·25·10)</button>
@@ -930,7 +930,7 @@
         <div style="flex:0 0 auto"><label>B 컷 ≥</label><input type="number" id="cutB" value="80" min="0" max="100" step="0.1" style="width:80px"></div>
         <div style="flex:0 0 auto"><label>C 컷 ≥</label><input type="number" id="cutC" value="70" min="0" max="100" step="0.1" style="width:80px"></div>
         <div style="flex:0 0 auto"><label>D 컷 ≥</label><input type="number" id="cutD" value="60" min="0" max="100" step="0.1" style="width:80px"></div>
-        <div style="flex:0 0 auto"><label>E 컷 ≥</label><input type="number" id="cutE" value="40" min="0" max="100" step="0.1" style="width:80px"></div>
+        <div id="cutEWrap" style="flex:0 0 auto"><label>E 컷 ≥</label><input type="number" id="cutE" value="40" min="0" max="100" step="0.1" style="width:80px"></div>
         <button id="cutsApply" style="padding:9px 18px">시뮬레이션 적용</button>
       </div>
       <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:14px" class="cuts-grid">
@@ -938,7 +938,7 @@
         <div>
           <table id="cutsCompTable" style="font-size:12.5px"></table>
           <div id="cutsNote"></div>
-          <p style="font-size:11.5px;color:var(--muted);margin:8px 0 0">※ 미도달(I) 기준은 40점으로 고정 권장 (성취평가제 표준) · 컷은 항상 A ≥ B ≥ C ≥ D ≥ E 순서 유지</p>
+          <p style="font-size:11.5px;color:var(--muted);margin:8px 0 0">※ 미도달(I)은 1학년 공통과목(공통국어·공통수학·공통영어·한국사·통합사회·통합과학)에만 적용 — 기준 40점 고정 권장 · 그 외 과목은 40점 미만도 E에 포함 · 컷은 항상 A ≥ B ≥ C ≥ D ≥ E 순서 유지</p>
         </div>
       </div>
     </section>
@@ -979,7 +979,7 @@
           <th>변별도<span class="tip" data-tip="변별도(D / Discrimination Index)&#10;·상위권 학생이 하위권보다 잘 맞히는 정도 (-1 ~ +1).&#10;·계산: 상위 27% 정답률 − 하위 27% 정답률.&#10;·0.3↑ 우수 / 0.1~0.3 보통 / 0~0.1 변별 부족 / 음수면 역변별(상위권이 더 틀림 → 정답 처리 의심)">?</span></th>
           <th>출제 난이도<span class="tip" data-tip="NEIS 문항정보표에 적힌 출제(의도) 난이도 — 쉬움/보통/어려움.&#10;·문항정보표 미업로드 시 '미입력'">?</span></th>
           <th>실제 난이도<span class="tip" data-tip="정답률 기반 3단계 분류 — 쉬움(p≥0.7) / 보통(0.4↑) / 어려움(0.4↓).&#10;·출제 난이도와 다르면 ⚠, 같으면 ✓ 표시">?</span></th>
-          <th>성취도별 정답률<span class="tip" data-tip="성취도별(A~E·I) 정답률을 미니 막대로 표시.&#10;·등급이 높을수록 정답률이 높아야 정상">?</span></th>
+          <th>성취도별 정답률<span class="tip" data-tip="성취도별 정답률을 미니 막대로 표시. (I는 1학년 공통과목만)&#10;·등급이 높을수록 정답률이 높아야 정상">?</span></th>
           <th>판별 성취수준<span class="tip" data-tip="판별 성취수준 = 정답률 65% 이상이 유지되는 가장 낮은 등급.&#10;·예: A=100·B=67·C=60 → 판별 B (B/C를 변별하는 문항)&#10;·해당 등급을 식별하는 데 효과적인 문항 = 변별 경계 등급">?</span></th>
           <th>검토 의견</th>
         </tr></thead><tbody></tbody></table>
@@ -999,8 +999,8 @@
     </section>
 
     <section class="card item-section">
-      <h2 id="navMatrix">성취도(A~E·I) × 문항 정답률 매트릭스<span class="tip" data-tip="각 등급(A~E·I)의 문항별 정답률을 매트릭스로 보여줍니다.&#10;·셀 색: 초록=높음 → 빨강=낮음&#10;·빨간 테두리: 패턴 깨짐 (상위 그룹보다 정답률이 더 높음)&#10;·셀을 클릭하면 정답자/오답자 명단이 팝업으로 표시됩니다.">?</span></h2>
-      <p style="color:var(--muted);margin:0 0 8px;font-size:13px">상위 등급일수록 정답률이 높아야 정상. 셀 색: 초록=높음 → 빨강=낮음 · 패턴 깨짐은 <b>3그룹</b>(상위 A·B / 중위 C·D / 하위 E·I) 가중 정답률을 기준으로 비교 — <b style="color:#dc2626">빨간 테두리</b>는 상위 그룹보다 정답률이 더 높은 그룹의 셀 · <b style="color:#1a1f2e">★ 검은 테두리</b>는 해당 문항의 <b>판별 성취수준</b>(정답률 65% 이상이 유지되는 가장 낮은 등급 = 변별 경계)</p>
+      <h2 id="navMatrix">성취도 × 문항 정답률 매트릭스<span class="tip" data-tip="각 성취도 등급의 문항별 정답률을 매트릭스로 보여줍니다. (I등급은 1학년 공통과목만)&#10;·셀 색: 초록=높음 → 빨강=낮음&#10;·빨간 테두리: 패턴 깨짐 (상위 그룹보다 정답률이 더 높음)&#10;·셀을 클릭하면 정답자/오답자 명단이 팝업으로 표시됩니다.">?</span></h2>
+      <p style="color:var(--muted);margin:0 0 8px;font-size:13px">상위 등급일수록 정답률이 높아야 정상. 셀 색: 초록=높음 → 빨강=낮음 · 패턴 깨짐은 <b>3그룹</b>(상위 A·B / 중위 C·D / 하위 E(·I)) 가중 정답률을 기준으로 비교 — <b style="color:#dc2626">빨간 테두리</b>는 상위 그룹보다 정답률이 더 높은 그룹의 셀 · <b style="color:#1a1f2e">★ 검은 테두리</b>는 해당 문항의 <b>판별 성취수준</b>(정답률 65% 이상이 유지되는 가장 낮은 등급 = 변별 경계)</p>
       <div id="matrixInvInfo" style="display:none;margin:0 0 10px;padding:8px 12px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;font-size:12.5px;color:#991b1b;line-height:1.55"></div>
       <div class="table-wrap" style="max-height:none">
         <table id="matrixTable"></table>
@@ -1134,7 +1134,7 @@
     </div>
 
     <section class="card finalterm-section" id="navFinalTerm" style="display:none">
-      <h2>🎓 학기말 종합 분석<span class="tip" data-tip="중간·기말·수행평가를 [학기말 환산 비율]로 합산한 학기말 점수로&#10;성취도(A~E·I)·등급·석차를 산출합니다.&#10;문항 분석은 제외하고 평가 결과(등급·성취도) 산출에 집중합니다.&#10;※ 병결·인정결로 인정점수가 부여된 학생은 실제 성적처리와 다를 수 있습니다.">?</span></h2>
+      <h2>🎓 학기말 종합 분석<span class="tip" data-tip="중간·기말·수행평가를 [학기말 환산 비율]로 합산한 학기말 점수로&#10;성취도·등급·석차를 산출합니다. (I는 1학년 공통과목만)&#10;문항 분석은 제외하고 평가 결과(등급·성취도) 산출에 집중합니다.&#10;※ 병결·인정결로 인정점수가 부여된 학생은 실제 성적처리와 다를 수 있습니다.">?</span></h2>
       <div id="finalTermBody"></div>
     </section>
 
@@ -2057,6 +2057,7 @@ async function _initSessionResume(){
 }
 
 function applyCuts(students, cuts){
+  const common = _iApplies(); // 미도달(I) 미적용 과목은 D컷 미만 전원 E
   const counts = {A:0, B:0, C:0, D:0, E:0, I:0};
   students.forEach(s=>{
     if(s.total==null) return;
@@ -2064,7 +2065,7 @@ function applyCuts(students, cuts){
     else if(s.total>=cuts.B) counts.B++;
     else if(s.total>=cuts.C) counts.C++;
     else if(s.total>=cuts.D) counts.D++;
-    else if(s.total>=cuts.E) counts.E++;
+    else if(!common || s.total>=cuts.E) counts.E++;
     else counts.I++;
   });
   return counts;
@@ -2119,7 +2120,11 @@ function renderCutsChart(cuts, students){
   const counts = applyCuts(students, cuts);
   const fixedCuts = {A:90,B:80,C:70,D:60,E:40};
   const fixedCounts = applyCuts(students, fixedCuts);
-  const labels = ['A','B','C','D','E','I'];
+  const common = _iApplies();
+  const labels = common ? ['A','B','C','D','E','I'] : ['A','B','C','D','E'];
+  // 미도달(I) 미적용 과목은 E컷(40) 입력칸 숨김 — D컷 미만 전원 E
+  const eWrap = document.getElementById('cutEWrap');
+  if(eWrap) eWrap.style.display = common ? '' : 'none';
   // 성취도 A~E·I 공통 색상 (A=초록 상위 → I=진빨강 하위) — _LEVEL_COLOR 단일 출처
   const colors = labels.map(l => _LEVEL_COLOR[l]);
   const totalN = students.filter(s=>s.total!=null).length;
@@ -2138,14 +2143,14 @@ function renderCutsChart(cuts, students){
       responsive:true, maintainAspectRatio:false,
       animation:{duration:700, easing:'easeOutQuart'},
       plugins:{
-        title:{display:true, text:'성취도 분포 비교 (회색=고정 / 색=시뮬레이션 — A 초록 → I 빨강)', color:'#1a1f2e', font:{size:13,weight:'600'}, padding:{bottom:6}},
+        title:{display:true, text:`성취도 분포 비교 (회색=고정 / 색=시뮬레이션 — A 초록 → ${common?'I':'E'} 빨강)`, color:'#1a1f2e', font:{size:13,weight:'600'}, padding:{bottom:6}},
         legend:{
           position:'bottom',
           labels:{
             boxWidth:14, boxHeight:14, padding:10, font:{size:11},
             // 시뮬레이션 dataset 의 backgroundColor 가 배열이라 기본 범례는 첫 색만 노출 → 직접 6색 + 고정 회색으로 구성
             generateLabels: () => [
-              {text:'고정 (90/80/70/60/40)', fillStyle:'rgba(148,163,184,.6)', strokeStyle:'transparent', lineWidth:0},
+              {text: common?'고정 (90/80/70/60/40)':'고정 (90/80/70/60)', fillStyle:'rgba(148,163,184,.6)', strokeStyle:'transparent', lineWidth:0},
               ...labels.map(l => ({text:'시뮬 '+l, fillStyle:_LEVEL_COLOR[l], strokeStyle:'transparent', lineWidth:0}))
             ]
           }
@@ -2273,7 +2278,7 @@ function renderFinalScoreAnalysis(stats){
         </tr></thead><tbody>`;
     [40, 50, 60, 70, 80, 90].forEach(otherMean=>{
       const semesterMean = examMean*myRatio/100 + otherMean*otherExamRatio/100 + perfMean;
-      const ach = semesterMean>=90?'A':semesterMean>=80?'B':semesterMean>=70?'C':semesterMean>=60?'D':semesterMean>=40?'E':'I';
+      const ach = semesterMean>=90?'A':semesterMean>=80?'B':semesterMean>=70?'C':semesterMean>=60?'D':semesterMean>=40?'E':(_iApplies()?'I':'E');
       const achColor = _LEVEL_COLOR[ach] || '#7f1d1d';
       html += `<tr>
         <td style="padding:7px;text-align:center;border-bottom:1px solid var(--line-2)">${otherMean}점</td>
@@ -2392,13 +2397,20 @@ function calcCronbach(items, students){
 }
 
 function achievementMatrix(items, students){
-  const groups = [
+  // 미도달(I) 미적용 과목은 E가 60점 미만 전체를 포함 (I 행 없음)
+  const groups = _iApplies() ? [
     {label:'A', filter:t=>t>=90},
     {label:'B', filter:t=>t>=80&&t<90},
     {label:'C', filter:t=>t>=70&&t<80},
     {label:'D', filter:t=>t>=60&&t<70},
     {label:'E', filter:t=>t>=40&&t<60},
     {label:'I', filter:t=>t<40},
+  ] : [
+    {label:'A', filter:t=>t>=90},
+    {label:'B', filter:t=>t>=80&&t<90},
+    {label:'C', filter:t=>t>=70&&t<80},
+    {label:'D', filter:t=>t>=60&&t<70},
+    {label:'E', filter:t=>t<60},
   ];
   return groups.map(g=>{
     const grp = students.filter(s=>s.total!=null && g.filter(s.total));
@@ -2555,8 +2567,9 @@ function gradeDist(students, grade){
   return out;
 }
 
-// 공통과목 판별 — 1학년 공통 6과목(국·수·영·한국사·통합사회·통합과학)은
-// 성취평가제에서 I등급(40 미만 · 미도달)을 별도로 관리. 막대 그래프도 분리 표시.
+// 공통과목 판별 — 미도달(I·40 미만)은 1학년 공통과목
+// (공통국어·공통수학·공통영어·한국사·통합사회·통합과학)에만 적용.
+// 그 외 과목은 I 없이 40점 미만도 성취도 E에 포함.
 function isCommonSubject(subjectName){
   if(!subjectName) return false;
   const n = String(subjectName).replace(/\s+/g, '').toLowerCase();
@@ -2571,6 +2584,8 @@ function isCommonSubject(subjectName){
   ].map(s=>s.toLowerCase());
   return commons.includes(n);
 }
+// 현재 입력된 과목 기준 미도달(I) 적용 여부 — 성취도 산출·차트·서술 전반에서 공용
+function _iApplies(){ return isCommonSubject((($('subject')||{}).value)||''); }
 
 function histogram(students, subject){
   const totals = students.map(s=>s.total).filter(v=>v!==null);
@@ -2605,19 +2620,18 @@ function histogram(students, subject){
       isCommon: true,
     };
   }
-  // 일반(선택과목 등): 5단계 + I는 E 위에 stacked
-  const labels = ['A (90↑)','B (80~90)','C (70~80)','D (60~70)','E (40~60)'];
+  // 일반(선택과목 등): 미도달(I) 미적용 — 40점 미만도 E에 포함한 5단계
+  const labels = ['A (90↑)','B (80~90)','C (70~80)','D (60~70)','E (60 미만)'];
   const counts  = [0,0,0,0,0];
-  const iCounts = [0,0,0,0,0];
   totals.forEach(t=>{
     if(t>=90) counts[0]++;
     else if(t>=80) counts[1]++;
     else if(t>=70) counts[2]++;
     else if(t>=60) counts[3]++;
-    else if(t>=40) counts[4]++;
-    else iCounts[4]++; // I → E 위에 적층
+    else counts[4]++; // 40점 미만 포함 전부 E
   });
-  return {labels, data:counts, iData:iCounts, ranges: rangesAE, iRange, isCommon: false};
+  const ranges5 = [...rangesAE.slice(0,4), {label:'E (60 미만)', test:t=>t<60}];
+  return {labels, data:counts, iData:null, ranges: ranges5, iRange:null, isCommon: false};
 }
 
 function classBreakdown(students){
@@ -2693,11 +2707,13 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
   // 만점은 항상 100점 가정 (성취도 분할기준 A:90~100)
   const FULL = 100;
   const perfect = totals.filter(t=>t>=FULL).length;
+  const common = isCommonSubject(subject); // 미도달(I) 적용 여부 — 1학년 공통과목만
   const aGrade = totals.filter(t=>t>=90).length;
-  const eGrade = totals.filter(t=>t>=40 && t<60).length;
+  const eGrade = totals.filter(t=> common ? (t>=40 && t<60) : t<60).length;
   const under40 = totals.filter(t=>t<40).length;
   const aRate = stats.n? aGrade/stats.n : 0;
   const under40Rate = stats.n? under40/stats.n : 0;
+  const eRate = stats.n? eGrade/stats.n : 0;
 
   // 표현 보정 (의미 있는 학급만 spread에 반영)
   const spreadDesc = cls.spread<5?'편차가 작은 편임'
@@ -2726,11 +2742,19 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
   narrative += `<p>성취도(고정분할 기준) 분포를 보면 `;
   narrative += `<b>A(90점 이상)</b> ${aGrade}명(${(aRate*100).toFixed(1)}%)`;
   if(perfect>0) narrative += ` 가운데 만점자 ${perfect}명을 포함`;
-  narrative += `, <b>E(40~60점)</b> ${eGrade}명, `;
-  narrative += `<b>I(40점 미만 · 미도달)</b> <span style="color:#dc2626;font-weight:600">${under40}명(${(under40Rate*100).toFixed(1)}%)</span>으로 나타남. `;
-  narrative += `해당 A구간 비중은 ${aDesc}. `;
-  if(under40>0){
-    narrative += `미도달(I) 학생에 대해서는 단원별 보충 지도와 함께 다음 학기 평가 전 진단·개별 피드백이 필요함. `;
+  if(common){
+    narrative += `, <b>E(40~60점)</b> ${eGrade}명, `;
+    narrative += `<b>I(40점 미만 · 미도달)</b> <span style="color:#dc2626;font-weight:600">${under40}명(${(under40Rate*100).toFixed(1)}%)</span>으로 나타남. `;
+    narrative += `해당 A구간 비중은 ${aDesc}. `;
+    if(under40>0){
+      narrative += `미도달(I) 학생에 대해서는 단원별 보충 지도와 함께 다음 학기 평가 전 진단·개별 피드백이 필요함. `;
+    }
+  } else {
+    narrative += `, <b>E(60점 미만)</b> ${eGrade}명(${(eRate*100).toFixed(1)}%)으로 나타남. `;
+    narrative += `해당 A구간 비중은 ${aDesc}. `;
+    if(eRate>=0.2){
+      narrative += `성취도 E 학생에 대해서는 단원별 보충 지도와 함께 다음 학기 평가 전 진단·개별 피드백이 필요함. `;
+    }
   }
   narrative += `</p>`;
 
@@ -2751,7 +2775,7 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
   }
   // 평균 기반
   if(stats.mean<50){
-    extra += `평균이 <b>${stats.mean.toFixed(1)}점</b>으로 매우 낮아 학생 다수가 미도달 영역에 머무름. 출제 자료의 추상도, 문항 길이, 시간 적정성을 종합 점검하고, 차기 평가에서는 정답률 70% 이상의 기본 확인 문항이 전체의 30% 이상을 차지하도록 설계 필요. `;
+    extra += `평균이 <b>${stats.mean.toFixed(1)}점</b>으로 매우 낮아 학생 다수가 ${common?'미도달 영역':'하위 성취(E) 영역'}에 머무름. 출제 자료의 추상도, 문항 길이, 시간 적정성을 종합 점검하고, 차기 평가에서는 정답률 70% 이상의 기본 확인 문항이 전체의 30% 이상을 차지하도록 설계 필요. `;
   } else if(stats.mean<60){
     extra += `평균 ${stats.mean.toFixed(1)}점으로 다소 낮음. 중하위권 학생들의 학습 동기 유지를 위해 단원 도입 개념을 다루는 문항 비중을 30% 정도로 확보하고, 자료 해석에 익숙하지 않은 학생을 위한 시각자료(도표·지도) 활용 비중을 점검할 필요가 있음. `;
   } else if(stats.mean>=82){
@@ -2763,7 +2787,7 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
   if(skewDir==='rightSkew' && Math.abs(skew)>=4){
     extra += `평균(${stats.mean.toFixed(1)})이 중앙값(${stats.median.toFixed(1)})보다 ${skew.toFixed(1)}점 높음 — 분포가 우측으로 꼬리를 늘어뜨린 형태(상위권 일부가 평균을 끌어올림). 중간 수준 학생에 대한 학습 점검이 필요. `;
   } else if(skewDir==='leftSkew' && Math.abs(skew)>=4){
-    extra += `중앙값(${stats.median.toFixed(1)})이 평균(${stats.mean.toFixed(1)})보다 ${(-skew).toFixed(1)}점 높음 — 분포가 좌측으로 꼬리를 늘어뜨린 형태(하위권 소수가 평균을 끌어내림). 미도달 학생에 대한 개별 학습 지원이 시급함. `;
+    extra += `중앙값(${stats.median.toFixed(1)})이 평균(${stats.mean.toFixed(1)})보다 ${(-skew).toFixed(1)}점 높음 — 분포가 좌측으로 꼬리를 늘어뜨린 형태(하위권 소수가 평균을 끌어내림). ${common?'미도달':'하위권'} 학생에 대한 개별 학습 지원이 시급함. `;
   }
   if(extra) narrative += `<p>${extra}</p>`;
 
@@ -2874,7 +2898,7 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
   } else if(stats.mean>=50){
     closing += `· 평균 ${stats.mean.toFixed(1)}점으로 다소 낮음. 학생 학습 동기 저하가 우려되므로 ① 정답률 70%+ 기본 확인 문항 비중 35% 확보, ② 자료 해석에 도움이 되는 시각 자료(도표·지도) 사용 강화 권고.<br>`;
   } else {
-    closing += `· 평균 ${stats.mean.toFixed(1)}점으로 매우 낮음. 다수 학생이 미도달 영역. 차기 출제 전 ① 동일 단원의 진단평가 우선 시행, ② 발문 길이·자료 난도 사전 검토 절차 강화, ③ 정답률 70%+ 문항 비중 40% 확보 권고.<br>`;
+    closing += `· 평균 ${stats.mean.toFixed(1)}점으로 매우 낮음. 다수 학생이 ${common?'미도달':'하위 성취(E)'} 영역. 차기 출제 전 ① 동일 단원의 진단평가 우선 시행, ② 발문 길이·자료 난도 사전 검토 절차 강화, ③ 정답률 70%+ 문항 비중 40% 확보 권고.<br>`;
   }
   // 변별도 / 검토 필요 코멘트
   if(negD>0){
@@ -2916,11 +2940,19 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
   } else if(cls.spread>=10 && cls.significantCount>=2){
     closing += `· 학급별 평균 편차 ${cls.spread.toFixed(1)}점으로 다소 큼. 학급 간 진도·이해도 점검을 위한 동학년 협의 필요.<br>`;
   }
-  // 미도달 / 학생군 지원
-  if(under40Rate>=0.20){
-    closing += `· 미도달(40점 미만) 학생 비율이 <b>${(under40Rate*100).toFixed(0)}%</b>로 매우 높음. ① 개인별 진단 후 단원 단위 보충 계획 수립, ② 또래 멘토링·방과후 학습지원 프로그램 적극 활용, ③ 다음 평가 전 형성평가로 회복 점검 권고.<br>`;
-  } else if(under40Rate>=0.10){
-    closing += `· 미도달 학생 비율 ${(under40Rate*100).toFixed(0)}%. 해당 학생군 대상으로 단원별 핵심 개념 보충 자료 제공·개별 면담 권고.<br>`;
+  // 미도달(공통과목) / 하위 성취 학생군 지원
+  if(common){
+    if(under40Rate>=0.20){
+      closing += `· 미도달(40점 미만) 학생 비율이 <b>${(under40Rate*100).toFixed(0)}%</b>로 매우 높음. ① 개인별 진단 후 단원 단위 보충 계획 수립, ② 또래 멘토링·방과후 학습지원 프로그램 적극 활용, ③ 다음 평가 전 형성평가로 회복 점검 권고.<br>`;
+    } else if(under40Rate>=0.10){
+      closing += `· 미도달 학생 비율 ${(under40Rate*100).toFixed(0)}%. 해당 학생군 대상으로 단원별 핵심 개념 보충 자료 제공·개별 면담 권고.<br>`;
+    }
+  } else {
+    if(eRate>=0.30){
+      closing += `· 하위 성취(E · 60점 미만) 학생 비율이 <b>${(eRate*100).toFixed(0)}%</b>로 매우 높음. ① 개인별 진단 후 단원 단위 보충 계획 수립, ② 또래 멘토링·방과후 학습지원 프로그램 적극 활용, ③ 다음 평가 전 형성평가로 회복 점검 권고.<br>`;
+    } else if(eRate>=0.20){
+      closing += `· 하위 성취(E) 학생 비율 ${(eRate*100).toFixed(0)}%. 해당 학생군 대상으로 단원별 핵심 개념 보충 자료 제공·개별 면담 권고.<br>`;
+    }
   }
   // 매력적 오답 패턴
   const attractCount = items.filter(i=>i.topWrong && i.topWrong.rate>=0.3 && i.p<0.6).length;
@@ -2953,9 +2985,11 @@ function buildReview(stats, items, gd, grade, subject, examName, students, alpha
   if(attractCount>=3){
     nextRecs.push(`<b>오개념 활용</b> — 이번 시험의 매력적 오답 문항(${attractCount}개)을 다음 형성평가에 같은 선지 그대로 재출제하여 오개념 정정 여부 점검`);
   }
-  // 미도달
-  if(under40Rate>=0.10){
+  // 미도달(공통과목) / 하위 성취 학습 지원
+  if(common && under40Rate>=0.10){
     nextRecs.push(`<b>학습 지원</b> — 미도달 학생 ${under40} 명에 대해 단원별 진단지를 제공하고, 1주 1회 보충 일정 수립`);
+  } else if(!common && eRate>=0.20){
+    nextRecs.push(`<b>학습 지원</b> — 성취도 E 학생 ${eGrade} 명에 대해 단원별 진단지를 제공하고, 1주 1회 보충 일정 수립`);
   }
   // 학급 격차
   if(cls.spread>=10 && cls.significantCount>=2){
@@ -4305,7 +4339,7 @@ const _DIFF3_COLOR = {'쉬움':'#16a34a', '보통':'#f59e0b', '어려움':'#dc26
 // 판별(변별) 성취수준 — 정답률 ≥ 65% 가 유지되는 가장 낮은 등급
 //   예: A=100, B=67, C=60  →  A·B 통과, C 미달  →  판별 = B
 function _targetLevelOf(rates, ns){
-  const labels = ['A','B','C','D','E','I'];
+  const labels = _iApplies() ? ['A','B','C','D','E','I'] : ['A','B','C','D','E'];
   let target = null;
   for(let i = 0; i < labels.length; i++){
     const r = rates[i];
@@ -4318,17 +4352,26 @@ const _LEVEL_COLOR = {'A':'#16a34a', 'B':'#65a30d', 'C':'#eab308', 'D':'#f97316'
 
 // ── 판별 성취수준별 문항 수 분석 ──
 // 판별=B 인 문항은 B까지 통과(≥65%)·C부터 미달 → B↔C 경계를 변별
-const _TGT_ORDER = ['A','B','C','D','E','I','none'];
-const _TGT_BOUNDARY = {
-  A:'A↔B 경계 변별 (최상위 변별)', B:'B↔C 경계 변별', C:'C↔D 경계 변별',
-  D:'D↔E 경계 변별', E:'E↔I 경계 변별 (기초 미도달 판별)',
-  I:'전 수준 통과 — 기초 확인용 (변별 없음)', none:'전 등급 <65% — A 집단도 어려워한 최고난도'
-};
+// 미도달(I) 미적용 과목은 I 없이 E까지만 — E 판별 = 전 수준 통과
+function _tgtOrder(){
+  return _iApplies() ? ['A','B','C','D','E','I','none'] : ['A','B','C','D','E','none'];
+}
+function _tgtBoundary(){
+  return _iApplies() ? {
+    A:'A↔B 경계 변별 (최상위 변별)', B:'B↔C 경계 변별', C:'C↔D 경계 변별',
+    D:'D↔E 경계 변별', E:'E↔I 경계 변별 (기초 미도달 판별)',
+    I:'전 수준 통과 — 기초 확인용 (변별 없음)', none:'전 등급 <65% — A 집단도 어려워한 최고난도'
+  } : {
+    A:'A↔B 경계 변별 (최상위 변별)', B:'B↔C 경계 변별', C:'C↔D 경계 변별',
+    D:'D↔E 경계 변별', E:'전 수준 통과 — 기초 확인용 (변별 없음)',
+    none:'전 등급 <65% — A 집단도 어려워한 최고난도'
+  };
+}
 function targetLevelDist(items, students){
   if(!items || !items.length || !students || !students.length) return null;
   const m = achievementMatrix(items, students);
   const dist = {};
-  _TGT_ORDER.forEach(k=>{ dist[k] = {n:0, qnos:[], pts:0}; });
+  _tgtOrder().forEach(k=>{ dist[k] = {n:0, qnos:[], pts:0}; });
   items.forEach((it, qi)=>{
     const t = _targetLevelOf(m.map(g=>g.rates[qi]), m.map(g=>g.n)) || 'none';
     dist[t].n++; dist[t].qnos.push(it.qno); dist[t].pts += (+it.points||0);
@@ -4345,14 +4388,17 @@ function _tgtBadge(k, small){
 // 분포 → 자동 해설 (한 시험)
 function _tgtComment(dist){
   const notes = [];
-  const realKeys = ['A','B','C','D','E'];
+  const common = _iApplies();
+  const BOUND = _tgtBoundary();
+  const realKeys = common ? ['A','B','C','D','E'] : ['A','B','C','D']; // 경계 변별 수준
+  const passKey = common ? 'I' : 'E'; // 전 수준 통과 (변별 없음)
   let best = null;
   realKeys.forEach(k=>{ if(dist[k].n > 0 && (!best || dist[k].n > dist[best].n)) best = k; });
-  if(best) notes.push(`판별 문항이 <b>${best} 수준</b>(${_TGT_BOUNDARY[best].split(' (')[0]})에 가장 많음 — ${dist[best].n}문항. 이 경계의 판정 근거가 가장 탄탄함`);
+  if(best) notes.push(`판별 문항이 <b>${best} 수준</b>(${BOUND[best].split(' (')[0]})에 가장 많음 — ${dist[best].n}문항. 이 경계의 판정 근거가 가장 탄탄함`);
   const gaps = realKeys.filter(k=>dist[k].n===0);
-  if(gaps.length) notes.push(`<b style="color:#b45309">${gaps.join('·')} 수준 판별 문항 없음</b> — ${gaps.map(k=>_TGT_BOUNDARY[k].split(' 변별')[0]).join(', ')} 경계를 확인할 문항이 부족해 해당 경계 근처 학생의 성취 판정 근거가 약함`);
+  if(gaps.length) notes.push(`<b style="color:#b45309">${gaps.join('·')} 수준 판별 문항 없음</b> — ${gaps.map(k=>BOUND[k].split(' 변별')[0]).join(', ')} 경계를 확인할 문항이 부족해 해당 경계 근처 학생의 성취 판정 근거가 약함`);
   if(dist.none.n>0) notes.push(`전 등급&lt;65% 문항 <b>${dist.none.n}개</b> — 최상위(A) 집단조차 정답률 65% 미만. 초고난도(킬러)이거나 정답 처리·발문 검토 필요`);
-  if(dist.I.n>0) notes.push(`전 수준 통과 문항 <b>${dist.I.n}개</b> — 모든 수준이 65% 이상 정답. 기초 확인용으로 변별 기여는 낮음`);
+  if(dist[passKey] && dist[passKey].n>0) notes.push(`전 수준 통과 문항 <b>${dist[passKey].n}개</b> — 모든 수준이 65% 이상 정답. 기초 확인용으로 변별 기여는 낮음`);
   return notes;
 }
 // 매트릭스 하단: 판별 성취수준별 문항 수 카드
@@ -4362,15 +4408,16 @@ function renderTargetDist(items, students){
   const res = targetLevelDist(items, students);
   if(!res){ box.style.display='none'; box.innerHTML=''; return; }
   const {dist, total} = res;
-  const maxN = Math.max(1, ..._TGT_ORDER.map(k=>dist[k].n));
-  const rows = _TGT_ORDER.map(k=>{
+  const ORD = _tgtOrder(), BOUND = _tgtBoundary();
+  const maxN = Math.max(1, ...ORD.map(k=>dist[k].n));
+  const rows = ORD.map(k=>{
     const d = dist[k];
     const c = k==='none' ? '#64748b' : _LEVEL_COLOR[k];
     const w = d.n ? Math.max(3, Math.round(d.n/maxN*100)) : 0;
     const chips = d.qnos.map(q=>`<span class="q-link" data-qno="Q${q}" style="display:inline-block;background:#fff;border:1px solid var(--line);border-radius:6px;padding:0 6px;margin:1px;font-size:11px;font-weight:600;color:var(--ink-2)">${q}</span>`).join('');
     return `<tr${d.n===0?' style="opacity:.45"':''}>
       <td style="text-align:center;white-space:nowrap">${_tgtBadge(k)}</td>
-      <td class="l" style="font-size:11.5px;color:var(--muted);white-space:nowrap">${_TGT_BOUNDARY[k]}</td>
+      <td class="l" style="font-size:11.5px;color:var(--muted);white-space:nowrap">${BOUND[k]}</td>
       <td style="min-width:170px"><div style="display:flex;align-items:center;gap:8px">
         <div style="flex:1;height:14px;background:#eef2f7;border-radius:7px;overflow:hidden"><div style="width:${w}%;height:100%;background:${c};border-radius:7px"></div></div>
         <b style="font-size:13px;min-width:44px;text-align:right;font-variant-numeric:tabular-nums">${d.n}문항</b></div></td>
@@ -4381,7 +4428,7 @@ function renderTargetDist(items, students){
   const notes = _tgtComment(dist);
   box.style.display='block';
   box.innerHTML = `
-    <h3 style="font-size:13.5px;font-weight:700;color:var(--ink);margin:0 0 4px">📊 판별 성취수준별 문항 수<span class="tip" data-tip="각 문항의 판별 성취수준(정답률 65% 이상이 유지되는 가장 낮은 등급)별 문항 수 집계.&#10;·A~E 각 경계에 판별 문항이 고르게 분포해야 전 성취 구간의 변별·판정 근거가 확보됨&#10;·'없음' = 전 등급<65% (A 집단조차 어려워한 문항)&#10;·I = 전 수준 통과 (모두 65% 이상 — 기초 확인용)">?</span></h3>
+    <h3 style="font-size:13.5px;font-weight:700;color:var(--ink);margin:0 0 4px">📊 판별 성취수준별 문항 수<span class="tip" data-tip="각 문항의 판별 성취수준(정답률 65% 이상이 유지되는 가장 낮은 등급)별 문항 수 집계.&#10;·각 경계에 판별 문항이 고르게 분포해야 전 성취 구간의 변별·판정 근거가 확보됨&#10;·'없음' = 전 등급<65% (A 집단조차 어려워한 문항)&#10;·최하 수준(공통과목 I / 그 외 E) = 전 수준 통과 (모두 65% 이상 — 기초 확인용)">?</span></h3>
     <p style="color:var(--muted);margin:0 0 9px;font-size:12px">문항 번호 클릭 시 원안지 보기 · A~E 경계별 판별 문항이 고르게 있어야 전 구간 성취 판정이 가능</p>
     <div class="table-wrap" style="max-height:none">
       <table class="pr-table" style="width:100%;font-size:12.5px">
@@ -4419,14 +4466,15 @@ function renderItemDistSummary(items, mtxRows, qnoToIdx){
   // 판별 성취수준 (성취도 매트릭스 기반 — 있을 때만)
   let tgtSegs = null;
   if(mtxRows){
+    const ORD = _tgtOrder();
     const byLevel = {};
-    _TGT_ORDER.forEach(k=>{ byLevel[k]=[]; });
+    ORD.forEach(k=>{ byLevel[k]=[]; });
     items.forEach(i=>{
       const qi = qnoToIdx[i.qno];
       const t = _targetLevelOf(mtxRows.map(g=>g.rates[qi]), mtxRows.map(g=>g.n)) || 'none';
       byLevel[t].push(i.qno);
     });
-    tgtSegs = _TGT_ORDER.map(k=>({
+    tgtSegs = ORD.map(k=>({
       label: k==='none'?'없음':k, n: byLevel[k].length,
       color: k==='none'?'#94a3b8':_LEVEL_COLOR[k], qnos: byLevel[k]
     }));
@@ -4592,11 +4640,16 @@ const _gradeFilters = {
   'A': t=>t>=90, 'B': t=>t>=80&&t<90, 'C': t=>t>=70&&t<80,
   'D': t=>t>=60&&t<70, 'E': t=>t>=40&&t<60, 'I': t=>t<40,
 };
+// 미도달(I) 미적용 과목은 E = 60점 미만 전체
+function _gradeFilterOf(gradeLabel){
+  if(gradeLabel==='E' && !_iApplies()) return t=>t<60;
+  return _gradeFilters[gradeLabel];
+}
 function openCellModal(gradeLabel, qidx, qno){
   const students = _lastStudents || [];
   const items = lastItems || [];
   const item = items.find(i => i.qno === Number(qno));
-  const filt = _gradeFilters[gradeLabel];
+  const filt = _gradeFilterOf(gradeLabel);
   if(!filt){ return; }
   const grpStudents = students.filter(s => s.total != null && filt(s.total));
   const correct = [], wrong = [], blank = [];
@@ -5016,7 +5069,7 @@ function renderItemTable(items, filter, students){
       const rates = mtxRows.map(r => r.rates[qi]);
       const ns = mtxRows.map(r => r.n);
       const target = _targetLevelOf(rates, ns);
-      const labels = ['A','B','C','D','E','I'];
+      const labels = mtxRows.map(r => r.label); // 과목에 따라 A~E 또는 A~E·I
       const bars = rates.map((r, li) => {
         if(r == null || ns[li] === 0){
           return `<div title="${labels[li]} 응시자 없음" style="flex:1;min-width:0;height:20px;background:#f3f4f6;border-radius:2px;display:flex;align-items:flex-end;justify-content:center;font-size:8px;color:#cbd5e1">-</div>`;
@@ -5190,10 +5243,10 @@ function buildFinalTermReport(opts){
       <div class="s"><div class="k">표준편차</div><div class="v">${stats.sd.toFixed(1)}</div></div>
       <div class="s"><div class="k">중앙값</div><div class="v">${stats.median.toFixed(1)}</div></div>
     </div>
-    <h3 class="pr-h3">성취도(A~E·I) 분포</h3>
-    <table class="pr-table"><thead><tr><th>성취도</th>${['A','B','C','D','E','I'].map(l=>`<th>${l}</th>`).join('')}</tr></thead>
-    <tbody><tr><td class="l">인원</td>${['A','B','C','D','E','I'].map(l=>`<td>${achCount[l]}</td>`).join('')}</tr>
-    <tr><td class="l">비율(%)</td>${['A','B','C','D','E','I'].map(l=>`<td>${complete.length?(achCount[l]/complete.length*100).toFixed(1):'0'}</td>`).join('')}</tr></tbody></table>
+    <h3 class="pr-h3">성취도(A~E${_iApplies()?'·I':''}) 분포</h3>
+    <table class="pr-table"><thead><tr><th>성취도</th>${(_iApplies()?['A','B','C','D','E','I']:['A','B','C','D','E']).map(l=>`<th>${l}</th>`).join('')}</tr></thead>
+    <tbody><tr><td class="l">인원</td>${(_iApplies()?['A','B','C','D','E','I']:['A','B','C','D','E']).map(l=>`<td>${achCount[l]}</td>`).join('')}</tr>
+    <tr><td class="l">비율(%)</td>${(_iApplies()?['A','B','C','D','E','I']:['A','B','C','D','E']).map(l=>`<td>${complete.length?(achCount[l]/complete.length*100).toFixed(1):'0'}</td>`).join('')}</tr></tbody></table>
     <div class="pr-chart-grid">${imgHist?`<img src="${imgHist}">`:''}${imgGrade?`<img src="${imgGrade}">`:''}</div>
     ${imgAch?`<div class="pr-chart-center"><img src="${imgAch}"></div>`:''}
     ${imgRank?`<div class="pr-chart-center"><img src="${imgRank}"></div>`:''}
@@ -5406,7 +5459,7 @@ function buildPrintReport(opts){
     const matrixHTML = ($('matrixTable')||{}).innerHTML || '';
     if(matrixHTML){
       html += `<section class="pr-page pr-landscape">
-        <h2 class="pr-h2">5. 성취도(A~E·I) × 문항 정답률 매트릭스</h2>
+        <h2 class="pr-h2">5. 성취도(A~E${_iApplies()?'·I':''}) × 문항 정답률 매트릭스</h2>
         <p class="pr-note">상위 등급일수록 정답률이 높아야 정상. 빨간 테두리 셀은 상위 그룹보다 정답률이 더 높은 그룹의 셀(패턴 깨짐).</p>
         <table class="pr-table">${matrixHTML}</table>
       </section>`;
@@ -6004,7 +6057,7 @@ function renderMatrix(items, students){
   const G = [
     {key:'top', label:'상위(A·B)', members:[0,1]},
     {key:'mid', label:'중위(C·D)', members:[2,3]},
-    {key:'bot', label:'하위(E·I)', members:[4,5]},
+    {key:'bot', label:_iApplies()?'하위(E·I)':'하위(E)', members:[4,5]},
   ];
   // 각 문항 × 각 3그룹의 가중 정답률 + 합계 인원 계산
   const groupRates = items.map((_, qi)=>
@@ -6845,8 +6898,8 @@ function drawCharts(items, hist, gd, students, grade, anon){
   };
   const baseTitle = {color:'#1a1f2e', font:{size:13.5,weight:'600'}, padding:{bottom:10}};
   const baseGrid = {color:'rgba(229,232,240,.6)', drawTicks:false};
-  // A → E 빨강 → 파랑, I(미도달)는 보라(E 위에 적층)
-  // 성취도 A~E·I 공통 색상 (A=초록 상위 → E=빨강 → I=진빨강 하위) — _LEVEL_COLOR 단일 출처
+  // 성취도 공통 색상 (A=초록 상위 → E=빨강 → I=진빨강 하위) — _LEVEL_COLOR 단일 출처
+  // I(미도달)는 1학년 공통과목에만 별도 막대로 표시. 그 외 과목은 E(60 미만)에 포함.
   const HIST_COLORS = ['A','B','C','D','E'].map(l => _LEVEL_COLOR[l]);
   const I_COLOR = _LEVEL_COLOR.I;
 
@@ -6899,68 +6952,48 @@ function drawCharts(items, hist, gd, students, grade, anon){
       }
     });
   } else {
-    // ===== 일반(선택과목 등): I는 E 위에 stacked =====
+    // ===== 일반(선택과목 등): 미도달(I) 미적용 — 40점 미만도 E에 포함한 5막대 =====
+    const totalAll = hist.data.reduce((s,n)=>s+n,0);
     charts.hist = new Chart($('histChart'), {
       type:'bar',
       plugins:[valueLabel],
       data:{
         labels:hist.labels,
-        datasets:[
-          {
-            label:'성취도', data:hist.data, backgroundColor:HIST_COLORS,
-            // E(인덱스4)에 I 적층되면 윗변은 평평(0), 그 외엔 둥근 윗변(6). 아랫변은 축에 붙도록 항상 평평.
-            borderRadius: hist.data.map((_,i)=> (i===4 && hist.iData[4]>0) ? 0 : 6),
-            borderSkipped:'bottom',
-            stack:'s', categoryPercentage:0.7, barPercentage:0.85
-          },
-          {
-            label:'I (40미만)', data:hist.iData, backgroundColor:I_COLOR,
-            borderRadius:6, borderSkipped:'bottom',
-            stack:'s', categoryPercentage:0.7, barPercentage:0.85
-          }
-        ]
+        datasets:[{
+          label:'성취도', data:hist.data, backgroundColor:HIST_COLORS,
+          borderRadius:6, borderSkipped:'bottom',
+          categoryPercentage:0.7, barPercentage:0.85
+        }]
       },
       options:{
-        responsive:true, maintainAspectRatio:false, animation:stackGrow,
+        responsive:true, maintainAspectRatio:false, animation:staggerBar(50),
         onClick:(evt, els)=>{
           if(!els.length) return;
-          const el = els[0];
-          const isI = el.datasetIndex===1;
-          if(isI){
-            showStudentsBy(students, hist.iRange.test, hist.iRange.label, anon, I_COLOR);
-          }else{
-            const r = hist.ranges[el.index];
-            showStudentsBy(students, r.test, r.label, anon, HIST_COLORS[el.index]);
-          }
+          const r = hist.ranges[els[0].index];
+          if(r) showStudentsBy(students, r.test, r.label, anon, HIST_COLORS[els[0].index]);
         },
         onHover:(e,els)=>{ e.native.target.style.cursor = els.length?'pointer':'default'; },
         plugins:{
-          title:{display:true,text:'성취도 분포 (막대 클릭 시 학생 목록 · I는 E 위에 적층)',...baseTitle},
+          title:{display:true,text:'성취도 분포 (막대 클릭 시 학생 목록 · 40점 미만은 E에 포함)',...baseTitle},
           legend:{display:true,position:'bottom',labels:{boxWidth:14,boxHeight:14,padding:12,font:{size:11.5},generateLabels:()=>[
             {text:'A (90↑)', fillStyle:HIST_COLORS[0], strokeStyle:'transparent', lineWidth:0},
             {text:'B (80~90)', fillStyle:HIST_COLORS[1], strokeStyle:'transparent', lineWidth:0},
             {text:'C (70~80)', fillStyle:HIST_COLORS[2], strokeStyle:'transparent', lineWidth:0},
             {text:'D (60~70)', fillStyle:HIST_COLORS[3], strokeStyle:'transparent', lineWidth:0},
-            {text:'E (40~60)', fillStyle:HIST_COLORS[4], strokeStyle:'transparent', lineWidth:0},
-            {text:'I (40미만)', fillStyle:I_COLOR, strokeStyle:'transparent', lineWidth:0}
+            {text:'E (60 미만)', fillStyle:HIST_COLORS[4], strokeStyle:'transparent', lineWidth:0}
           ]}},
           tooltip:{...baseTooltip, callbacks:{
-            label:c=>`${c.dataset.label}: ${c.raw}명`,
-            footer:c=>{
-              const el = c[0];
-              if(el.datasetIndex===1) return '클릭 → I(40미만) 학생 보기';
-              return '클릭 → ' + hist.labels[el.dataIndex] + ' 학생 보기';
-            }
+            label:c=>`${hist.labels[c.dataIndex]}: ${c.raw}명`,
+            footer:c=>`클릭 → ${hist.labels[c[0].dataIndex]} 학생 보기`
           }},
           valueLabel:{formatter:(v)=>{
-            const total = hist.data.reduce((s,n)=>s+n,0) + (hist.iData||[]).reduce((s,n)=>s+n,0);
-            if(total===0) return [v+'명'];
-            return [v+'명', (v/total*100).toFixed(1)+'%'];
+            if(totalAll===0) return [v+'명'];
+            return [v+'명', (v/totalAll*100).toFixed(1)+'%'];
           }}
         },
         scales:{
-          x:{stacked:true, grid:{display:false}},
-          y:{stacked:true, beginAtZero:true, ticks:{precision:0}, grid:baseGrid, suggestedMax: Math.ceil(Math.max(...hist.data.map((v,i)=>v+((hist.iData||[])[i]||0)))*1.35)}
+          x:{grid:{display:false}},
+          y:{beginAtZero:true, ticks:{precision:0}, grid:baseGrid, suggestedMax: Math.ceil(Math.max(...hist.data)*1.35)}
         }
       }
     });
@@ -7173,7 +7206,7 @@ const EXAM = { mid:null, final:null, perform:null };
 let ACTIVE_TAB = 'mid';
 const pdfStage = { mid:null, final:null };
 
-function achLevelOf(t){ return t>=90?'A':t>=80?'B':t>=70?'C':t>=60?'D':t>=40?'E':'I'; }
+function achLevelOf(t){ return t>=90?'A':t>=80?'B':t>=70?'C':t>=60?'D':t>=40?'E':(_iApplies()?'I':'E'); }
 // 학기말 환산점수 → 성취도: 점수를 정수로 반올림한 뒤 판정 (예: 89.74 → 90 → A)
 function ftAch(t){ return achLevelOf(Math.round(t)); }
 // 부동소수 artifact 제거 — 소수 둘째자리까지
@@ -7391,7 +7424,7 @@ function renderFinalTerm(){
 function drawFinalTermCharts(complete){
   if(typeof Chart==='undefined' || !complete || !complete.length) return;
   const _LV=(typeof _LEVEL_COLOR!=='undefined')?_LEVEL_COLOR:{};
-  const LVS=['A','B','C','D','E','I'];
+  const LVS=_iApplies()?['A','B','C','D','E','I']:['A','B','C','D','E'];
   const ach={A:0,B:0,C:0,D:0,E:0,I:0}; complete.forEach(r=>ach[ftAch(r.total)]++);
   const N=complete.length||1;
   try{ destroyChart('ftAch'); }catch(e){}
@@ -7402,7 +7435,7 @@ function drawFinalTermCharts(complete){
       data:{labels:LVS.slice(), datasets:[{data:LVS.map(l=>ach[l]), backgroundColor:LVS.map(l=>_LV[l]||'#999'), borderWidth:2, borderColor:'#fff'}]},
       options:{responsive:true, maintainAspectRatio:false, cutout:'52%',
         plugins:{
-          title:{display:true, text:'성취도 비율 (A~E·I)', font:{size:13,weight:'600'}, color:'#1a1f2e'},
+          title:{display:true, text:`성취도 비율 (A~E${_iApplies()?'·I':''})`, font:{size:13,weight:'600'}, color:'#1a1f2e'},
           legend:{position:'right', labels:{font:{size:11.5}, boxWidth:12, generateLabels:()=>LVS.map((l,i)=>({text:`${l}  ${ach[l]}명 (${(ach[l]/N*100).toFixed(1)}%)`, fillStyle:_LV[l]||'#999', strokeStyle:_LV[l]||'#999', index:i}))}},
           tooltip:{callbacks:{label:c=>`${c.label}  ${c.raw}명 (${(c.raw/N*100).toFixed(1)}%)`}}
         }}
@@ -7460,12 +7493,17 @@ function buildFinalTermReview(complete, incomplete, grade, subject, ft){
   }
   p1 += `</p>`;
 
+  const common = isCommonSubject(subject); // 미도달(I) 적용 여부 — 1학년 공통과목만
   let p2 = `<p>고정분할점수에 따른 성취도 분포를 보면 `;
   p2 += `<b>A(90점 이상)</b> ${ach.A}명(${pct(ach.A).toFixed(1)}%)`;
   if(perfect>0) p2 += ` 가운데 만점자 ${perfect}명 포함`;
   p2 += `, <b>B</b> ${ach.B}명(${pct(ach.B).toFixed(1)}%), <b>C</b> ${ach.C}명(${pct(ach.C).toFixed(1)}%), <b>D</b> ${ach.D}명(${pct(ach.D).toFixed(1)}%), <b>E</b> ${ach.E}명(${pct(ach.E).toFixed(1)}%)으로 ${evenDesc}. `;
-  p2 += `최소성취수준 미도달(40점 미만)은 <b style="color:#dc2626">${ach.I}명(${pct(ach.I).toFixed(1)}%)</b>`;
-  p2 += ach.I>0 ? `으로, 최소성취수준 도달을 위한 단원별 보충 지도와 개별 피드백이 필요함.` : `으로 없음.`;
+  if(common){
+    p2 += `최소성취수준 미도달(40점 미만)은 <b style="color:#dc2626">${ach.I}명(${pct(ach.I).toFixed(1)}%)</b>`;
+    p2 += ach.I>0 ? `으로, 최소성취수준 도달을 위한 단원별 보충 지도와 개별 피드백이 필요함.` : `으로 없음.`;
+  } else if(pct(ach.E)>=20){
+    p2 += `성취도 E(60점 미만) 비율이 ${pct(ach.E).toFixed(1)}%로 높은 편이므로, 해당 학생군에 대한 단원별 보충 지도와 개별 피드백이 필요함.`;
+  }
   p2 += `</p>`;
 
   // 표준편차/변별 + 중간↔기말 변화
@@ -7477,7 +7515,7 @@ function buildFinalTermReview(complete, incomplete, grade, subject, ft){
   if(Math.abs(skew)>=4){
     p3 += skew>0
       ? `평균(${mean.toFixed(1)})이 중앙값(${median.toFixed(1)})보다 높아 상위권 일부가 평균을 끌어올린 형태이며 중위권 점검이 필요함. `
-      : `중앙값(${median.toFixed(1)})이 평균(${mean.toFixed(1)})보다 높아 하위권 소수가 평균을 끌어내린 형태이며 미도달 학생 지원이 시급함. `;
+      : `중앙값(${median.toFixed(1)})이 평균(${mean.toFixed(1)})보다 높아 하위권 소수가 평균을 끌어내린 형태이며 ${common?'미도달':'하위권'} 학생 지원이 시급함. `;
   }
   if(EXAM.mid && EXAM.final){
     const both=complete.filter(r=>r.midScore!=null && r.finalScore!=null);
@@ -7595,8 +7633,8 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
       <div style="font-size:12px;color:#9a3412;margin-top:6px">${names}${incomplete.length>40?' 외…':''}</div>
     </div>`;
   }
-  // 성취도 분포(반올림 정수 기준) 집계 — 여러 패널에서 공용
-  const LVS=['A','B','C','D','E','I'];
+  // 성취도 분포(반올림 정수 기준) 집계 — 여러 패널에서 공용 (I는 공통과목만)
+  const LVS=_iApplies()?['A','B','C','D','E','I']:['A','B','C','D','E'];
   const achCnt={A:0,B:0,C:0,D:0,E:0,I:0};
   complete.forEach(r=>{ achCnt[ftAch(r.total)]++; });
   const N=complete.length;
@@ -7659,28 +7697,30 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
       const fT = targetLevelDist(EXAM.final.itemRes, EXAM.final.students);
       if(mT && fT){
         const C_MID='#60a5fa', C_FIN='#2563eb';
-        const maxN = Math.max(1, ..._TGT_ORDER.map(k=>Math.max(mT.dist[k].n, fT.dist[k].n)));
+        const ORD=_tgtOrder(), BOUND=_tgtBoundary();
+        const REAL=_iApplies()?['A','B','C','D','E']:['A','B','C','D']; // 경계 변별 수준만
+        const maxN = Math.max(1, ...ORD.map(k=>Math.max(mT.dist[k].n, fT.dist[k].n)));
         const bar=(n,color)=>{
           const w = n ? Math.max(3, Math.round(n/maxN*100)) : 0;
           return `<div style="display:flex;align-items:center;gap:6px;min-width:120px">
             <div style="flex:1;height:11px;background:#eef2f7;border-radius:6px;overflow:hidden"><div style="width:${w}%;height:100%;background:${color};border-radius:6px"></div></div>
             <b style="font-size:12px;min-width:22px;text-align:right;font-variant-numeric:tabular-nums">${n}</b></div>`;
         };
-        const rows=_TGT_ORDER.map(k=>{
+        const rows=ORD.map(k=>{
           const m0=mT.dist[k].n, f0=fT.dist[k].n, d=f0-m0;
           const dTxt = d===0 ? '<span style="color:#9ca3af">—</span>' : `<b style="color:${d>0?'#047857':'#dc2626'}">${d>0?'+':''}${d}</b>`;
           return `<tr${(m0===0&&f0===0)?' style="opacity:.45"':''}>
             <td style="text-align:center;white-space:nowrap">${_tgtBadge(k, true)}</td>
-            <td class="l" style="font-size:11px;color:var(--muted);white-space:nowrap">${_TGT_BOUNDARY[k].split(' (')[0]}</td>
+            <td class="l" style="font-size:11px;color:var(--muted);white-space:nowrap">${BOUND[k].split(' (')[0]}</td>
             <td title="중간 ${m0}문항 · 배점 합 ${_n2(mT.dist[k].pts)}점">${bar(m0, C_MID)}</td>
             <td title="기말 ${f0}문항 · 배점 합 ${_n2(fT.dist[k].pts)}점">${bar(f0, C_FIN)}</td>
             <td style="text-align:center">${dTxt}</td>
           </tr>`;
         }).join('');
-        // 해설 — 판별 중심 이동(A=1 어려움 … I=6 쉬움, none=0 최고난도) + 공백 경계
+        // 해설 — 판별 중심 이동(A=1 어려움 … 최하 수준=쉬움, none=0 최고난도) + 공백 경계
         const centerOf=T=>{
           let s=0, n=0;
-          _TGT_ORDER.forEach((k,i)=>{ const rank = k==='none' ? 0 : i+1; s += rank*T.dist[k].n; n += T.dist[k].n; });
+          ORD.forEach((k,i)=>{ const rank = k==='none' ? 0 : i+1; s += rank*T.dist[k].n; n += T.dist[k].n; });
           return n ? s/n : null;
         };
         const notes=[];
@@ -7691,16 +7731,16 @@ function renderFinalTermPanels(ft, complete, incomplete, grade){
             : `기말은 판별 경계가 <b>하위 수준 쪽으로 이동</b> — 중간보다 완만한 구성으로 중·하위 판정 근거 보강`);
         }
         let big=null, bigD=0;
-        ['A','B','C','D','E'].forEach(k=>{ const d=fT.dist[k].n-mT.dist[k].n; if(Math.abs(d)>Math.abs(bigD)){big=k; bigD=d;} });
-        if(big && bigD!==0) notes.push(`변화가 가장 큰 수준은 <b>${big}</b> (${bigD>0?'+':''}${bigD}문항) — ${_TGT_BOUNDARY[big].split(' (')[0]} 문항이 ${bigD>0?'늘어남':'줄어듦'}`);
-        const bothGap=['A','B','C','D','E'].filter(k=>mT.dist[k].n===0 && fT.dist[k].n===0);
+        REAL.forEach(k=>{ const d=fT.dist[k].n-mT.dist[k].n; if(Math.abs(d)>Math.abs(bigD)){big=k; bigD=d;} });
+        if(big && bigD!==0) notes.push(`변화가 가장 큰 수준은 <b>${big}</b> (${bigD>0?'+':''}${bigD}문항) — ${BOUND[big].split(' (')[0]} 문항이 ${bigD>0?'늘어남':'줄어듦'}`);
+        const bothGap=REAL.filter(k=>mT.dist[k].n===0 && fT.dist[k].n===0);
         if(bothGap.length) notes.push(`<b style="color:#b45309">${bothGap.join('·')} 수준은 두 시험 모두 판별 문항 없음</b> — 학기 전체로도 해당 경계의 성취 판정 근거가 부족`);
-        const filled=['A','B','C','D','E'].filter(k=>mT.dist[k].n===0 && fT.dist[k].n>0);
+        const filled=REAL.filter(k=>mT.dist[k].n===0 && fT.dist[k].n>0);
         if(filled.length) notes.push(`중간에 없던 <b>${filled.join('·')} 수준</b> 판별 문항이 기말에서 보완됨`);
         const dNone=fT.dist.none.n-mT.dist.none.n;
         if(mT.dist.none.n||fT.dist.none.n) notes.push(`전 등급&lt;65%(최고난도) 문항: 중간 ${mT.dist.none.n}개 → 기말 ${fT.dist.none.n}개${dNone!==0?` (${dNone>0?'+':''}${dNone})`:''}`);
         tgtCmpHtml=`<div style="border-top:1px dashed var(--line);margin-top:14px;padding-top:11px">
-          <div style="font-size:12.5px;color:var(--ink-2);font-weight:700;margin-bottom:2px">📊 판별 성취수준별 문항 수 비교<span class="tip" data-tip="판별 성취수준 = 정답률 65% 이상이 유지되는 가장 낮은 등급 (그 문항이 변별하는 성취 경계).&#10;·각 시험의 성취도(A~E·I)는 해당 시험 원점수 기준&#10;·A~E 경계별 판별 문항이 고르게 있어야 전 구간 판정 근거 확보&#10;·'없음' = 전 등급<65% (최고난도)">?</span>
+          <div style="font-size:12.5px;color:var(--ink-2);font-weight:700;margin-bottom:2px">📊 판별 성취수준별 문항 수 비교<span class="tip" data-tip="판별 성취수준 = 정답률 65% 이상이 유지되는 가장 낮은 등급 (그 문항이 변별하는 성취 경계).&#10;·각 시험의 성취도는 해당 시험 원점수 기준 (I는 1학년 공통과목만)&#10;·경계별 판별 문항이 고르게 있어야 전 구간 판정 근거 확보&#10;·'없음' = 전 등급<65% (최고난도)">?</span>
             <span style="font-weight:400;color:var(--muted);font-size:11px;margin-left:6px"><span style="display:inline-block;width:9px;height:9px;background:${C_MID};border-radius:2px;vertical-align:-1px"></span> 중간 ${mT.total}문항 · <span style="display:inline-block;width:9px;height:9px;background:${C_FIN};border-radius:2px;vertical-align:-1px"></span> 기말 ${fT.total}문항</span></div>
           <div class="table-wrap" style="max-height:none">
             <table class="pr-table" style="width:100%;font-size:12px">
