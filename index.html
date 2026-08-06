@@ -6054,10 +6054,13 @@ function renderMatrix(items, students){
   // 그룹 가중 정답률(인원 가중평균)이 상위 그룹보다 5%p 이상 높으면 inversion
   // 차이가 15%p 이상이면 strong (강하게 강조)
   const TOL = 0.05, STRONG_TOL = 0.15, MIN_GRP_N = 3;
+  // 하위 그룹 멤버는 실제 매트릭스 행 수에 맞춤 —
+  // 미도달(I) 미적용 과목은 m이 A~E 5행뿐이라 [4,5] 고정 시 inversion[5]가 undefined가 된다.
+  const botMembers = m.length>5 ? [4,5] : [4];
   const G = [
     {key:'top', label:'상위(A·B)', members:[0,1]},
     {key:'mid', label:'중위(C·D)', members:[2,3]},
-    {key:'bot', label:_iApplies()?'하위(E·I)':'하위(E)', members:[4,5]},
+    {key:'bot', label:m.length>5?'하위(E·I)':'하위(E)', members:botMembers},
   ];
   // 각 문항 × 각 3그룹의 가중 정답률 + 합계 인원 계산
   const groupRates = items.map((_, qi)=>
@@ -6091,6 +6094,7 @@ function renderMatrix(items, students){
         const strong = maxDiff > STRONG_TOL;
         // 해당 그룹의 멤버(예: 중위면 C, D 행) 모두 표시
         G[gi].members.forEach(idx=>{
+          if(!inversion[idx]) return;   // 성취도 행 수보다 큰 인덱스(비공통과목의 I행) 방어
           inversion[idx][qi].inv = true;
           if(strong) inversion[idx][qi].strong = true;
         });
