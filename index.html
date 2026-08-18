@@ -420,6 +420,20 @@
     content:'📄';font-size:9px;margin-left:2px;opacity:.5;
   }
 
+  /* 파일 다운로드 경로 안내 */
+  .pathhint{
+    margin-top:6px;padding:7px 9px;border-radius:8px;
+    background:#f3f6ff;border:1px solid rgba(91,108,255,.18);
+    font-size:11.5px;line-height:1.55;color:var(--ink-2);
+  }
+  .pathhint b{color:var(--pri-deep);font-weight:700}
+  .pathhint .step{
+    display:inline-block;background:#fff;border:1px solid rgba(91,108,255,.25);
+    border-radius:5px;padding:0 5px;margin:1px 1px;font-weight:600;color:var(--pri-deep);
+    white-space:nowrap;
+  }
+  .pathhint .note{display:block;margin-top:4px;color:var(--muted);font-size:11px}
+
   /* 지표 도움말 칩 */
   .tip{
     display:inline-flex;align-items:center;justify-content:center;
@@ -758,9 +772,14 @@
       <span style="display:flex;align-items:center;gap:10px">1. 파일 업로드 및 설정</span>
       <span id="setupToggle" style="font-size:12px;font-weight:600;color:var(--pri);background:var(--pri-50);padding:4px 10px;border-radius:8px;transition:all .2s var(--ease);user-select:none">접기 ▲</span>
     </h2>
-    <div id="setupBody" style="overflow:hidden;transition:max-height .35s var(--ease), opacity .25s var(--ease);max-height:2000px">
+    <div id="setupBody" style="overflow:hidden;transition:max-height .35s var(--ease), opacity .25s var(--ease);max-height:2600px">
     <div style="background:linear-gradient(135deg,#e0ecff,#dbeafe);border-left:4px solid var(--pri);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--ink-2);border-radius:10px;font-weight:500">
-      📥 <b style="color:var(--pri-deep)">다운로드 경로</b>: NEIS → 성적 → 정기시험조회 → 교과목별학생답정오표 → <b>[XLS data]</b> 저장
+      📥 <b style="color:var(--pri-deep)">NEIS 다운로드 경로 요약</b> <span style="color:var(--muted);font-weight:400;font-size:12px">· 자세한 경로는 아래 각 파일 항목에 표시했습니다</span>
+      <div style="margin-top:7px;display:grid;gap:4px;font-size:12.5px;font-weight:400">
+        <div>· <b>교과목별학생답정오표</b> — 성적 → 정기시험조회 → 교과목별학생답정오표 → <b>[XLS data]</b></div>
+        <div>· <b>문항정보표</b> — 성적 → 정기시험 → 문항정보표관리 → <b>출력</b> → <b>[XLS data]</b></div>
+        <div>· <b>수행평가 일람표</b> — 성적 → 수행평가조회/통계 → 강의실별일람표조회(전체영역) → <b>[XLS data]</b></div>
+      </div>
     </div>
     <!-- 공통 설정 -->
     <div class="row">
@@ -800,14 +819,26 @@
         <label>교과목별학생답정오표 (.xlsx) · 다중</label>
         <input type="file" id="file" accept=".xlsx,.xls" multiple>
         <div id="fileList" style="margin-top:6px;font-size:12px;color:var(--muted)"></div>
+        <div class="pathhint">
+          📥 <b>받는 곳</b> NEIS <span class="step">성적</span>→<span class="step">정기시험조회</span>→<span class="step">교과목별학생답정오표</span>→ 학년·중간고사 시험 선택 → <span class="step">조회</span> → 상단 <b>[XLS data]</b> 저장
+          <span class="note">· 반(강의실)별로 나눠 받은 파일은 여러 개를 한 번에 올려도 됩니다.</span>
+        </div>
         <label style="margin-top:8px">시험명</label>
         <input type="text" id="examName" placeholder="예: 1학기 중간고사">
         <label style="margin-top:8px">📋 NEIS 문항정보표 (선택)</label>
         <input type="file" id="neisFile" accept=".xlsx,.xls">
         <div id="neisStatus" style="margin-top:6px;font-size:11.5px;color:var(--muted)">문항정보표를 올리면 의도·성취기준 분석이 추가됩니다(선택형만).</div>
+        <div class="pathhint">
+          📥 <b>받는 곳</b> NEIS <span class="step">성적</span>→<span class="step">정기시험</span>→<span class="step">문항정보표관리</span>→<span class="step">출력</span> → <b>[XLS data]</b> 저장
+          <span class="note">· 출력 화면에서 인쇄(PDF)가 아닌 <b>XLS data</b> 로 받아야 분석에 사용할 수 있습니다.</span>
+        </div>
         <label style="margin-top:8px">원안지 PDF (선택)</label>
         <input type="file" id="pdfFile" accept=".pdf">
         <div id="pdfStatus" style="margin-top:6px;font-size:11.5px;color:var(--muted)">업로드 시 문항별 이미지를 만들어 표 클릭에 연결합니다.</div>
+        <div class="pathhint">
+          📥 <b>받는 곳</b> 학교에서 출제·인쇄한 <b>시험지 원본 PDF</b> (한글/워드에서 <span class="step">다른 이름으로 저장</span> → PDF, 또는 인쇄소 제출본)
+          <span class="note">· 소책자(제본) 형태로 만든 PDF는 아래 <b>PDF 처리 방식</b>에서 &lsquo;소책자&rsquo;를 선택하세요.</span>
+        </div>
       </div>
       <!-- 기말고사 -->
       <div class="upcard" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 13px">
@@ -815,14 +846,26 @@
         <label>교과목별학생답정오표 (.xlsx) · 다중</label>
         <input type="file" id="fileFinal" accept=".xlsx,.xls" multiple>
         <div id="fileListFinal" style="margin-top:6px;font-size:12px;color:var(--muted)"></div>
+        <div class="pathhint">
+          📥 <b>받는 곳</b> NEIS <span class="step">성적</span>→<span class="step">정기시험조회</span>→<span class="step">교과목별학생답정오표</span>→ 학년·기말고사 시험 선택 → <span class="step">조회</span> → 상단 <b>[XLS data]</b> 저장
+          <span class="note">· 반(강의실)별로 나눠 받은 파일은 여러 개를 한 번에 올려도 됩니다.</span>
+        </div>
         <label style="margin-top:8px">시험명</label>
         <input type="text" id="examNameFinal" placeholder="예: 1학기 기말고사">
         <label style="margin-top:8px">📋 NEIS 문항정보표 (선택)</label>
         <input type="file" id="neisFileFinal" accept=".xlsx,.xls">
         <div id="neisStatusFinal" style="margin-top:6px;font-size:11.5px;color:var(--muted)">문항정보표를 올리면 의도·성취기준 분석이 추가됩니다(선택형만).</div>
+        <div class="pathhint">
+          📥 <b>받는 곳</b> NEIS <span class="step">성적</span>→<span class="step">정기시험</span>→<span class="step">문항정보표관리</span>→<span class="step">출력</span> → <b>[XLS data]</b> 저장
+          <span class="note">· 출력 화면에서 인쇄(PDF)가 아닌 <b>XLS data</b> 로 받아야 분석에 사용할 수 있습니다.</span>
+        </div>
         <label style="margin-top:8px">원안지 PDF (선택)</label>
         <input type="file" id="pdfFileFinal" accept=".pdf">
         <div id="pdfStatusFinal" style="margin-top:6px;font-size:11.5px;color:var(--muted)">업로드 시 문항별 이미지를 만들어 표 클릭에 연결합니다.</div>
+        <div class="pathhint">
+          📥 <b>받는 곳</b> 학교에서 출제·인쇄한 <b>시험지 원본 PDF</b> (한글/워드에서 <span class="step">다른 이름으로 저장</span> → PDF, 또는 인쇄소 제출본)
+          <span class="note">· 소책자(제본) 형태로 만든 PDF는 아래 <b>PDF 처리 방식</b>에서 &lsquo;소책자&rsquo;를 선택하세요.</span>
+        </div>
       </div>
       <!-- 수행평가 -->
       <div class="upcard" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 13px">
@@ -830,7 +873,11 @@
         <label>강의실별 일람표(전체영역) (.xlsx) · 다중</label>
         <input type="file" id="filePerform" accept=".xlsx,.xls" multiple>
         <div id="fileListPerform" style="margin-top:6px;font-size:12px;color:var(--muted)"></div>
-        <div id="performStatus" style="margin-top:6px;font-size:11.5px;color:var(--muted)">NEIS → 수행평가조회/통계 → 강의실별일람표조회(전체영역) → [XLS data]. 강의실별로 여러 파일을 올리면 합계가 학기말 환산에 반영됩니다.</div>
+        <div id="performStatus" style="margin-top:6px;font-size:11.5px;color:var(--muted)">수행평가 점수를 올리면 학기말 환산에 실제 점수가 반영됩니다(미업로드 시 위의 &lsquo;수행평가 평균&rsquo; 값 사용).</div>
+        <div class="pathhint">
+          📥 <b>받는 곳</b> NEIS <span class="step">성적</span>→<span class="step">수행평가조회/통계</span>→<span class="step">강의실별일람표조회(전체영역)</span>→ 학년·과목 선택 → <span class="step">조회</span> → <b>[XLS data]</b> 저장
+          <span class="note">· 영역별 점수와 <b>합계</b>가 모두 들어있는 <b>전체영역</b> 일람표여야 합니다.<br>· 강의실(반)별로 여러 파일을 올리면 자동으로 합쳐집니다.</span>
+        </div>
       </div>
     </div>
 
@@ -872,7 +919,7 @@
     <div style="margin-top:14px">
       <button id="run">분석 시작</button>
       <span style="color:var(--muted);font-size:12px;margin-left:10px">· PDF·HTML 저장은 우측 상단 버튼으로 가능합니다</span>
-      <span id="buildTag" style="color:var(--muted);font-size:11px;margin-left:10px;opacity:.7" title="현재 로드된 버전 — 오류 문의 시 함께 알려주세요">build 2026-08-06a</span>
+      <span id="buildTag" style="color:var(--muted);font-size:11px;margin-left:10px;opacity:.7" title="현재 로드된 버전 — 오류 문의 시 함께 알려주세요">build 2026-08-18a</span>
     </div>
     <div id="err" class="err hidden"></div>
     </div><!-- /#setupBody -->
