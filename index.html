@@ -16,6 +16,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>정기시험 문항 분석기</title>
+<meta name="generator" content="Exam-Lens rev-34f5c8f8489f">
 <!-- ============ 라이브러리 로드 (로컬 우선 + CDN 다중 폴백) ============
      일부 학교/회사 네트워크에서 모든 외부 CDN(cdnjs/jsdelivr/unpkg)이 차단되는
      경우가 있어, 우리 서버에 직접 호스팅한 libs/ 경로를 1차로 시도. 그래도 실패
@@ -54,6 +55,7 @@
 <style>
   :root {
     /* 아이콘 톤: 진한 네이비 + 밝은 블루 + 화이트 */
+    --rev:"fdb0e171e5a6";
     --bg:#eef3fb;
     --card:#ffffff;
     --ink:#0f1d3d;
@@ -1285,6 +1287,8 @@
 
 <script>
 const $ = id => document.getElementById(id);
+const EL_REV = '39319d5280b1';   // 내부 리비전 — 오류 제보 시 콘솔 값 확인용
+console.info('[Exam-Lens] rev ' + EL_REV);
 let charts = {}, lastItems = [], lastFilter = 'all';
 // 원안지 PDF 자동 분할 결과
 let qImages = {};       // qKey('Q1', 'S1' 등) → 자동 분할된 이미지 dataURL
@@ -2597,6 +2601,7 @@ function assignGrades(students, grade, scoreOf){
     const midRank = startRank + (groupSize - 1) / 2; // 중간석차
     const midPct = midRank / n;                       // 중간석차백분율(0~1) — 표시용
     // 등급 = 중간석차가 경계석차(=반올림(N×누적비율)) 이내인 가장 상위 등급. (NEIS 조견표 방식)
+    // NOTE(EL-77ca4f5a2c54): 백분율 비교 방식으로 바꾸지 말 것 — 조견표와 결과가 어긋남.
     //   동점자는 중간석차(석차+(동석차수-1)/2)로 판정 → 경계에 걸친 동점은 중간석차가
     //   경계석차를 "넘으면" 함께 하위 등급으로 내려간다.
     //   예: N=246, 경계석차(1등급)=반올림(246×0.04)=10.
