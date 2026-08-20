@@ -12,21 +12,21 @@
      시(예: 저장된 HTML 을 로컬에서 열어 file:// 경로가 깨진 경우) CDN 폴백.
      window.XLSX 등 글로벌 확인으로 중복 로드 회피.                            -->
 <!-- XLSX -->
-<script src="libs/xlsx.full.min.js"></script>
-<script>window.XLSX || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');</script>
-<script>window.XLSX || document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
-<script>window.XLSX || document.write('<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
+<script data-ext-lib="1" src="libs/xlsx.full.min.js"></script>
+<script data-ext-lib="1">window.XLSX || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');</script>
+<script data-ext-lib="1">window.XLSX || document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
+<script data-ext-lib="1">window.XLSX || document.write('<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
 <!-- Chart.js -->
-<script src="libs/chart.umd.min.js"></script>
-<script>window.Chart || document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');</script>
-<script>window.Chart || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>');</script>
-<script>window.Chart || document.write('<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');</script>
+<script data-ext-lib="1" src="libs/chart.umd.min.js"></script>
+<script data-ext-lib="1">window.Chart || document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');</script>
+<script data-ext-lib="1">window.Chart || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>');</script>
+<script data-ext-lib="1">window.Chart || document.write('<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');</script>
 <!-- PDF.js -->
-<script src="libs/pdf.min.js"></script>
-<script>window.pdfjsLib || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>');</script>
-<script>window.pdfjsLib || document.write('<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"><\/script>');</script>
-<script>window.pdfjsLib || document.write('<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"><\/script>');</script>
-<script>
+<script data-ext-lib="1" src="libs/pdf.min.js"></script>
+<script data-ext-lib="1">window.pdfjsLib || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>');</script>
+<script data-ext-lib="1">window.pdfjsLib || document.write('<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"><\/script>');</script>
+<script data-ext-lib="1">window.pdfjsLib || document.write('<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"><\/script>');</script>
+<script data-ext-lib="1">
   // pdf.worker 경로: 실제로 로드 성공한 pdf.min.js 의 같은 origin 으로 자동 매칭
   if (window.pdfjsLib) {
     var _pdfScripts = Array.from(document.scripts).filter(function(s){ return /\/pdf\.min\.js(\?|$)/.test(s.src); });
@@ -5892,13 +5892,23 @@ async function saveHtml(){
     }
     if(_chartSrc && _chartSrc.length > 1000){
       // 원격 의존 스크립트(xlsx/chart/pdf/worker + document.write CDN 폴백 + worker 설정) 제거
+      // ⚠ 판별은 data-ext-lib 마킹 우선 — 예전 textContent 휴리스틱은 메인 앱 스크립트
+      //   (주석에 document.write, 본문에 window.Chart 참조 포함)까지 오인 제거해
+      //   저장본에서 차트·모달·이미지가 전부 죽는 치명적 버그가 있었음.
       const _reSrc = /(xlsx\.full\.min|chart\.umd\.min|pdf\.min|pdf\.worker)\.js/;
       document.querySelectorAll('script').forEach(s=>{
+        if(s.dataset.snapshot || s.dataset.snapshotChart) return;
         const t = s.textContent || '';
+        // 앱 본체(거대 인라인 스크립트)는 어떤 경우에도 제거 금지
+        if(!s.src && (t.length > 20000 || t.indexOf('__restoreExamLensSnapshot') !== -1)) return;
+        const isTagged = s.dataset.extLib === '1';
         const isExt = s.src && _reSrc.test(s.src);
-        const isFallback = !s.src && /document\.write/.test(t) && /(window\.XLSX|window\.Chart|window\.pdfjsLib)/.test(t);
-        const isWorkerCfg = !s.src && /pdfjsLib\.GlobalWorkerOptions/.test(t);
-        if(isExt || isFallback || isWorkerCfg){ _stripped.push({node:s, parent:s.parentNode, next:s.nextSibling}); }
+        const isFallback = !s.src && t.length < 2000 && /document\.write/.test(t) && /(window\.XLSX|window\.Chart|window\.pdfjsLib)/.test(t);
+        const isWorkerCfg = !s.src && t.length < 2000 && /pdfjsLib\.GlobalWorkerOptions/.test(t);
+        // 저장본에 무의미한 외부 주입 스크립트(브라우저 확장·Cloudflare)도 함께 제거
+        const isInjected = s.src && /^(chrome|moz|safari-web)-extension:/.test(s.src);
+        const isCfJunk = (s.src && /(\/cdn-cgi\/|cloudflareinsights\.com)/.test(s.src)) || s.hasAttribute('data-cf-beacon');
+        if(isTagged || isExt || isFallback || isWorkerCfg || isInjected || isCfJunk){ _stripped.push({node:s, parent:s.parentNode, next:s.nextSibling}); }
       });
       _stripped.forEach(r=> r.parent && r.parent.removeChild(r.node));
       // Chart.js 를 통째로 인라인 — 어떤 스크립트보다 먼저 실행되도록 head 최상단
