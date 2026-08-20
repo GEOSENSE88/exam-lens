@@ -5767,6 +5767,8 @@ async function saveHtml(){
   document.querySelectorAll('.qmodal.dim').forEach(m=>m.classList.remove('dim'));
   const _qp = document.getElementById('qPanel'); if(_qp) _qp.classList.remove('on');
   const _qb = document.getElementById('qBackdrop'); if(_qb) _qb.classList.remove('on');
+  // 떠 있는 토스트도 닫기 (저장본에 "복원했습니다" 토스트가 박제되는 것 방지)
+  const _toastEl = document.getElementById('toast'); if(_toastEl) _toastEl.className = '';
 
   // ⚠ #setup 카드를 제거하기 BEFORE 에 현재 폼 값을 캡처해야 함.
   //   카드를 떼고 나서 캡처하면 $('grade').value 가 null 이 되어 스냅샷이 9등급(기본 폴백)으로 박힘.
@@ -5933,11 +5935,24 @@ async function saveHtml(){
     document.head.insertBefore(baseEl, document.head.firstChild);
   }
 
-  // 직렬화 (인라인 성공 시 icon.png 오프라인 깨진 이미지 숨김 처리)
-  let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  // 오프라인 저장본에서 icon.png 깨진 이미지 숨김 — 직렬화 전에 DOM 속성으로 부여.
+  // ⚠ 예전의 직렬화 후 문자열 replace 방식은 saveHtml 자기 소스 안의 'src="icon.png"'
+  //   문자열까지 치환해 저장본 메인 스크립트를 SyntaxError 로 죽이는 치명적 버그였음.
+  //   (따옴표가 꼬여 스크립트 전체 파싱 실패 → 차트·모달·복원 전부 불능)
+  const _iconImgs = [];
   if(_inlinedChart){
-    html = html.replace(/src="icon\.png"/g, 'src="icon.png" onerror="this.style.display=\'none\'"');
+    document.querySelectorAll('img').forEach(im=>{
+      const _s = im.getAttribute('src') || '';
+      if(/(^|\/)icon\.png$/.test(_s) && !im.getAttribute('onerror')){
+        im.setAttribute('onerror', "this.style.display='none'");
+        _iconImgs.push(im);
+      }
+    });
   }
+
+  // 직렬화
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  _iconImgs.forEach(im=>im.removeAttribute('onerror'));
 
   // 원복 — 라이브 페이지 기능이 계속 살아있도록 떼어낸 것들 되돌리기
   if(baseEl) baseEl.remove();
